@@ -1,11 +1,11 @@
 
 include_directories(
   ${LSEB_SOURCE_DIR}
+  ${Boost_INCLUDE_DIRS}
 )
 
 add_executable(
-  Test
-  test.cpp
+  t_generator
+  t_generator.cpp
   Generator.cpp
 )
-

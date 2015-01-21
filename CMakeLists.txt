@@ -28,5 +28,8 @@ else()
     # exit due to fatal error
 endif()
 
+# searching for boost 1.55 or newer
+find_package(Boost 1.55 REQUIRED COMPONENTS system)
+
 add_subdirectory(generator)
 

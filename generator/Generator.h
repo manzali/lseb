@@ -7,9 +7,9 @@
 class Generator {
  private:
   uint64_t current_event_id_;
-  char* metadata_ptr_;
+  char* const metadata_ptr_;
   size_t const metadata_size_;
-  char* data_ptr_;
+  char* const data_ptr_;
   size_t const data_size_;
 
  public:
