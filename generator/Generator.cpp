@@ -1,52 +1,74 @@
-#include <cstring> // memset
-
 #include "generator/Generator.h"
+
+#include <chrono>
+
+#include <cstring> // memset
+#include <cassert>
+
 #include "commons/dataformat.h"
 
+using namespace dataformat;
+
 bool checkMetaDataSize(size_t size, size_t offset) {
-  return offset + sizeof(MetaData) > size ? false : true;
+  return offset + sizeof(EventMetaData) <= size;
 }
 
-bool checkDataSize(size_t size, size_t offset) {
-  return offset + sizeof(Data) > size ? false : true;
+bool checkDataSize(size_t size, size_t offset, size_t payload) {
+  return offset + sizeof(EventHeader) + payload <= size;
 }
 
-Generator::Generator(char* metadata_ptr, size_t metadata_size, char* data_ptr,
-                     size_t data_size)
-    : current_event_id_(0),
-      metadata_ptr_(metadata_ptr),
-      metadata_size_(metadata_size),
-      data_ptr_(data_ptr),
-      data_size_(data_size) {
+Generator::Generator(size_t mean, size_t stddev, size_t max, size_t min)
+    : m_current_event_id(0),
+      m_generator(std::chrono::system_clock::now().time_since_epoch().count()),
+      m_distribution(mean, stddev),
+      m_min(min),
+      m_max(max ? max : mean + 5 * stddev) {
+  assert(m_min <= mean && mean <= m_max);
 }
 
-int Generator::generateEvents() {
+size_t Generator::generatePayloadSize() {
+  size_t const val = m_distribution(m_generator);
+  /*
+   * If val > max then return max and
+   * if val < min then return min,
+   * this is to avoid values out of range (i.e. negative)
+   */
+  return std::max(m_min, std::min(val, m_max));
+}
+
+int Generator::generateEvents(char* metadata_ptr, size_t metadata_size,
+                              char* data_ptr, size_t data_size) {
 
   size_t m_offset = 0;
   size_t d_offset = 0;
 
-  uint64_t const starting_event_id = current_event_id_;
+  uint64_t const starting_event_id = m_current_event_id;
 
-  while (checkMetaDataSize(metadata_size_, m_offset)
-      && (checkDataSize(data_size_, d_offset))) {
-    // Set MetaData
-    MetaData& metadata = *metadata_cast(metadata_ptr_ + m_offset);
-    metadata.id = current_event_id_;
-    metadata.length = sizeof(Data);
+  size_t payload_size = generatePayloadSize();
+
+  while (checkMetaDataSize(metadata_size, m_offset)
+      && (checkDataSize(data_size, d_offset, payload_size))) {
+
+    // Set EventMetaData
+    EventMetaData& metadata = *eventmetadata_cast(metadata_ptr + m_offset);
+    metadata.id = m_current_event_id;
+    metadata.length = sizeof(EventHeader) + payload_size;
     metadata.offset = d_offset;
 
-    // Set Data
-    Data& data = *data_cast(data_ptr_ + d_offset);
-    data.length = sizeof(Data);
-    data.flags = 0;
-    data.id = current_event_id_;
-    memset(data.payload, 0, payload_size);
+    // Set EventHeader
+    EventHeader& header = *eventheader_cast(data_ptr + d_offset);
+    header.length = metadata.length;
+    header.flags = 0;
+    header.id = m_current_event_id;
 
     // Update offsets and increment counters
     m_offset += sizeof(metadata);
-    d_offset += sizeof(data);
-    current_event_id_++;
+    d_offset += header.length;
+    ++m_current_event_id;
+
+    // Compute new payload size
+    payload_size = generatePayloadSize();
   }
 
-  return current_event_id_ - starting_event_id;
+  return m_current_event_id - starting_event_id;
 }

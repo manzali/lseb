@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 
 #include <cstdlib>
 
@@ -7,19 +8,22 @@
 #include "commons/dataformat.h"
 #include "generator/Generator.h"
 
-static size_t const gigabyte = 1073741824;
+using namespace dataformat;
+
 static size_t const megabyte = 1048576;
 
 int main() {
-  size_t const metadata_size = gigabyte;
-  char* const metadata_ptr = new char[metadata_size];
+  size_t const metadata_size = megabyte;
+  std::unique_ptr<char[]> const metadata_ptr(new char[metadata_size]);
 
-  size_t const data_size = gigabyte;
-  char* const data_ptr = new char[data_size];
+  size_t const data_size = megabyte;
+  std::unique_ptr<char[]> const data_ptr(new char[data_size]);
 
-  Generator generator(metadata_ptr, metadata_size, data_ptr, data_size);
+  Generator generator(400, 200);
 
-  int generated_events = generator.generateEvents();
+  int generated_events = generator.generateEvents(metadata_ptr.get(),
+                                                  metadata_size, data_ptr.get(),
+                                                  data_size);
 
   std::cout << "Generated " << generated_events << " events." << std::endl;
 
@@ -32,27 +36,25 @@ int main() {
 
   while (generated_events != 0) {
     // Check MetaData
-    MetaData const& metadata = *metadata_cast(metadata_ptr + m_offset);
+    EventMetaData const& metadata = *eventmetadata_cast(
+        metadata_ptr.get() + m_offset);
     BOOST_TEST_EQ(metadata.id, current_event_id);
-    BOOST_TEST_EQ(metadata.length, sizeof(Data));
+    // metadata.length implicitly tested with header.length
     BOOST_TEST_EQ(metadata.offset, d_offset);
 
     // Check Data
-    Data const& data = *data_cast(data_ptr + d_offset);
-    BOOST_TEST_EQ(data.length, sizeof(Data));
-    BOOST_TEST_EQ(data.flags, 0);
-    BOOST_TEST_EQ(data.id, current_event_id);
+    EventHeader const& header = *eventheader_cast(data_ptr.get() + d_offset);
+    BOOST_TEST_EQ(header.length, metadata.length);
+    BOOST_TEST_EQ(header.flags, 0);
+    BOOST_TEST_EQ(header.id, current_event_id);
     // missing check on payload
 
     // Update offsets and increment counters
     m_offset += sizeof(metadata);
-    d_offset += sizeof(data);
-    current_event_id++;
-    generated_events--;
+    d_offset += header.length;
+    ++current_event_id;
+    --generated_events;
   }
-
-  delete[] metadata_ptr;
-  delete[] data_ptr;
 
   boost::report_errors();
 }
