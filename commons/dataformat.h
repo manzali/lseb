@@ -4,7 +4,7 @@
 #include <cstdint> // uint64_t
 #include <cstdlib> // size_t
 
-namespace dataformat {
+namespace lseb {
 
 struct EventMetaData {
   uint64_t id;

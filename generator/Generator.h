@@ -6,6 +6,8 @@
 #include <cstdint> // uint64_t
 #include <cstdlib> // size_t
 
+namespace lseb {
+
 class Generator {
  private:
   uint64_t m_current_event_id;
@@ -23,5 +25,7 @@ class Generator {
                      size_t data_size);  // returns number of generated events
 
 };
+
+}
 
 #endif

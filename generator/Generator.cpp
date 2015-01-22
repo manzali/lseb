@@ -7,7 +7,7 @@
 
 #include "commons/dataformat.h"
 
-using namespace dataformat;
+namespace lseb {
 
 bool checkMetaDataSize(size_t size, size_t offset) {
   return offset + sizeof(EventMetaData) <= size;
@@ -71,4 +71,6 @@ int Generator::generateEvents(char* metadata_ptr, size_t metadata_size,
   }
 
   return m_current_event_id - starting_event_id;
+}
+
 }

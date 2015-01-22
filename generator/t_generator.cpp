@@ -8,7 +8,7 @@
 #include "commons/dataformat.h"
 #include "generator/Generator.h"
 
-using namespace dataformat;
+using namespace lseb;
 
 static size_t const megabyte = 1048576;
 
