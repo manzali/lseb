@@ -18,20 +18,20 @@ struct EventHeader {
   uint64_t id;
 };
 
-inline EventMetaData* eventmetadata_cast(char* pointer) {
-  return static_cast<EventMetaData*>(static_cast<void*>(pointer));
+inline EventMetaData* EventMetaData_cast(void* pointer) {
+  return static_cast<EventMetaData*>(pointer);
 }
 
-inline EventMetaData const* eventmetadata_cast(char const* pointer) {
-  return static_cast<const EventMetaData*>(static_cast<const void*>(pointer));
+inline EventMetaData const* EventMetaData_cast(void const* pointer) {
+  return static_cast<const EventMetaData*>(pointer);
 }
 
-inline EventHeader* eventheader_cast(char* pointer) {
-  return static_cast<EventHeader*>(static_cast<void*>(pointer));
+inline EventHeader* EventHeader_cast(void* pointer) {
+  return static_cast<EventHeader*>(pointer);
 }
 
-inline EventHeader const* eventheader_cast(char const* pointer) {
-  return static_cast<const EventHeader*>(static_cast<const void*>(pointer));
+inline EventHeader const* EventHeader_cast(void const* pointer) {
+  return static_cast<const EventHeader*>(pointer);
 }
 
 }

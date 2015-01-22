@@ -36,14 +36,14 @@ int main() {
 
   while (generated_events != 0) {
     // Check MetaData
-    EventMetaData const& metadata = *eventmetadata_cast(
+    EventMetaData const& metadata = *EventMetaData_cast(
         metadata_ptr.get() + m_offset);
     BOOST_TEST_EQ(metadata.id, current_event_id);
     // metadata.length implicitly tested with header.length
     BOOST_TEST_EQ(metadata.offset, d_offset);
 
     // Check Data
-    EventHeader const& header = *eventheader_cast(data_ptr.get() + d_offset);
+    EventHeader const& header = *EventHeader_cast(data_ptr.get() + d_offset);
     BOOST_TEST_EQ(header.length, metadata.length);
     BOOST_TEST_EQ(header.flags, 0);
     BOOST_TEST_EQ(header.id, current_event_id);
