@@ -1,4 +1,4 @@
-#include "generator/Generator.h"
+#include "generator/generator.h"
 
 #include <chrono>
 

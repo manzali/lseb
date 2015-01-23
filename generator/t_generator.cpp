@@ -6,7 +6,7 @@
 #include <boost/detail/lightweight_test.hpp>
 
 #include "commons/dataformat.h"
-#include "generator/Generator.h"
+#include "generator/generator.h"
 
 using namespace lseb;
 

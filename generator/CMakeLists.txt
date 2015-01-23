@@ -7,5 +7,5 @@ include_directories(
 add_executable(
   t_generator
   t_generator.cpp
-  Generator.cpp
+  generator.cpp
 )
