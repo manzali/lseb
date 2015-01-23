@@ -8,21 +8,20 @@
 
 namespace lseb {
 
-bool checkMetaDataSize(size_t size, size_t offset) {
-  return offset + sizeof(EventMetaData) <= size;
+template<typename T, typename RandomAccessIterator>
+bool enoughSpaceFor(RandomAccessIterator first, RandomAccessIterator last,
+                    size_t payload_size = 0) {
+  return std::distance(first, last) >= sizeof(T) + payload_size;
 }
 
-bool checkDataSize(size_t size, size_t offset, size_t payload) {
-  return offset + sizeof(EventHeader) + payload <= size;
-}
-
-size_t fitToRange(size_t val, size_t min, size_t max) {
+template<typename T>
+T fitToRange(T val, T min, T max) {
   return std::max(min, std::min(val, max));
 }
 
-template<int N>
+template<size_t N>
 size_t roundUpPowerOf2(size_t val) {
-  assert(N > 0 && (N & (N - 1)) == 0 && "N must be a power of 2");
+  static_assert((N & (N - 1)) == 0, "N must be a power of 2");
   return (val + N - 1) & ~(N - 1);
 }
 
@@ -40,34 +39,32 @@ size_t Generator::generatePayloadSize() {
   return roundUpPowerOf2<8>(fitToRange(val, m_min, m_max));
 }
 
-int Generator::generateEvents(char* metadata_ptr, size_t metadata_size,
-                              char* data_ptr, size_t data_size) {
-
-  size_t m_offset = 0;
-  size_t d_offset = 0;
+int Generator::generateEvents(char* begin_metadata, char* end_metadata,
+                              char* begin_data, char* end_data) {
 
   uint64_t const starting_event_id = m_current_event_id;
 
   size_t payload_size = generatePayloadSize();
 
-  while (checkMetaDataSize(metadata_size, m_offset)
-      && checkDataSize(data_size, d_offset, payload_size)) {
+  char* current_metadata = begin_metadata;  // I could use begin_metadata instead
+  char* current_data = begin_data;  // needed to compute offset
+
+  while (enoughSpaceFor<EventMetaData>(current_metadata, end_metadata)
+      && enoughSpaceFor<EventHeader>(current_data, end_data, payload_size)) {
 
     // Set EventMetaData
-    EventMetaData& metadata = *EventMetaData_cast(metadata_ptr + m_offset);
-    metadata.id = m_current_event_id;
-    metadata.length = sizeof(EventHeader) + payload_size;
-    metadata.offset = d_offset;
+    EventMetaData& metadata =
+        *(new (EventMetaData_cast(current_metadata)) EventMetaData(
+            m_current_event_id, sizeof(EventHeader) + payload_size,
+            std::distance(begin_data, current_data)));
 
     // Set EventHeader
-    EventHeader& header = *EventHeader_cast(data_ptr + d_offset);
-    header.length = metadata.length;
-    header.flags = 0;
-    header.id = m_current_event_id;
+    EventHeader& header = *(new (EventHeader_cast(current_data)) EventHeader(
+        metadata.length, m_current_event_id));
 
     // Update offsets and increment counters
-    m_offset += sizeof(metadata);
-    d_offset += header.length;
+    current_metadata += sizeof(EventMetaData);
+    current_data += header.length;
     ++m_current_event_id;
 
     // Compute new payload size

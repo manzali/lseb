@@ -21,9 +21,9 @@ int main() {
 
   Generator generator(400, 200);
 
-  int generated_events = generator.generateEvents(metadata_ptr.get(),
-                                                  metadata_size, data_ptr.get(),
-                                                  data_size);
+  int generated_events = generator.generateEvents(
+      metadata_ptr.get(), metadata_ptr.get() + metadata_size, data_ptr.get(),
+      data_ptr.get() + data_size);
 
   std::cout << "Generated " << generated_events << " events." << std::endl;
 
