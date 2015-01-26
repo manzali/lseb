@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include "commons/dataformat.h"
+#include "commons/pointer_cast.h"
 
 namespace lseb {
 
@@ -39,10 +40,8 @@ size_t Generator::generatePayloadSize() {
   return roundUpPowerOf2<8>(fitToRange(val, m_min, m_max));
 }
 
-int Generator::generateEvents(char* begin_metadata, char* end_metadata,
+std::pair<char*, char*> Generator::generateEvents(char* begin_metadata, char* end_metadata,
                               char* begin_data, char* end_data) {
-
-  uint64_t const starting_event_id = m_current_event_id;
 
   size_t payload_size = generatePayloadSize();
 
@@ -54,12 +53,12 @@ int Generator::generateEvents(char* begin_metadata, char* end_metadata,
 
     // Set EventMetaData
     EventMetaData& metadata =
-        *(new (EventMetaData_cast(current_metadata)) EventMetaData(
+        *(new (pointer_cast<EventMetaData>(current_metadata)) EventMetaData(
             m_current_event_id, sizeof(EventHeader) + payload_size,
             std::distance(begin_data, current_data)));
 
     // Set EventHeader
-    EventHeader& header = *(new (EventHeader_cast(current_data)) EventHeader(
+    EventHeader& header = *(new (pointer_cast<EventHeader>(current_data)) EventHeader(
         metadata.length, m_current_event_id));
 
     // Update offsets and increment counters
@@ -71,7 +70,7 @@ int Generator::generateEvents(char* begin_metadata, char* end_metadata,
     payload_size = generatePayloadSize();
   }
 
-  return m_current_event_id - starting_event_id;
+  return std::make_pair(current_metadata, current_data);
 }
 
 }

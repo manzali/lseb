@@ -4,8 +4,17 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
+add_library(
+  generator
+  generator.cpp
+)
+
 add_executable(
   t_generator
   t_generator.cpp
-  generator.cpp
+)
+
+target_link_libraries(
+  t_generator
+  generator
 )

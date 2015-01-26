@@ -3,6 +3,8 @@
 
 #include <cstdint> // uint64_t
 
+#include "commons/pointer_cast.h"
+
 namespace lseb {
 
 struct EventMetaData {
@@ -26,22 +28,6 @@ struct EventHeader {
         id(id) {
   }
 };
-
-inline EventMetaData* EventMetaData_cast(void* pointer) {
-  return static_cast<EventMetaData*>(pointer);
-}
-
-inline EventMetaData const* EventMetaData_cast(void const* pointer) {
-  return static_cast<const EventMetaData*>(pointer);
-}
-
-inline EventHeader* EventHeader_cast(void* pointer) {
-  return static_cast<EventHeader*>(pointer);
-}
-
-inline EventHeader const* EventHeader_cast(void const* pointer) {
-  return static_cast<const EventHeader*>(pointer);
-}
 
 }
 
