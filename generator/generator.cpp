@@ -40,13 +40,15 @@ size_t Generator::generatePayloadSize() {
   return roundUpPowerOf2<8>(fitToRange(val, m_min, m_max));
 }
 
-std::pair<char*, char*> Generator::generateEvents(char* begin_metadata, char* end_metadata,
+int64_t Generator::generateEvents(char* begin_metadata, char* end_metadata,
                               char* begin_data, char* end_data) {
 
   size_t payload_size = generatePayloadSize();
 
   char* current_metadata = begin_metadata;  // I could use begin_metadata instead
   char* current_data = begin_data;  // needed to compute offset
+
+  uint64_t const starting_event_id = m_current_event_id;
 
   while (enoughSpaceFor<EventMetaData>(current_metadata, end_metadata)
       && enoughSpaceFor<EventHeader>(current_data, end_data, payload_size)) {
@@ -70,7 +72,7 @@ std::pair<char*, char*> Generator::generateEvents(char* begin_metadata, char* en
     payload_size = generatePayloadSize();
   }
 
-  return std::make_pair(current_metadata, current_data);
+  return m_current_event_id - starting_event_id;
 }
 
 }

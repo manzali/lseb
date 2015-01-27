@@ -1,8 +1,6 @@
 #ifndef GENERATOR_GENERATOR_H
 #define GENERATOR_GENERATOR_H
 
-#include <utility>
-
 #include <random>
 
 #include <cstdint> // uint64_t
@@ -23,9 +21,8 @@ class Generator {
 
  public:
   Generator(size_t mean, size_t stddev, size_t max = 0, size_t min = 0);
-  std::pair<char*, char*> generateEvents(char* begin_metadata,
-                                         char* end_metadata, char* begin_data,
-                                         char* end_data);  // returns number of generated events
+  int64_t generateEvents(char* begin_metadata, char* end_metadata, char* begin_data,
+                     char* end_data);  // returns number of generated events
 };
 
 }
