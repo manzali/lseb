@@ -19,13 +19,13 @@ struct EventMetaData {
 };
 
 struct EventHeader {
+  uint64_t id;
   uint64_t length;
   uint64_t flags;
-  uint64_t id;
-  EventHeader(uint64_t length, uint64_t id)
-      : length(length),
-        flags(0),
-        id(id) {
+  EventHeader(uint64_t id, uint64_t length)
+      : id(id),
+        length(length),
+        flags(0) {
   }
 };
 

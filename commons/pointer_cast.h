@@ -1,6 +1,8 @@
 #ifndef COMMONS_POINTER_CAST_H
 #define COMMONS_POINTER_CAST_H
 
+#include <cassert>
+
 #include <type_traits>
 
 namespace lseb {

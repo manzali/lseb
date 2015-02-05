@@ -1,10 +1,7 @@
 #include "generator/generator.h"
 
-#include <chrono>
-
 #include <cassert>
 
-#include "commons/dataformat.h"
 #include "commons/pointer_cast.h"
 
 namespace lseb {
@@ -15,62 +12,49 @@ bool enoughSpaceFor(RandomAccessIterator first, RandomAccessIterator last,
   return std::distance(first, last) >= sizeof(T) + payload_size;
 }
 
-template<typename T>
-T fitToRange(T val, T min, T max) {
-  return std::max(min, std::min(val, max));
+Generator::Generator(char* begin_data, SizeGenerator const& payload_size_generator)
+    : m_begin_data(begin_data),
+      m_current_event_id(0),
+      m_payload_size_generator(payload_size_generator) {
 }
 
-template<size_t N>
-size_t roundUpPowerOf2(size_t val) {
-  static_assert((N & (N - 1)) == 0, "N must be a power of 2");
-  return (val + N - 1) & ~(N - 1);
-}
+uint64_t Generator::generateEvents(EventMetaData* current_metadata,
+                                   EventMetaData* end_metadata,
+                                   char* current_data, char* end_data) {
 
-Generator::Generator(size_t mean, size_t stddev, size_t max, size_t min)
-    : m_current_event_id(0),
-      m_generator(std::chrono::system_clock::now().time_since_epoch().count()),
-      m_distribution(mean, stddev),
-      m_min(min),
-      m_max(max ? max : mean + 5 * stddev) {
-  assert(m_min <= mean && mean <= m_max);
-}
-
-size_t Generator::generatePayloadSize() {
-  size_t const val = m_distribution(m_generator);
-  return roundUpPowerOf2<8>(fitToRange(val, m_min, m_max));
-}
-
-int64_t Generator::generateEvents(char* begin_metadata, char* end_metadata,
-                              char* begin_data, char* end_data) {
-
-  size_t payload_size = generatePayloadSize();
-
-  char* current_metadata = begin_metadata;  // I could use begin_metadata instead
-  char* current_data = begin_data;  // needed to compute offset
+  size_t payload_size = m_payload_size_generator.generate();
 
   uint64_t const starting_event_id = m_current_event_id;
 
-  while (enoughSpaceFor<EventMetaData>(current_metadata, end_metadata)
+  while (current_metadata != end_metadata
       && enoughSpaceFor<EventHeader>(current_data, end_data, payload_size)) {
 
+    assert(
+        std::distance(m_begin_data, current_data) >= 0
+            && "Checking data addresses");
+
     // Set EventMetaData
-    EventMetaData& metadata =
-        *(new (pointer_cast<EventMetaData>(current_metadata)) EventMetaData(
-            m_current_event_id, sizeof(EventHeader) + payload_size,
-            std::distance(begin_data, current_data)));
+    EventMetaData& metadata = *(new (current_metadata) EventMetaData(
+        m_current_event_id, sizeof(EventHeader) + payload_size,
+        std::distance(m_begin_data, current_data)));
 
     // Set EventHeader
-    EventHeader& header = *(new (pointer_cast<EventHeader>(current_data)) EventHeader(
-        metadata.length, m_current_event_id));
+    EventHeader& header =
+        *(new (pointer_cast<EventHeader>(current_data)) EventHeader(
+            m_current_event_id, metadata.length));
 
     // Update offsets and increment counters
-    current_metadata += sizeof(EventMetaData);
+    ++current_metadata;
     current_data += header.length;
     ++m_current_event_id;
 
     // Compute new payload size
-    payload_size = generatePayloadSize();
+    payload_size = m_payload_size_generator.generate();
   }
+
+  assert(
+      m_current_event_id >= starting_event_id
+          && "Checking overflow of event ID");
 
   return m_current_event_id - starting_event_id;
 }

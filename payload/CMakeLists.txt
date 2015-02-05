@@ -5,21 +5,16 @@ include_directories(
 )
 
 add_library(
-  generator
-  generator.cpp
-)
-
-target_link_libraries(
-  generator
   size_generator
+  size_generator.cpp
 )
 
 add_executable(
-  t_generator
-  t_generator.cpp
+  t_size_generator
+  t_size_generator.cpp
 )
 
 target_link_libraries(
-  t_generator
-  generator
+  t_size_generator
+  size_generator
 )

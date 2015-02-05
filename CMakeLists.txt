@@ -7,7 +7,7 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 if (CMAKE_COMPILER_IS_GNUCXX)
     message(STATUS "Using GNU c++ compiler")
     # setting flags for GNU compiler
-    set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+    set(CMAKE_CXX_FLAGS "-Wall -Wextra -pthread")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2")
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 else (CMAKE_COMPILER_IS_GNUCXX)
@@ -28,5 +28,5 @@ endif()
 # searching for boost 1.55 or newer
 find_package(Boost 1.55 REQUIRED COMPONENTS system)
 
+add_subdirectory(payload)
 add_subdirectory(generator)
-
