@@ -24,13 +24,9 @@ class Generator {
   size_t m_current_event_id;
 
  public:
-  Generator(
-      SizeGenerator const& payload_size_generator,
-      EventMetaData* const begin_metadata,
-      EventMetaData* const end_metadata,
-      char* const begin_data,
-      char* const end_data
-  );
+  Generator(SizeGenerator const& payload_size_generator,
+            EventMetaData* begin_metadata, EventMetaData* end_metadata,
+            char* begin_data, char* end_data);
   size_t releaseEvents(size_t n_events);
   size_t generateEvents(size_t n_events);
 };

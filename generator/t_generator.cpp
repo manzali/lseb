@@ -38,10 +38,11 @@ int main() {
 
   uint64_t partial_generated_events = 0;
   uint64_t generated_events = 0;
-  do{
-    partial_generated_events = generator.generateEvents(mean_buffered_events / 10);
+  do {
+    partial_generated_events = generator.generateEvents(
+        mean_buffered_events / 10);
     generated_events += partial_generated_events;
-  }while(partial_generated_events);
+  } while (partial_generated_events);
 
   std::cout << "Generated " << generated_events << " events." << std::endl;
 
@@ -69,7 +70,7 @@ int main() {
 
     // Update pointers and increment counters
     ++current_metadata;
-    if(current_metadata == end_metadata){
+    if (current_metadata == end_metadata) {
       current_metadata = begin_metadata;
     }
     current_data += header.length;
@@ -79,10 +80,10 @@ int main() {
   generator.releaseEvents(mean_buffered_events / 2);
 
   generated_events = 0;
-  do{
+  do {
     partial_generated_events = generator.generateEvents(100);
     generated_events += partial_generated_events;
-  }while(partial_generated_events);
+  } while (partial_generated_events);
 
   std::cout << "Generated " << generated_events << " events." << std::endl;
 
@@ -104,7 +105,7 @@ int main() {
 
     // Update pointers and increment counters
     ++current_metadata;
-    if(current_metadata == end_metadata){
+    if (current_metadata == end_metadata) {
       current_metadata = begin_metadata;
     }
     current_data += header.length;
