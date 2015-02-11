@@ -5,16 +5,16 @@ include_directories(
 )
 
 add_library(
-  size_generator
-  size_generator.cpp
+  length_generator
+  length_generator.cpp
 )
 
 add_executable(
-  t_size_generator
-  t_size_generator.cpp
+  t_length_generator
+  t_length_generator.cpp
 )
 
 target_link_libraries(
-  t_size_generator
-  size_generator
+  t_length_generator
+  length_generator
 )

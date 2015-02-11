@@ -1,5 +1,5 @@
-#ifndef PAYLOAD_SIZE_GENERATOR_H
-#define PAYLOAD_SIZE_GENERATOR_H
+#ifndef PAYLOAD_LENGTH_GENERATOR_H
+#define PAYLOAD_LENGTH_GENERATOR_H
 
 #include <random>
 
@@ -7,7 +7,7 @@
 
 namespace lseb {
 
-class SizeGenerator {
+class LengthGenerator {
 
  private:
   std::default_random_engine m_generator;
@@ -16,7 +16,7 @@ class SizeGenerator {
   size_t m_min;
 
  public:
-  SizeGenerator(size_t mean, size_t stddev = 0, size_t max = 0, size_t min = 0);
+  LengthGenerator(size_t mean, size_t stddev = 0, size_t max = 0, size_t min = 0);
   size_t generate();
 };
 

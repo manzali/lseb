@@ -1,4 +1,4 @@
-#include "payload/size_generator.h"
+#include "payload/length_generator.h"
 
 #include <cassert>
 
@@ -9,7 +9,7 @@ T fitToRange(T val, T min, T max) {
   return std::max(min, std::min(val, max));
 }
 
-SizeGenerator::SizeGenerator(size_t mean, size_t stddev, size_t max, size_t min)
+LengthGenerator::LengthGenerator(size_t mean, size_t stddev, size_t max, size_t min)
     : m_generator(std::random_device { }()),
       m_distribution(mean, stddev),
       m_max(max ? max : mean + 5 * stddev),
@@ -17,7 +17,7 @@ SizeGenerator::SizeGenerator(size_t mean, size_t stddev, size_t max, size_t min)
   assert(m_min <= mean && mean <= m_max);
 }
 
-size_t SizeGenerator::generate() {
+size_t LengthGenerator::generate() {
   return fitToRange(
       static_cast<size_t>(m_distribution(m_generator)), m_min, m_max);
 }

@@ -6,7 +6,7 @@
 
 #include "commons/dataformat.h"
 #include "commons/pointer_cast.h"
-#include "payload/size_generator.h"
+#include "payload/length_generator.h"
 #include "generator/generator.h"
 
 using namespace lseb;
@@ -32,8 +32,8 @@ int main() {
   char* const begin_data = data_buffer.get();
   char* const end_data = data_buffer.get() + data_size;
 
-  SizeGenerator payload_size_generator(mean, stddev);
-  Generator generator(payload_size_generator, begin_metadata, end_metadata,
+  LengthGenerator payload_length_generator(mean, stddev);
+  Generator generator(payload_length_generator, begin_metadata, end_metadata,
                       begin_data, end_data);
 
   uint64_t partial_generated_events = 0;

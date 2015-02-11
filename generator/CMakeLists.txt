@@ -11,7 +11,7 @@ add_library(
 
 target_link_libraries(
   generator
-  size_generator
+  length_generator
 )
 
 add_executable(

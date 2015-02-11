@@ -16,10 +16,10 @@ size_t roundUpPowerOf2(size_t val) {
   return (val + N - 1) & ~(N - 1);
 }
 
-Generator::Generator(SizeGenerator const& payload_size_generator,
+Generator::Generator(LengthGenerator const& payload_length_generator,
                      EventMetaData* begin_metadata, EventMetaData* end_metadata,
                      char* begin_data, char* end_data)
-    : m_payload_size_generator(payload_size_generator),
+    : m_payload_length_generator(payload_length_generator),
       m_begin_metadata(begin_metadata),
       m_ring_metadata(std::distance(begin_metadata, end_metadata)),
       m_begin_data(begin_data),
@@ -60,7 +60,7 @@ size_t Generator::generateEvents(size_t n_events) {
           n_events : m_ring_metadata.capacity() - m_ring_metadata.size();
 
   size_t event_size = roundUpPowerOf2<data_padding>(
-      sizeof(EventHeader) + m_payload_size_generator.generate());
+      sizeof(EventHeader) + m_payload_length_generator.generate());
 
   while (i != e && m_avail_data >= event_size) {
 
@@ -99,7 +99,7 @@ size_t Generator::generateEvents(size_t n_events) {
 
     // Next event size
     event_size = roundUpPowerOf2<data_padding>(
-        sizeof(header) + m_payload_size_generator.generate());
+        sizeof(header) + m_payload_length_generator.generate());
 
   }
   return i;
