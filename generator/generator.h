@@ -1,10 +1,11 @@
 #ifndef GENERATOR_GENERATOR_H
 #define GENERATOR_GENERATOR_H
 
-#include <random>
+#include <utility>
 
-#include <cstdint> // uint64_t
 #include <cstdlib> // size_t
+
+#include <boost/circular_buffer.hpp>
 
 #include "payload/size_generator.h"
 #include "commons/dataformat.h"
@@ -14,14 +15,24 @@ namespace lseb {
 class Generator {
 
  private:
-  char* const m_begin_data;
-  uint64_t m_current_event_id;
   SizeGenerator m_payload_size_generator;
+  EventMetaData* const m_begin_metadata;
+  boost::circular_buffer<EventMetaData*> m_ring_metadata;
+  char* const m_begin_data;
+  char* const m_end_data;
+  size_t m_avail_data;
+  size_t m_current_event_id;
 
  public:
-  Generator(char* begin_data, SizeGenerator const& payload_size_generator);
-  uint64_t generateEvents(EventMetaData* current_metadata, EventMetaData* end_metadata,
-                         char* current_data, char* end_data);  // returns number of generated events
+  Generator(
+      SizeGenerator const& payload_size_generator,
+      EventMetaData* const begin_metadata,
+      EventMetaData* const end_metadata,
+      char* const begin_data,
+      char* const end_data
+  );
+  size_t releaseEvents(size_t n_events);
+  size_t generateEvents(size_t n_events);
 };
 
 }
