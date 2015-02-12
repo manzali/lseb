@@ -1,7 +1,6 @@
 
 include_directories(
   ${LSEB_SOURCE_DIR}
-  ${Boost_INCLUDE_DIRS}
 )
 
 add_library(

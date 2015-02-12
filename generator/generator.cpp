@@ -1,14 +1,13 @@
 #include "generator/generator.h"
 
+#include <cmath>
 #include <cassert>
 
 #include "commons/pointer_cast.h"
 
 namespace lseb {
 
-namespace {
-size_t const data_padding = 32;
-}
+static size_t const data_padding = 32;
 
 template<size_t N>
 size_t roundUpPowerOf2(size_t val) {
@@ -32,16 +31,15 @@ Generator::Generator(LengthGenerator const& payload_length_generator,
   assert(std::distance(m_begin_data, m_end_data) % data_padding == 0);
 }
 
-size_t Generator::releaseEvents(size_t n_events) {
-  size_t i = 0;
-  size_t const e =
-      (n_events <= m_ring_metadata.size()) ? n_events : m_ring_metadata.size();
-  while (i != e) {
-    m_avail_data += m_ring_metadata[0]->length;
+void Generator::releaseEvents(size_t n_events) {
+  assert(
+      n_events <= m_ring_metadata.size()
+          && "Wrong number of events to release");
+  while (n_events != 0) {
+    m_avail_data += m_ring_metadata.front()->length;
     m_ring_metadata.pop_front();
-    ++i;
+    --n_events;
   }
-  return i;
 }
 
 size_t Generator::generateEvents(size_t n_events) {
@@ -49,8 +47,12 @@ size_t Generator::generateEvents(size_t n_events) {
   // Set current data pointer (next to be written)
   char* current_data = m_begin_data;
   if (!m_ring_metadata.empty()) {
-    EventMetaData* last_metadata = m_ring_metadata.back();
-    current_data += (last_metadata->offset + last_metadata->length);
+    EventMetaData const& last_metadata = *m_ring_metadata.back();
+    size_t const data_capacity = std::distance(m_begin_data, m_end_data);
+    assert(last_metadata.offset < data_capacity);
+    size_t const offset = last_metadata.length + last_metadata.offset;
+    // Handle wrap
+    current_data += (offset >= data_capacity) ? offset - data_capacity : offset;
   }
 
   // Start creating events
@@ -68,15 +70,12 @@ size_t Generator::generateEvents(size_t n_events) {
     EventMetaData* current_metadata = m_begin_metadata
         + (m_current_event_id % m_ring_metadata.capacity());
 
+    ssize_t offset = std::distance(m_begin_data, current_data);
+    assert(offset >= 0);
+
     // Set EventMetaData
     EventMetaData& metadata = *(new (current_metadata) EventMetaData(
-        m_current_event_id, event_size,
-        std::distance(m_begin_data, current_data)));
-
-    // Check current_data pointer wrap
-    if (current_data == m_end_data) {
-      current_data = m_begin_data;
-    }
+        m_current_event_id, event_size, offset));
 
     // Set EventHeader
     EventHeader& header =
@@ -87,10 +86,11 @@ size_t Generator::generateEvents(size_t n_events) {
     m_ring_metadata.push_back(current_metadata);
 
     // Update current_data pointer
-    size_t const avail_size = std::distance(current_data, m_end_data);
+    size_t const dist_to_end_data = std::distance(current_data, m_end_data);
     current_data =
-        (event_size <= avail_size) ?
-            current_data + event_size : m_begin_data + event_size - avail_size;
+        (event_size < dist_to_end_data) ?
+            current_data + event_size :
+            m_begin_data + event_size - dist_to_end_data;
 
     // Update counters
     ++i;
@@ -102,6 +102,9 @@ size_t Generator::generateEvents(size_t n_events) {
         sizeof(header) + m_payload_length_generator.generate());
 
   }
+
+  assert(n_events >= i && "Generated too much events");
+
   return i;
 }
 

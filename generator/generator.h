@@ -1,8 +1,6 @@
 #ifndef GENERATOR_GENERATOR_H
 #define GENERATOR_GENERATOR_H
 
-#include <utility>
-
 #include <cstdlib> // size_t
 
 #include <boost/circular_buffer.hpp>
@@ -27,7 +25,7 @@ class Generator {
   Generator(LengthGenerator const& payload_length_generator,
             EventMetaData* begin_metadata, EventMetaData* end_metadata,
             char* begin_data, char* end_data);
-  size_t releaseEvents(size_t n_events);
+  void releaseEvents(size_t n_events);
   size_t generateEvents(size_t n_events);
 };
 

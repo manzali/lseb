@@ -1,6 +1,8 @@
 #ifndef COMMONS_DATAFORMAT_H
 #define COMMONS_DATAFORMAT_H
 
+#include <utility>
+
 #include <cstdint> // uint64_t
 
 #include "commons/pointer_cast.h"
@@ -17,6 +19,8 @@ struct EventMetaData {
         offset(offset) {
   }
 };
+
+typedef std::pair<EventMetaData*, EventMetaData*> EventMetaDataPair;
 
 struct EventHeader {
   uint64_t id;
