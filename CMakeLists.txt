@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-project(LSEB C CXX)
+project(LSEB CXX)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
