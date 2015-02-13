@@ -2,7 +2,7 @@
 #include <memory>
 #include <vector>
 
-#include <boost/detail/lightweight_test.hpp>
+#include "commons/boost_lightweight_test.hpp"
 
 #include "commons/dataformat.h"
 #include "commons/pointer_cast.h"

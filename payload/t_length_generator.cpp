@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include <boost/detail/lightweight_test.hpp>
+#include "commons/boost_lightweight_test.hpp"
 
 #include "payload/length_generator.h"
 
