@@ -45,8 +45,8 @@ int main() {
   Generator generator(payload_size_generator, begin_metadata, end_metadata,
                       begin_data, end_data);
 
-  EventsQueuePtr ready_events_queue(new EventsQueue);
-  EventsQueuePtr sent_events_queue(new EventsQueue);
+  EventsQueue ready_events_queue;
+  EventsQueue sent_events_queue;
 
   Controller controller(generator, begin_metadata, end_metadata,
                         ready_events_queue, sent_events_queue);
@@ -62,7 +62,7 @@ int main() {
   while (1) {
 
     EventMetaDataPair metadata_pair;
-    ready_events_queue->pop(metadata_pair);
+    ready_events_queue.pop(metadata_pair);
 
     size_t generated_events = 0;
     ssize_t const diff = std::distance(metadata_pair.first,
@@ -79,7 +79,7 @@ int main() {
               << metadata_pair.second << "] -> " << generated_events
               << " events\n";
 */
-    sent_events_queue->push(metadata_pair);
+    sent_events_queue.push(metadata_pair);
 /*
     std::cout << "Sent\t[" << metadata_pair.first << ", "
               << metadata_pair.second << "] -> " << generated_events

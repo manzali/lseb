@@ -12,8 +12,8 @@ namespace lseb {
 Controller::Controller(Generator const& generator,
                        EventMetaData* begin_metadata,
                        EventMetaData* end_metadata,
-                       EventsQueuePtr ready_events_queue,
-                       EventsQueuePtr sent_events_queue)
+                       EventsQueue& ready_events_queue,
+                       EventsQueue& sent_events_queue)
     : m_generator(generator),
       m_begin_metadata(begin_metadata),
       m_end_metadata(end_metadata),
@@ -55,13 +55,13 @@ void Controller::operator()(size_t frequency) {
     metadata_pair.second = current_metadata;
 
     if (generated_events) {
-      m_ready_events_queue->push(metadata_pair);
+      m_ready_events_queue.push(metadata_pair);
       total_generated_events += generated_events;
       // Reset metadata_pair
       metadata_pair.second = metadata_pair.first;
-      m_sent_events_queue->pop_nowait(metadata_pair);
+      m_sent_events_queue.pop_nowait(metadata_pair);
     } else {
-      m_sent_events_queue->pop(metadata_pair);
+      m_sent_events_queue.pop(metadata_pair);
     }
 
     size_t events_to_release = 0;
