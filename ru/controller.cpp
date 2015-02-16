@@ -1,5 +1,6 @@
 #include "ru/controller.h"
 
+#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -29,8 +30,9 @@ void Controller::operator()(size_t frequency) {
   auto const start_time = std::chrono::high_resolution_clock::now();
 
   size_t total_generated_events = 0;
-
   EventMetaData* current_metadata = m_begin_metadata;
+  static std::ptrdiff_t const metadata_capacity = std::distance(
+      m_begin_metadata, m_end_metadata);
 
   while (1) {
     std::this_thread::sleep_for(ns_to_wait);
@@ -44,39 +46,22 @@ void Controller::operator()(size_t frequency) {
     size_t const generated_events = m_generator.generateEvents(
         events_to_generate);
 
-    EventMetaDataPair metadata_pair;
-    metadata_pair.first = current_metadata;
-    size_t const dist_to_end_metadata = std::distance(current_metadata,
-                                                      m_end_metadata);
-    current_metadata =
-        (generated_events < dist_to_end_metadata) ?
-            current_metadata + generated_events :
-            m_begin_metadata + generated_events - dist_to_end_metadata;
-    metadata_pair.second = current_metadata;
-
+    // Send generated events
     if (generated_events) {
-      m_ready_events_queue.push(metadata_pair);
+      EventMetaData* const previous_metadata = current_metadata;
+      size_t const metadata_offset = (current_metadata - m_begin_metadata
+          + generated_events) % metadata_capacity;
+      current_metadata = m_begin_metadata + metadata_offset;
+      m_ready_events_queue.push(
+          EventMetaDataRange(previous_metadata, current_metadata));
       total_generated_events += generated_events;
-      // Reset metadata_pair
-      metadata_pair.second = metadata_pair.first;
-      m_sent_events_queue.pop_nowait(metadata_pair);
-    } else {
-      m_sent_events_queue.pop(metadata_pair);
     }
 
-    size_t events_to_release = 0;
-
-    ssize_t const diff = std::distance(metadata_pair.first,
-                                       metadata_pair.second);
-    if (diff >= 0) {
-      events_to_release = diff;
-    } else {
-      events_to_release = std::distance(metadata_pair.first, m_end_metadata);
-      events_to_release += std::distance(m_begin_metadata, metadata_pair.second);
+    // Receive events to release
+    if (generated_events || !m_sent_events_queue.empty()) {
+      EventMetaDataRange metadata_range(m_sent_events_queue.pop());
+      m_generator.releaseEvents(metadata_range.distance(metadata_capacity));
     }
-
-    m_generator.releaseEvents(events_to_release);
-
   }
 
 }

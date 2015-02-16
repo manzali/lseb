@@ -43,7 +43,6 @@ void Generator::releaseEvents(size_t n_events) {
 }
 
 size_t Generator::generateEvents(size_t n_events) {
-
   // Set current data pointer (next to be written)
   char* current_data = m_begin_data;
   if (!m_ring_metadata.empty()) {

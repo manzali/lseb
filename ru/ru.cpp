@@ -20,11 +20,13 @@ int main() {
   size_t const stddev = 200;
   size_t const data_size = 32 * 1024 * 1024 * 16;
 
-  size_t const mean_buffered_events = data_size / (sizeof(EventHeader) + mean);
-  size_t const metadata_size = mean_buffered_events * sizeof(EventMetaData);
+  size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
+  size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
 
-  std::cout << "Metadata buffer can contain " << mean_buffered_events
+  std::cout << "Metadata buffer can contain " << max_buffered_events
             << " events.\n";
+
+  std::cout << "Asked frequency:\t" << frequency << " Hz\n";
 
   // Allocate memory
 
@@ -50,49 +52,27 @@ int main() {
 
   Controller controller(generator, begin_metadata, end_metadata,
                         ready_events_queue, sent_events_queue);
-
   std::thread controller_th(controller, frequency);
 
   size_t tot_generated_events = 0;
-
   auto start_time = std::chrono::high_resolution_clock::now();
-
-  std::cout << "Asked frequency of " << frequency << " Hz\n";
 
   while (1) {
 
-    EventMetaDataPair metadata_pair;
-    ready_events_queue.pop(metadata_pair);
+    EventMetaDataRange metadata_range = ready_events_queue.pop();
+    tot_generated_events += metadata_range.distance(max_buffered_events);
 
-    size_t generated_events = 0;
-    ssize_t const diff = std::distance(metadata_pair.first,
-                                       metadata_pair.second);
-    if (diff >= 0) {
-      generated_events = diff;
-    } else {
-      generated_events = std::distance(metadata_pair.first, end_metadata);
-      generated_events += std::distance(begin_metadata, metadata_pair.second);
-    }
-    tot_generated_events += generated_events;
-/*
-    std::cout << "Ready\t[" << metadata_pair.first << ", "
-              << metadata_pair.second << "] -> " << generated_events
-              << " events\n";
-*/
-    sent_events_queue.push(metadata_pair);
-/*
-    std::cout << "Sent\t[" << metadata_pair.first << ", "
-              << metadata_pair.second << "] -> " << generated_events
-              << " events\n";
-*/
+    // Releasing the same events generated
+    sent_events_queue.push(metadata_range);
+
     auto const end_time = std::chrono::high_resolution_clock::now();
     auto const diff_us = std::chrono::duration_cast<std::chrono::nanoseconds>(
         end_time - start_time);
 
     if (diff_us.count() >= 1000000000) {
       double const seconds = diff_us.count() / 1000000000.;
-      std::cout << "Real frequency is of " << tot_generated_events / seconds
-                << " Hz\n";
+      std::cout << std::fixed << "Real frequency is:\t"
+                << tot_generated_events / seconds << " Hz\n";
       tot_generated_events = 0;
       start_time = std::chrono::high_resolution_clock::now();
     }

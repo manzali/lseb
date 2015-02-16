@@ -15,32 +15,26 @@ class SharedQueue {
   std::condition_variable cond_;
 
  public:
-
-  bool pop_nowait(T& item) {
-    std::unique_lock < std::mutex > mlock(mutex_);
-    if (!queue_.empty()) {
-      item = queue_.front();
-      queue_.pop();
-      return true;
-    }
-    return false;
-  }
-
-  void pop(T& item) {
-    std::unique_lock < std::mutex > mlock(mutex_);
+  T pop() {
+    std::unique_lock<std::mutex> mlock(mutex_);
     while (queue_.empty()) {
       cond_.wait(mlock);
     }
-    item = queue_.front();
+    T item(queue_.front());
     queue_.pop();
+    return item;
   }
 
   void push(const T& item) {
-    std::unique_lock < std::mutex > mlock(mutex_);
+    std::unique_lock<std::mutex> mlock(mutex_);
     queue_.push(item);
-    mlock.unlock();
     cond_.notify_one();
   }
+
+  bool empty() {
+    return queue_.empty();
+  }
+
   SharedQueue() = default;
   SharedQueue(const SharedQueue&) = delete;            // disable copying
   SharedQueue& operator=(const SharedQueue&) = delete;  // disable assignment

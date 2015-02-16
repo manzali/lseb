@@ -10,7 +10,7 @@
 
 namespace lseb {
 
-typedef SharedQueue<EventMetaDataPair> EventsQueue;
+typedef SharedQueue<EventMetaDataRange> EventsQueue;
 
 class Controller {
 
