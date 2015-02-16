@@ -52,10 +52,17 @@ class EventMetaDataRange {
   EventMetaData* end() const {
     return m_end;
   }
-  size_t distance(size_t capacity) {
-    return (capacity + std::distance(m_begin, m_end)) % capacity;
-  }
 };
+
+template<typename T>
+size_t circularDistance(T* begin, T* end, size_t capacity) {
+  return (capacity + std::distance(begin, end)) % capacity;
+}
+
+template<typename T>
+T* circularForward(T* current, T* begin, size_t capacity, size_t forward) {
+  return begin + (current - begin + forward) % capacity;
+}
 
 }
 

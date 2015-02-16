@@ -60,7 +60,9 @@ int main() {
   while (1) {
 
     EventMetaDataRange metadata_range = ready_events_queue.pop();
-    tot_generated_events += metadata_range.distance(max_buffered_events);
+    tot_generated_events += circularDistance(metadata_range.begin(),
+                                             metadata_range.end(),
+                                             max_buffered_events);
 
     // Releasing the same events generated
     sent_events_queue.push(metadata_range);

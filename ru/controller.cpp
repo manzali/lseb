@@ -49,9 +49,8 @@ void Controller::operator()(size_t frequency) {
     // Send generated events
     if (generated_events) {
       EventMetaData* const previous_metadata = current_metadata;
-      size_t const metadata_offset = (current_metadata - m_begin_metadata
-          + generated_events) % metadata_capacity;
-      current_metadata = m_begin_metadata + metadata_offset;
+      current_metadata = circularForward(current_metadata, m_begin_metadata,
+                                         metadata_capacity, generated_events);
       m_ready_events_queue.push(
           EventMetaDataRange(previous_metadata, current_metadata));
       total_generated_events += generated_events;
@@ -60,7 +59,9 @@ void Controller::operator()(size_t frequency) {
     // Receive events to release
     if (generated_events || !m_sent_events_queue.empty()) {
       EventMetaDataRange metadata_range(m_sent_events_queue.pop());
-      m_generator.releaseEvents(metadata_range.distance(metadata_capacity));
+      m_generator.releaseEvents(
+          circularDistance(metadata_range.begin(), metadata_range.end(),
+                           metadata_capacity));
     }
   }
 
