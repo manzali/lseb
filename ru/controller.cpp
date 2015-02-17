@@ -1,12 +1,12 @@
 #include "ru/controller.h"
 
-#include <iostream>
 #include <chrono>
 #include <thread>
 
 #include <cmath>
 
 #include "commons/pointer_cast.h"
+#include "commons/utility.h"
 
 namespace lseb {
 
@@ -59,9 +59,10 @@ void Controller::operator()(size_t frequency) {
     // Receive events to release
     if (generated_events || !m_sent_events_queue.empty()) {
       EventMetaDataRange metadata_range(m_sent_events_queue.pop());
-      m_generator.releaseEvents(
-          circularDistance(metadata_range.begin(), metadata_range.end(),
-                           metadata_capacity));
+      size_t const events_to_release = circularDistance(metadata_range.begin(),
+                                                        metadata_range.end(),
+                                                        metadata_capacity);
+      m_generator.releaseEvents(events_to_release);
     }
   }
 

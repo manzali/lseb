@@ -1,8 +1,6 @@
 #ifndef COMMONS_DATAFORMAT_H
 #define COMMONS_DATAFORMAT_H
 
-#include <iterator>
-
 #include <cstdint> // uint64_t
 
 #include "commons/pointer_cast.h"
@@ -32,8 +30,8 @@ struct EventHeader {
 };
 
 class EventMetaDataRange {
-  EventMetaData* const m_begin;
-  EventMetaData* const m_end;
+  EventMetaData* m_begin;
+  EventMetaData* m_end;
 
  public:
   EventMetaDataRange(EventMetaData* begin, EventMetaData* end)
@@ -53,16 +51,6 @@ class EventMetaDataRange {
     return m_end;
   }
 };
-
-template<typename T>
-size_t circularDistance(T* begin, T* end, size_t capacity) {
-  return (capacity + std::distance(begin, end)) % capacity;
-}
-
-template<typename T>
-T* circularForward(T* current, T* begin, size_t capacity, size_t forward) {
-  return begin + (current - begin + forward) % capacity;
-}
 
 }
 
