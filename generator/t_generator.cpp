@@ -112,8 +112,6 @@ int main() {
     ++current_event_id;
   }
 
-  std::cout << "Max event id: " << SIZE_MAX << std::endl;
-
   boost::report_errors();
 }
 
