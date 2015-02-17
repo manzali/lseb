@@ -3,9 +3,12 @@
 #include <thread>
 #include <chrono>
 
+#include <cstdlib>
+#include <cassert>
+
 #include "commons/dataformat.h"
 #include "commons/pointer_cast.h"
-#include "commons/shared_queue.h"
+#include "commons/utility.h"
 
 #include "generator/generator.h"
 #include "payload/length_generator.h"
@@ -13,9 +16,11 @@
 
 using namespace lseb;
 
-int main() {
+int main(int argc, char* argv[]) {
 
-  size_t const frequency = 30000000;
+  assert(argc == 2 && "The frequency is required as parameter!");
+  size_t const frequency = atoi(argv[1]);
+
   size_t const mean = 400;
   size_t const stddev = 200;
   size_t const data_size = 32 * 1024 * 1024 * 16;
