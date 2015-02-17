@@ -12,14 +12,18 @@ namespace lseb {
 
 class Generator {
 
- private:
   LengthGenerator m_payload_length_generator;
   EventMetaData* const m_begin_metadata;
-  boost::circular_buffer<EventMetaData*> m_ring_metadata;
+  EventMetaData* const m_end_metadata;
+  std::ptrdiff_t const m_metadata_capacity;
+  EventMetaData* m_read_metadata;
+  EventMetaData* m_write_metadata;
   char* const m_begin_data;
   char* const m_end_data;
+  std::ptrdiff_t const m_data_capacity;
   size_t m_avail_data;
   size_t m_current_event_id;
+  bool is_empty;
 
  public:
   Generator(LengthGenerator const& payload_length_generator,
