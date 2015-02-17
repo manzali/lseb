@@ -1,7 +1,6 @@
 #include "ru/controller.h"
 
 #include <chrono>
-#include <thread>
 
 #include <cmath>
 
@@ -35,7 +34,6 @@ void Controller::operator()(size_t frequency) {
       m_begin_metadata, m_end_metadata);
 
   while (1) {
-    std::this_thread::sleep_for(ns_to_wait);
     auto const ns_elapsed =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::high_resolution_clock::now() - start_time);
@@ -57,7 +55,7 @@ void Controller::operator()(size_t frequency) {
     }
 
     // Receive events to release
-    if (generated_events || !m_sent_events_queue.empty()) {
+    while (!m_sent_events_queue.empty()) {
       EventMetaDataRange metadata_range(m_sent_events_queue.pop());
       size_t const events_to_release = circularDistance(metadata_range.begin(),
                                                         metadata_range.end(),

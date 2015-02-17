@@ -25,6 +25,8 @@ int main(int argc, char* argv[]) {
   size_t const stddev = 200;
   size_t const data_size = 32 * 1024 * 1024 * 16;
 
+  size_t const buffer_events = 40;
+
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
 
@@ -64,20 +66,22 @@ int main(int argc, char* argv[]) {
 
   while (1) {
 
-    EventMetaDataRange metadata_range = ready_events_queue.pop();
-    tot_generated_events += circularDistance(metadata_range.begin(),
-                                             metadata_range.end(),
-                                             max_buffered_events);
+    if (!ready_events_queue.empty()) {
+      EventMetaDataRange metadata_range = ready_events_queue.pop();
+      tot_generated_events += circularDistance(metadata_range.begin(),
+                                               metadata_range.end(),
+                                               max_buffered_events);
 
-    // Releasing the same events generated
-    sent_events_queue.push(metadata_range);
+      // Releasing the same events generated
+      sent_events_queue.push(metadata_range);
+    }
 
     auto const end_time = std::chrono::high_resolution_clock::now();
-    auto const diff_us = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    auto const diff_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
         end_time - start_time);
 
-    if (diff_us.count() >= 1000000000) {
-      double const seconds = diff_us.count() / 1000000000.;
+    if (diff_ns.count() >= 1000000000) {
+      double const seconds = diff_ns.count() / 1000000000.;
       std::cout << std::fixed << "Real frequency is:\t"
                 << tot_generated_events / seconds << " Hz\n";
       tot_generated_events = 0;
