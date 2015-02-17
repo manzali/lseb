@@ -32,6 +32,7 @@ class SharedQueue {
   }
 
   bool empty() {
+    std::unique_lock<std::mutex> mlock(mutex_);
     return queue_.empty();
   }
 
