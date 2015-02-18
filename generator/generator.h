@@ -3,8 +3,6 @@
 
 #include <cstdlib> // size_t
 
-#include <boost/circular_buffer.hpp>
-
 #include "payload/length_generator.h"
 #include "commons/dataformat.h"
 
