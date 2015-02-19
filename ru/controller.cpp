@@ -26,7 +26,7 @@ Controller::Controller(Generator const& generator,
 
 void Controller::operator()(size_t generator_frequency) {
 
-  LOG(INFO) << "Asked frequency: " << generator_frequency << " Hz.";
+  LOG(INFO) << "Asked frequency: " << generator_frequency << " Hz";
 
   // Compute time to sleep
   std::chrono::nanoseconds const ns_to_wait(1000000000 / generator_frequency);
@@ -66,7 +66,7 @@ void Controller::operator()(size_t generator_frequency) {
 
     if (frequency_meter.check()) {
       LOG(DEBUG) << std::fixed << "Real frequency is: "
-                 << frequency_meter.frequency() << " Hz\n";
+                 << frequency_meter.frequency() << " Hz";
     }
 
     // Receive events to release
