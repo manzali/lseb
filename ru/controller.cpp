@@ -1,11 +1,14 @@
 #include "ru/controller.h"
 
 #include <chrono>
+#include <thread>
 
 #include <cmath>
 
 #include "commons/pointer_cast.h"
 #include "commons/utility.h"
+#include "commons/frequency_meter.h"
+#include "commons/log.h"
 
 namespace lseb {
 
@@ -21,10 +24,12 @@ Controller::Controller(Generator const& generator,
       m_sent_events_queue(sent_events_queue) {
 }
 
-void Controller::operator()(size_t frequency) {
+void Controller::operator()(size_t generator_frequency) {
+
+  LOG(INFO) << "Asked frequency: " << generator_frequency << " Hz.";
 
   // Compute time to sleep
-  std::chrono::nanoseconds const ns_to_wait(1000000000 / frequency);
+  std::chrono::nanoseconds const ns_to_wait(1000000000 / generator_frequency);
 
   auto const start_time = std::chrono::high_resolution_clock::now();
 
@@ -33,7 +38,10 @@ void Controller::operator()(size_t frequency) {
   static std::ptrdiff_t const metadata_capacity = std::distance(
       m_begin_metadata, m_end_metadata);
 
+  FrequencyMeter frequency_meter(5);
+
   while (1) {
+    std::this_thread::sleep_for(ns_to_wait);
     auto const ns_elapsed =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::high_resolution_clock::now() - start_time);
@@ -52,6 +60,13 @@ void Controller::operator()(size_t frequency) {
       m_ready_events_queue.push(
           EventMetaDataRange(previous_metadata, current_metadata));
       total_generated_events += generated_events;
+
+      frequency_meter.add(generated_events);
+    }
+
+    if (frequency_meter.check()) {
+      LOG(DEBUG) << std::fixed << "Real frequency is: "
+                 << frequency_meter.frequency() << " Hz\n";
     }
 
     // Receive events to release

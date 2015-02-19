@@ -1,7 +1,5 @@
-#include <iostream>
 #include <memory>
 #include <thread>
-#include <chrono>
 
 #include <cstdlib>
 #include <cassert>
@@ -9,6 +7,7 @@
 #include "commons/dataformat.h"
 #include "commons/pointer_cast.h"
 #include "commons/utility.h"
+#include "commons/log.h"
 
 #include "generator/generator.h"
 #include "payload/length_generator.h"
@@ -18,22 +17,20 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
+  Log::init("ReadoutUnit", Log::DEBUG);
+
   assert(argc == 2 && "The frequency is required as parameter!");
-  size_t const frequency = atoi(argv[1]);
+  size_t const generator_frequency = atoi(argv[1]);
 
   size_t const mean = 400;
   size_t const stddev = 200;
   size_t const data_size = 32 * 1024 * 1024 * 16;
 
-  size_t const buffer_events = 40;
-
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
 
-  std::cout << "Metadata buffer can contain " << max_buffered_events
-            << " events.\n";
-
-  std::cout << "Asked frequency:\t" << frequency << " Hz\n";
+  LOG(INFO) << "Metadata buffer can contain " << max_buffered_events
+            << " events.";
 
   // Allocate memory
 
@@ -59,34 +56,12 @@ int main(int argc, char* argv[]) {
 
   Controller controller(generator, begin_metadata, end_metadata,
                         ready_events_queue, sent_events_queue);
-  std::thread controller_th(controller, frequency);
-
-  size_t tot_generated_events = 0;
-  auto start_time = std::chrono::high_resolution_clock::now();
+  std::thread controller_th(controller, generator_frequency);
 
   while (1) {
-
-    if (!ready_events_queue.empty()) {
-      EventMetaDataRange metadata_range = ready_events_queue.pop();
-      tot_generated_events += circularDistance(metadata_range.begin(),
-                                               metadata_range.end(),
-                                               max_buffered_events);
-
-      // Releasing the same events generated
-      sent_events_queue.push(metadata_range);
-    }
-
-    auto const end_time = std::chrono::high_resolution_clock::now();
-    auto const diff_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        end_time - start_time);
-
-    if (diff_ns.count() >= 1000000000) {
-      double const seconds = diff_ns.count() / 1000000000.;
-      std::cout << std::fixed << "Real frequency is:\t"
-                << tot_generated_events / seconds << " Hz\n";
-      tot_generated_events = 0;
-      start_time = std::chrono::high_resolution_clock::now();
-    }
+    EventMetaDataRange metadata_range = ready_events_queue.pop();
+    // Releasing the same events generated
+    sent_events_queue.push(metadata_range);
   }
 
   controller_th.join();

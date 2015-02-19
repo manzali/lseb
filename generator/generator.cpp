@@ -53,8 +53,10 @@ void Generator::releaseEvents(size_t n_events) {
                                                         m_begin_metadata,
                                                         m_metadata_capacity,
                                                         n_events - 1);
-    m_avail_data += m_data_capacity + (m_data_capacity + last_read_metadata->offset
-        + last_read_metadata->length - m_read_metadata->offset) % m_data_capacity;
+    m_avail_data += m_data_capacity
+        + (m_data_capacity + last_read_metadata->offset
+            + last_read_metadata->length - m_read_metadata->offset)
+            % m_data_capacity;
     m_read_metadata = circularForward(last_read_metadata, m_begin_metadata,
                                       m_metadata_capacity, 1);
     if (m_read_metadata == m_write_metadata) {

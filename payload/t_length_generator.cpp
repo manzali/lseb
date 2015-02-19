@@ -16,7 +16,7 @@ int main() {
   LengthGenerator fixed_size(mean);
 
   // Check fixed size
-  for(int i = 0; i < 1000; ++i){
+  for (int i = 0; i < 1000; ++i) {
     size_t payload = fixed_size.generate();
     BOOST_TEST_EQ(payload, mean);
   }
@@ -26,7 +26,7 @@ int main() {
   size_t const default_max = mean + stddev * 5;
 
   // Check variable size
-  for(int i = 0; i < 1000; ++i){
+  for (int i = 0; i < 1000; ++i) {
     size_t payload = variable_size.generate();
     BOOST_TEST(payload >= default_min);
     BOOST_TEST(payload <= default_max);
@@ -35,7 +35,7 @@ int main() {
   LengthGenerator variable_bounded_size(mean, stddev, max, min);
 
   // Check variable bounded size
-  for(int i = 0; i < 1000; ++i){
+  for (int i = 0; i < 1000; ++i) {
     size_t payload = variable_bounded_size.generate();
     BOOST_TEST(payload >= min);
     BOOST_TEST(payload <= max);
