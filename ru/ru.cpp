@@ -24,13 +24,17 @@ int main(int argc, char* argv[]) {
 
   size_t const mean = 400;
   size_t const stddev = 200;
-  size_t const data_size = 32 * 1024 * 1024 * 16;
+  size_t const data_size = 32 * 1024 * 1024;
+
+  size_t const bulk_size = 40;
 
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
 
   LOG(INFO) << "Metadata buffer can contain " << max_buffered_events
-            << " events.";
+            << " events";
+
+  LOG(INFO) << "Bulked submissions are composed by " << bulk_size << " events";
 
   // Allocate memory
 
@@ -58,10 +62,48 @@ int main(int argc, char* argv[]) {
                         ready_events_queue, sent_events_queue);
   std::thread controller_th(controller, generator_frequency);
 
+  EventMetaData* first_bulked_metadata = begin_metadata;
+  size_t bulked_events = 0;
+
   while (1) {
+    // Get ready events
     EventMetaDataRange metadata_range = ready_events_queue.pop();
-    // Releasing the same events generated
-    sent_events_queue.push(metadata_range);
+    bulked_events += circularDistance(metadata_range.begin(),
+                                      metadata_range.end(),
+                                      max_buffered_events);
+
+    // Handle bulk submission and release events
+    while (bulked_events >= bulk_size) {
+      EventMetaData* last_bulked_metadata = circularForward(
+          first_bulked_metadata, begin_metadata, max_buffered_events,
+          bulk_size);
+      EventMetaDataRange bulked_metadata(first_bulked_metadata,
+                                         last_bulked_metadata);
+
+      EventMetaData* before_last_bulked_metadata = circularForward(
+          first_bulked_metadata, begin_metadata, max_buffered_events,
+          bulk_size - 1);
+
+      size_t const metadata_load = circularDistance(first_bulked_metadata,
+                                                    last_bulked_metadata,
+                                                    max_buffered_events)
+          * sizeof(EventMetaData);
+
+      size_t const data_load = circularDistance(
+          begin_data + first_bulked_metadata->offset,
+          begin_data + before_last_bulked_metadata->offset
+              + before_last_bulked_metadata->length,
+          data_size);
+
+      LOG(DEBUG) << "Sending events from " << first_bulked_metadata->id
+                 << " to " << before_last_bulked_metadata->id << " ("
+                 << metadata_load + data_load << " bytes)";
+
+      sent_events_queue.push(bulked_metadata);
+      bulked_events -= bulk_size;
+      first_bulked_metadata = last_bulked_metadata;
+    }
+
   }
 
   controller_th.join();
