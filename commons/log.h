@@ -6,9 +6,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <iomanip> // put_time
 
-#include <ctime>   // localtime
+#include <ctime>
 #include <cassert>
 
 #include <syslog.h>
@@ -21,12 +20,15 @@ namespace lseb {
 
 namespace {
 
+int const BUFSIZE = 200;
+
 inline std::string Now() {
   auto now = std::chrono::system_clock::now();
   auto in_time_t = std::chrono::system_clock::to_time_t(now);
-  std::ostringstream oss;
-  oss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X");
-  return oss.str();
+  char tmdescr[BUFSIZE] = { 0 };
+  const char fmt[] = "%F - %T";
+  std::strftime(tmdescr, sizeof(tmdescr) - 1, fmt, std::localtime(&in_time_t));
+  return std::string(tmdescr);
 }
 
 inline void log_to_syslog(std::istream& input_stream, std::mutex& mx, int level,
@@ -77,11 +79,10 @@ class Log {
     StaticMembers& sm(static_members());
     assert(!sm.ident.empty() && "Did you forget to call Log::Init()?");
     if (sm.use_syslog) {
-      log_to_syslog(m_tmp_stream, sm.mx, ToSyslog(m_level),
-                            ToString(m_level));
+      log_to_syslog(m_tmp_stream, sm.mx, ToSyslog(m_level), ToString(m_level));
     } else {
       log_to_stream(*sm.log_stream, m_tmp_stream, sm.mx, sm.ident,
-                            ToString(m_level));
+                    ToString(m_level));
     }
   }
   std::ostream& tmp_stream() {

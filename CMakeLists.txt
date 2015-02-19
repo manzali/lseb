@@ -8,7 +8,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")	
   # using GCC
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pthread")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
   
