@@ -18,7 +18,7 @@
 
 namespace lseb {
 
-namespace {
+namespace detail{
 
 int const BUFSIZE = 200;
 
@@ -79,9 +79,9 @@ class Log {
     StaticMembers& sm(static_members());
     assert(!sm.ident.empty() && "Did you forget to call Log::Init()?");
     if (sm.use_syslog) {
-      log_to_syslog(m_tmp_stream, sm.mx, ToSyslog(m_level), ToString(m_level));
+     detail::log_to_syslog(m_tmp_stream, sm.mx, ToSyslog(m_level), ToString(m_level));
     } else {
-      log_to_stream(*sm.log_stream, m_tmp_stream, sm.mx, sm.ident,
+      detail::log_to_stream(*sm.log_stream, m_tmp_stream, sm.mx, sm.ident,
                     ToString(m_level));
     }
   }
