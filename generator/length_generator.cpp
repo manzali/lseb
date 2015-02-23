@@ -1,4 +1,4 @@
-#include "payload/length_generator.h"
+#include "generator/length_generator.h"
 
 #include <cassert>
 

@@ -8,6 +8,11 @@ add_library(
   controller.cpp
 )
 
+add_library(
+  sender
+  sender.cpp
+)
+
 add_executable(
   ru
   ru.cpp
@@ -16,5 +21,6 @@ add_executable(
 target_link_libraries(
   ru
   controller
+  sender
   generator
 )

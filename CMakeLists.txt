@@ -37,6 +37,6 @@ else()
     # exit due to fatal error
 endif()
 
-add_subdirectory(payload)
 add_subdirectory(generator)
 add_subdirectory(ru)
+add_subdirectory(test)

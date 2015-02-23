@@ -8,17 +8,12 @@ add_library(
   generator.cpp
 )
 
+add_library(
+  length_generator
+  length_generator.cpp
+)
+
 target_link_libraries(
   generator
   length_generator
-)
-
-add_executable(
-  t_generator
-  t_generator.cpp
-)
-
-target_link_libraries(
-  t_generator
-  generator
 )

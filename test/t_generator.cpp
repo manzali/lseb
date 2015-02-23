@@ -2,11 +2,10 @@
 #include <memory>
 #include <vector>
 
-#include "commons/boost_lightweight_test.hpp"
-
-#include "commons/dataformat.h"
-#include "commons/pointer_cast.h"
-#include "payload/length_generator.h"
+#include "../common/boost_lightweight_test.hpp"
+#include "../common/dataformat.h"
+#include "../common/utility.h"
+#include "generator/length_generator.h"
 #include "generator/generator.h"
 
 using namespace lseb;
@@ -14,7 +13,8 @@ using namespace lseb;
 int main() {
 
   size_t const data_size = 32 * 1024;
-  std::unique_ptr<char[]> const data_buffer(new char[data_size]);
+  std::unique_ptr<unsigned char[]> const data_ptr(
+      new unsigned char[data_size]);
 
   size_t const mean = 400;
   size_t const stddev = 200;
@@ -22,19 +22,23 @@ int main() {
   size_t const mean_buffered_events = data_size / (sizeof(EventHeader) + mean);
 
   size_t metadata_size = mean_buffered_events * sizeof(EventMetaData);
-  std::unique_ptr<char[]> const metadata_buffer(new char[metadata_size]);
+  std::unique_ptr<unsigned char[]> const metadata_ptr(
+      new unsigned char[metadata_size]);
 
   EventMetaData* const begin_metadata = pointer_cast<EventMetaData>(
-      metadata_buffer.get());
+      metadata_ptr.get());
   EventMetaData* const end_metadata = pointer_cast<EventMetaData>(
-      metadata_buffer.get() + metadata_size);
+      metadata_ptr.get() + metadata_size);
 
-  char* const begin_data = data_buffer.get();
-  char* const end_data = data_buffer.get() + data_size;
+  unsigned char* const begin_data = data_ptr.get();
+  unsigned char* const end_data = data_ptr.get() + data_size;
 
   LengthGenerator payload_length_generator(mean, stddev);
-  Generator generator(payload_length_generator, begin_metadata, end_metadata,
-                      begin_data, end_data);
+
+  MetaDataBuffer metadata_buffer(begin_metadata, end_metadata);
+  DataBuffer data_buffer(begin_data, end_data);
+
+  Generator generator(payload_length_generator, metadata_buffer, data_buffer);
 
   uint64_t partial_generated_events = 0;
   uint64_t generated_events = 0;
@@ -48,7 +52,7 @@ int main() {
 
   // Now check consistency between metadata and data
 
-  char const* current_data = data_buffer.get();
+  unsigned char const* current_data = data_ptr.get();
 
   uint64_t current_event_id = 0;
 

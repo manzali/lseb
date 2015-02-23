@@ -3,9 +3,14 @@ include_directories(
   ${LSEB_SOURCE_DIR}
 )
 
-add_library(
-  length_generator
-  length_generator.cpp
+add_executable(
+  t_generator
+  t_generator.cpp
+)
+
+target_link_libraries(
+  t_generator
+  generator
 )
 
 add_executable(
@@ -16,4 +21,9 @@ add_executable(
 target_link_libraries(
   t_length_generator
   length_generator
+)
+
+add_executable(
+  t_iniparser
+  t_iniparser.cpp
 )

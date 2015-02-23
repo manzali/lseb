@@ -4,27 +4,28 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "commons/dataformat.h"
-#include "commons/pointer_cast.h"
-#include "commons/utility.h"
-#include "commons/log.h"
-
+#include "../common/dataformat.h"
+#include "../common/frequency_meter.h"
+#include "../common/log.h"
+#include "../common/utility.h"
 #include "generator/generator.h"
-#include "payload/length_generator.h"
+#include "generator/length_generator.h"
+
 #include "ru/controller.h"
+#include "ru/sender.h"
 
 using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  Log::init("ReadoutUnit", Log::DEBUG);
+  Log::init("ReadoutUnit", Log::INFO);
 
   assert(argc == 2 && "The frequency is required as parameter!");
   size_t const generator_frequency = atoi(argv[1]);
 
   size_t const mean = 400;
   size_t const stddev = 200;
-  size_t const data_size = 32 * 1024 * 1024;
+  size_t const data_size = 32 * 1024 * 1024 * 16;
 
   size_t const bulk_size = 40;
 
@@ -36,77 +37,40 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Bulked submissions are composed by " << bulk_size << " events";
 
+  LOG(INFO) << "Asked frequency for events generation is "
+            << generator_frequency / 1000000. << " MHz";
+
   // Allocate memory
 
-  std::unique_ptr<char[]> const metadata_buffer(new char[metadata_size]);
-  std::unique_ptr<char[]> const data_ptr(new char[data_size]);
+  std::unique_ptr<unsigned char[]> const metadata_ptr(
+      new unsigned char[metadata_size]);
+  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
-  // Define begin and end pointers
+  MetaDataRange metadata_range(metadata_ptr.get(),
+                               metadata_ptr.get() + metadata_size);
+  DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
-  EventMetaData* const begin_metadata = pointer_cast<EventMetaData>(
-      metadata_buffer.get());
-  EventMetaData* const end_metadata = pointer_cast<EventMetaData>(
-      metadata_buffer.get() + metadata_size);
-
-  char* const begin_data = data_ptr.get();
-  char* const end_data = data_ptr.get() + data_size;
+  MetaDataBuffer metadata_buffer(metadata_range);
+  DataBuffer data_buffer(data_range);
 
   LengthGenerator payload_size_generator(mean, stddev);
-  Generator generator(payload_size_generator, begin_metadata, end_metadata,
-                      begin_data, end_data);
+  Generator generator(payload_size_generator, metadata_buffer, data_buffer);
 
-  EventsQueue ready_events_queue;
-  EventsQueue sent_events_queue;
+  SharedQueue<MetaDataRange> ready_events_queue;
+  SharedQueue<MetaDataRange> sent_events_queue;
 
-  Controller controller(generator, begin_metadata, end_metadata,
-                        ready_events_queue, sent_events_queue);
+  Controller controller(generator, metadata_range, ready_events_queue,
+                        sent_events_queue);
   std::thread controller_th(controller, generator_frequency);
 
-  EventMetaData* first_bulked_metadata = begin_metadata;
-  size_t bulked_events = 0;
+  Sender sender(metadata_range, data_range, ready_events_queue,
+                sent_events_queue);
+  std::thread sender_th(sender, bulk_size);
 
-  while (1) {
-    // Get ready events
-    EventMetaDataRange metadata_range = ready_events_queue.pop();
-    bulked_events += circularDistance(metadata_range.begin(),
-                                      metadata_range.end(),
-                                      max_buffered_events);
-
-    // Handle bulk submission and release events
-    while (bulked_events >= bulk_size) {
-      EventMetaData* last_bulked_metadata = circularForward(
-          first_bulked_metadata, begin_metadata, max_buffered_events,
-          bulk_size);
-      EventMetaDataRange bulked_metadata(first_bulked_metadata,
-                                         last_bulked_metadata);
-
-      EventMetaData* before_last_bulked_metadata = circularForward(
-          first_bulked_metadata, begin_metadata, max_buffered_events,
-          bulk_size - 1);
-
-      size_t const metadata_load = circularDistance(first_bulked_metadata,
-                                                    last_bulked_metadata,
-                                                    max_buffered_events)
-          * sizeof(EventMetaData);
-
-      size_t const data_load = circularDistance(
-          begin_data + first_bulked_metadata->offset,
-          begin_data + before_last_bulked_metadata->offset
-              + before_last_bulked_metadata->length,
-          data_size);
-
-      LOG(DEBUG) << "Sending events from " << first_bulked_metadata->id
-                 << " to " << before_last_bulked_metadata->id << " ("
-                 << metadata_load + data_load << " bytes)";
-
-      sent_events_queue.push(bulked_metadata);
-      bulked_events -= bulk_size;
-      first_bulked_metadata = last_bulked_metadata;
-    }
-
-  }
+  // Waiting
 
   controller_th.join();
+  sender_th.join();
 
 }
 

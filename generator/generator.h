@@ -3,28 +3,21 @@
 
 #include <cstdlib> // size_t
 
-#include "payload/length_generator.h"
-#include "commons/dataformat.h"
+#include "../common/dataformat.h"
+#include "generator/length_generator.h"
 
 namespace lseb {
 
 class Generator {
-
-  LengthGenerator m_payload_length_generator;
-  EventMetaData* const m_begin_metadata;
-  std::ptrdiff_t const m_metadata_capacity;
-  EventMetaData* m_read_metadata;
-  EventMetaData* m_write_metadata;
-  char* const m_begin_data;
-  std::ptrdiff_t const m_data_capacity;
-  size_t m_avail_data;
+  LengthGenerator m_length_generator;
+  MetaDataBuffer m_metadata_buffer;
+  DataBuffer m_data_buffer;
   size_t m_current_event_id;
-  bool is_empty;
 
  public:
-  Generator(LengthGenerator const& payload_length_generator,
-            EventMetaData* begin_metadata, EventMetaData* end_metadata,
-            char* begin_data, char* end_data);
+  Generator(LengthGenerator const& length_generator,
+            MetaDataBuffer const& metadata_buffer,
+            DataBuffer const& data_buffer);
   void releaseEvents(size_t n_events);
   size_t generateEvents(size_t n_events);
 };

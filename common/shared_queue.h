@@ -1,5 +1,5 @@
-#ifndef COMMONS_SHARED_QUEUE_H
-#define COMMONS_SHARED_QUEUE_H
+#ifndef COMMON_SHARED_QUEUE_H
+#define COMMON_SHARED_QUEUE_H
 
 #include <queue>
 #include <thread>

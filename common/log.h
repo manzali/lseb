@@ -1,5 +1,5 @@
-#ifndef COMMONS_LOG_H
-#define COMMONS_LOG_H
+#ifndef COMMON_LOG_H
+#define COMMON_LOG_H
 
 #include <chrono>
 #include <mutex>
