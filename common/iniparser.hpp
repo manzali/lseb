@@ -1,3 +1,11 @@
+//=======================================================================
+//
+// Software based on ini-parser project
+// (https://github.com/Poordeveloper/ini-parser)
+// Distributed under the MIT License.
+//
+//=======================================================================
+
 #ifndef COMMON_INIPARSER_HPP
 #define COMMON_INIPARSER_HPP
 
