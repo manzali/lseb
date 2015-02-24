@@ -3,7 +3,7 @@
 
 #include <cstdint> // uint64_t
 
-#include "../common/utility.h"
+#include "common/utility.h"
 
 namespace lseb {
 

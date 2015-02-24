@@ -1,8 +1,8 @@
 #include "ru/sender.h"
 
-#include "../common/frequency_meter.h"
-#include "../common/log.h"
-#include "../common/utility.h"
+#include "common/frequency_meter.h"
+#include "common/log.h"
+#include "common/utility.h"
 
 namespace lseb {
 

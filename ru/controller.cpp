@@ -4,8 +4,8 @@
 
 #include <cmath>
 
-#include "../common/log.h"
-#include "../common/utility.h"
+#include "common/log.h"
+#include "common/utility.h"
 
 namespace lseb {
 

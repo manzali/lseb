@@ -3,7 +3,7 @@
 
 #include <cstdlib> // size_t
 
-#include "../common/dataformat.h"
+#include "common/dataformat.h"
 #include "generator/length_generator.h"
 
 namespace lseb {

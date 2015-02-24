@@ -3,8 +3,8 @@
 
 #include <cmath>
 
-#include "../common/dataformat.h"
-#include "../common/shared_queue.h"
+#include "common/dataformat.h"
+#include "common/shared_queue.h"
 #include "generator/generator.h"
 
 namespace lseb {

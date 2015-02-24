@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cassert>
 
-#include "../common/utility.h"
+#include "common/utility.h"
 
 namespace lseb {
 

@@ -4,10 +4,10 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "../common/dataformat.h"
-#include "../common/frequency_meter.h"
-#include "../common/log.h"
-#include "../common/utility.h"
+#include "common/dataformat.h"
+#include "common/frequency_meter.h"
+#include "common/log.h"
+#include "common/utility.h"
 #include "generator/generator.h"
 #include "generator/length_generator.h"
 

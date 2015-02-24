@@ -1,8 +1,8 @@
 #ifndef RU_SENDER_H
 #define RU_SENDER_H
 
-#include "../common/dataformat.h"
-#include "../common/shared_queue.h"
+#include "common/dataformat.h"
+#include "common/shared_queue.h"
 
 namespace lseb {
 

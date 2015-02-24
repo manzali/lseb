@@ -2,9 +2,9 @@
 #include <memory>
 #include <vector>
 
-#include "../common/boost_lightweight_test.hpp"
-#include "../common/dataformat.h"
-#include "../common/utility.h"
+#include "common/boost_lightweight_test.hpp"
+#include "common/dataformat.h"
+#include "common/utility.h"
 #include "generator/length_generator.h"
 #include "generator/generator.h"
 

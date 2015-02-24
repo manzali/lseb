@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "../common/boost_lightweight_test.hpp"
+#include "common/boost_lightweight_test.hpp"
 #include "generator/length_generator.h"
 
 using namespace lseb;
