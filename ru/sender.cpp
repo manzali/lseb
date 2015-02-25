@@ -1,5 +1,7 @@
 #include "ru/sender.h"
 
+#include <ratio>
+
 #include "common/frequency_meter.h"
 #include "common/log.h"
 #include "common/utility.h"
@@ -50,11 +52,12 @@ void Sender::operator()(size_t bulk_size) {
 
       if (memory_throughput.check()) {
         LOG(INFO) << "Throughput on memory is "
-                  << memory_throughput.frequency() / 125000000. << " Gb/s";
+                  << memory_throughput.frequency() / std::giga::num * 8.
+                  << " Gb/s";
       }
       if (events_frequency.check()) {
         LOG(INFO) << "Real events generation frequency is "
-                  << events_frequency.frequency() / 1000000. << " MHz";
+                  << events_frequency.frequency() / std::mega::num << " MHz";
       }
     }
 

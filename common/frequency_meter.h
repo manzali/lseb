@@ -20,21 +20,19 @@ class FrequencyMeter {
     assert(m_timeout > 0.0);
   }
   void add(double value) {
-    assert(value >= 0.0 && "Trying to add a non positive value");
+    assert(value >= 0.0 && "Trying to add a negative value");
     m_counter += value;
   }
   bool check() {
     auto end_time = std::chrono::high_resolution_clock::now();
-    double const elapsed_seconds = std::chrono::duration_cast<
-        std::chrono::nanoseconds>(end_time - m_start_time).count()
-        / 1000000000.;
+    double const elapsed_seconds = std::chrono::duration<double>(
+        end_time - m_start_time).count();
     return elapsed_seconds >= m_timeout ? true : false;
   }
   double frequency() {
     auto end_time = std::chrono::high_resolution_clock::now();
-    double const elapsed_seconds = std::chrono::duration_cast<
-        std::chrono::nanoseconds>(end_time - m_start_time).count()
-        / 1000000000.;
+    double const elapsed_seconds = std::chrono::duration<double>(
+        end_time - m_start_time).count();
     double const frequency = m_counter / elapsed_seconds;
     m_start_time = std::chrono::high_resolution_clock::now();
     m_counter = 0.0;

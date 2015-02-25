@@ -35,23 +35,15 @@ class MetaDataRange {
 
  public:
   using iterator = EventMetaData*;
+  using const_iterator = EventMetaData const*;
   MetaDataRange(EventMetaData* begin, EventMetaData* end)
       : m_begin(begin),
         m_end(end) {
   }
-  ssize_t size() {
-    return std::distance(m_begin, m_end);
-  }
-  EventMetaData* begin() {
+  iterator begin() {
     return m_begin;
   }
-  EventMetaData* end() {
-    return m_end;
-  }
-  EventMetaData* begin() const {
-    return m_begin;
-  }
-  EventMetaData* end()const  {
+  iterator end() {
     return m_end;
   }
 };
@@ -62,25 +54,17 @@ class DataRange {
 
  public:
   using iterator = unsigned char*;
+  using const_iterator = unsigned char const*;
   DataRange(unsigned char* begin, unsigned char* end)
       : m_begin(begin),
         m_end(end) {
     assert(is_aligned_for<EventHeader>(begin));
     assert(is_aligned_for<EventHeader>(end));
   }
-  ssize_t size() {
-    return std::distance(m_begin, m_end);
-  }
-  unsigned char* begin() {
+  iterator begin() {
     return m_begin;
   }
-  unsigned char* end() {
-    return m_end;
-  }
-  unsigned char* begin() const {
-    return m_begin;
-  }
-  unsigned char* end()const  {
+  iterator end() {
     return m_end;
   }
 };
@@ -93,6 +77,7 @@ class MetaDataBuffer {
 
  public:
   using iterator = EventMetaData*;
+  using const_iterator = EventMetaData const*;
   MetaDataBuffer(unsigned char* begin, unsigned char* end)
       : m_begin(pointer_cast<EventMetaData>(begin)),
         m_end(pointer_cast<EventMetaData>(end)),
@@ -105,13 +90,6 @@ class MetaDataBuffer {
         m_end(end),
         m_next_read(begin),
         m_next_write(begin) {
-    assert(m_begin < m_end);
-  }
-  MetaDataBuffer(MetaDataRange const& metadata_range)
-      : m_begin(metadata_range.begin()),
-        m_end(metadata_range.end()),
-        m_next_read(metadata_range.begin()),
-        m_next_write(metadata_range.begin()) {
     assert(m_begin < m_end);
   }
   EventMetaData* begin() {
@@ -153,6 +131,7 @@ class DataBuffer {
 
  public:
   using iterator = unsigned char*;
+  using const_iterator = unsigned char const*;
   DataBuffer(unsigned char* begin, unsigned char* end)
       : m_begin(begin),
         m_end(end),
@@ -160,13 +139,6 @@ class DataBuffer {
         m_next_write(begin) {
     assert(is_aligned_for<EventHeader>(begin));
     assert(is_aligned_for<EventHeader>(end));
-    assert(m_begin < m_end);
-  }
-  DataBuffer(DataRange const& data_range)
-      : m_begin(data_range.begin()),
-        m_end(data_range.end()),
-        m_next_read(data_range.begin()),
-        m_next_write(data_range.begin()) {
     assert(m_begin < m_end);
   }
   unsigned char* begin() {

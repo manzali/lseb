@@ -21,24 +21,20 @@ Controller::Controller(Generator const& generator,
 
 void Controller::operator()(size_t generator_frequency) {
 
-  // Compute time to sleep
-  std::chrono::nanoseconds const ns_to_wait(1000000000 / generator_frequency);
-
   auto const start_time = std::chrono::high_resolution_clock::now();
-
-  size_t total_generated_events = 0;
+  size_t tot_generated_events = 0;
   EventMetaData* current_metadata = m_metadata_range.begin();
 
   while (true) {
-    auto const ns_elapsed =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::high_resolution_clock::now() - start_time);
+    double const elapsed_seconds = std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - start_time).count();
 
-    size_t const events_to_generate = ns_elapsed.count() / ns_to_wait.count()
-        - total_generated_events;
+    size_t const tot_events_to_generate = elapsed_seconds * generator_frequency;
+
+    assert(tot_events_to_generate >= tot_generated_events);
 
     size_t const generated_events = m_generator.generateEvents(
-        events_to_generate);
+        tot_events_to_generate - tot_generated_events);
 
     // Send generated events
     if (generated_events) {
@@ -47,8 +43,7 @@ void Controller::operator()(size_t generator_frequency) {
                                           m_metadata_range);
       m_ready_events_queue.push(
           MetaDataRange(previous_metadata, current_metadata));
-      total_generated_events += generated_events;
-
+      tot_generated_events += generated_events;
     }
 
     // Receive events to release
