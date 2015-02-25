@@ -34,15 +34,10 @@ class MetaDataRange {
   EventMetaData* m_end;
 
  public:
-  typedef EventMetaData* iterator;
+  using iterator = EventMetaData*;
   MetaDataRange(EventMetaData* begin, EventMetaData* end)
       : m_begin(begin),
         m_end(end) {
-  }
-  MetaDataRange(unsigned char* begin, unsigned char* end)
-      : m_begin(pointer_cast<EventMetaData>(begin)),
-        m_end(pointer_cast<EventMetaData>(end)) {
-
   }
   ssize_t size() {
     return std::distance(m_begin, m_end);
@@ -66,7 +61,7 @@ class DataRange {
   unsigned char* m_end;
 
  public:
-  typedef unsigned char* iterator;
+  using iterator = unsigned char*;
   DataRange(unsigned char* begin, unsigned char* end)
       : m_begin(begin),
         m_end(end) {
@@ -97,7 +92,7 @@ class MetaDataBuffer {
   EventMetaData* m_next_write;
 
  public:
-  typedef EventMetaData* iterator;
+  using iterator = EventMetaData*;
   MetaDataBuffer(unsigned char* begin, unsigned char* end)
       : m_begin(pointer_cast<EventMetaData>(begin)),
         m_end(pointer_cast<EventMetaData>(end)),
@@ -157,7 +152,7 @@ class DataBuffer {
   unsigned char* m_next_write;
 
  public:
-  typedef unsigned char* iterator;
+  using iterator = unsigned char*;
   DataBuffer(unsigned char* begin, unsigned char* end)
       : m_begin(begin),
         m_end(end),

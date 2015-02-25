@@ -46,8 +46,10 @@ int main(int argc, char* argv[]) {
       new unsigned char[metadata_size]);
   std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
-  MetaDataRange metadata_range(metadata_ptr.get(),
-                               metadata_ptr.get() + metadata_size);
+  MetaDataRange metadata_range(
+      pointer_cast<EventMetaData>(metadata_ptr.get()),
+      pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
+
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
   MetaDataBuffer metadata_buffer(metadata_range);
