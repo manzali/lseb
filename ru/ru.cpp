@@ -18,14 +18,14 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  Log::init("ReadoutUnit", Log::INFO);
+  Log::init("ReadoutUnit", Log::DEBUG);
 
   assert(argc == 2 && "The frequency is required as parameter!");
   size_t const generator_frequency = atoi(argv[1]);
 
   size_t const mean = 400;
   size_t const stddev = 200;
-  size_t const data_size = 32 * 1024 * 1024 * 16;
+  size_t const data_size = 32 * 1024 * 16;
 
   size_t const bulk_size = 40;
 
