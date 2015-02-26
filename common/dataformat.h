@@ -46,6 +46,12 @@ class MetaDataRange {
   iterator end() {
     return m_end;
   }
+  const_iterator begin() const {
+    return m_begin;
+  }
+  const_iterator end() const {
+    return m_end;
+  }
 };
 
 class DataRange {
@@ -65,6 +71,12 @@ class DataRange {
     return m_begin;
   }
   iterator end() {
+    return m_end;
+  }
+  const_iterator begin() const {
+    return m_begin;
+  }
+  const_iterator end() const {
     return m_end;
   }
 };
@@ -92,16 +104,16 @@ class MetaDataBuffer {
         m_next_write(begin) {
     assert(m_begin < m_end);
   }
-  EventMetaData* begin() {
+  iterator begin() {
     return m_begin;
   }
-  EventMetaData* end() {
+  iterator end() {
     return m_end;
   }
-  EventMetaData* next_read() {
+  iterator next_read() {
     return m_next_read;
   }
-  EventMetaData* next_write() {
+  iterator next_write() {
     return m_next_write;
   }
   size_t size() {
@@ -141,16 +153,16 @@ class DataBuffer {
     assert(is_aligned_for<EventHeader>(end));
     assert(m_begin < m_end);
   }
-  unsigned char* begin() {
+  iterator begin() {
     return m_begin;
   }
-  unsigned char* end() {
+  iterator end() {
     return m_end;
   }
-  unsigned char* next_read() {
+  iterator next_read() {
     return m_next_read;
   }
-  unsigned char* next_write() {
+  iterator next_write() {
     return m_next_write;
   }
   size_t size() {
