@@ -1,10 +1,13 @@
 #ifndef COMMON_UTILITY_H
 #define COMMON_UTILITY_H
 
+#include <vector>
 #include <iterator>
 #include <type_traits>
 
 #include <cassert>
+
+#include <sys/uio.h>
 
 namespace lseb {
 
@@ -45,6 +48,22 @@ typename R::iterator advance_in_range(typename R::iterator current,
   return std::begin(range)
       + (current - std::begin(range) + advance)
           % std::distance(std::begin(range), std::end(range));
+}
+
+template<typename R, typename T>
+std::vector<iovec> create_iovec(R sub_range, T range) {
+  std::vector<iovec> iov;
+  size_t const item_size = sizeof(*sub_range.begin());
+  if (sub_range.begin() < sub_range.end()) {
+    size_t len = distance_in_range(sub_range, range) * item_size;
+    iov.push_back( { sub_range.begin(), len });
+  } else {
+    size_t len = std::distance(sub_range.begin(), range.end()) * item_size;
+    iov.push_back( { sub_range.begin(), len });
+    len = std::distance(range.begin(), sub_range.end()) * item_size;
+    iov.push_back( { range.begin(), len });
+  }
+  return iov;
 }
 
 }
