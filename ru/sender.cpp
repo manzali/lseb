@@ -1,6 +1,6 @@
 #include "ru/sender.h"
 
-#include <ratio>
+#include <sys/uio.h>
 
 #include "common/log.h"
 #include "common/utility.h"
@@ -22,70 +22,46 @@ void Sender::operator()(size_t bulk_size) {
   size_t bulked_events = 0;
 
   while (true) {
+
     // Get ready events
     MetaDataRange metadata_subrange = m_ready_events_queue.pop();
-    size_t const generated_events = distance_in_range(metadata_subrange,
-                                                      m_metadata_range);
+    bulked_events += distance_in_range(metadata_subrange, m_metadata_range);
 
-    if (generated_events) {
+    // Handle bulk submission and release events
+    while (bulked_events >= bulk_size) {
 
-      MetaDataRange::iterator before_last_metadata = advance_in_range(
-          metadata_subrange.begin(), generated_events - 1, m_metadata_range);
+      // Create bulked metadata and data ranges
 
-      DataRange data_subrange(
-          m_data_range.begin() + metadata_subrange.begin()->offset,
-          m_data_range.begin() + before_last_metadata->offset
-              + before_last_metadata->length);
+      MetaDataRange bulked_metadata(
+          first_bulked_metadata,
+          advance_in_range(first_bulked_metadata, bulk_size, m_metadata_range));
 
-      bulked_events += generated_events;
+      MetaDataRange::iterator last_bulked_metadata = advance_in_range(
+          bulked_metadata.begin(), bulk_size - 1, m_metadata_range);
 
-      // Handle bulk submission and release events
-      while (bulked_events >= bulk_size) {
-        MetaDataRange::iterator last_bulked_metadata = advance_in_range(
-            first_bulked_metadata, bulk_size, m_metadata_range);
+      DataRange bulked_data(
+          m_data_range.begin() + bulked_metadata.begin()->offset,
+          m_data_range.begin() + last_bulked_metadata->offset
+              + last_bulked_metadata->length);
 
-        MetaDataRange bulked_metadata(first_bulked_metadata,
-                                      last_bulked_metadata);
+      // Create iovec
 
-        MetaDataRange::iterator before_last_bulked_metadata = advance_in_range(
-            first_bulked_metadata, bulk_size - 1, m_metadata_range);
+      std::vector<iovec> iov = create_iovec(bulked_metadata, m_metadata_range);
+      std::vector<iovec> iov_data = create_iovec(bulked_data, m_data_range);
 
-        size_t bulk_load = distance_in_range(
-            MetaDataRange(first_bulked_metadata, last_bulked_metadata),
-            m_metadata_range) * sizeof(EventMetaData);
+      iov.insert(iov.end(), iov_data.begin(), iov_data.end());
 
-        DataRange bulked_data(
-            m_data_range.begin() + first_bulked_metadata->offset,
-            m_data_range.begin() + before_last_bulked_metadata->offset
-                + before_last_bulked_metadata->length);
-
-        bulk_load += distance_in_range(bulked_data, m_data_range);
-
-        LOG(DEBUG)
-            << "Sending events from "
-            << first_bulked_metadata->id
-            << " to "
-            << before_last_bulked_metadata->id
-            << " ("
-            << bulk_load
-            << " bytes)"
-            << "\nMetaData Bulk ["
-            << bulked_metadata.begin()
-            << ", "
-            << bulked_metadata.end()
-            << ((bulked_metadata.begin() > bulked_metadata.end()) ?
-                "]\tMETADATA WRAP" : "]")
-            << "\nData Bulk ["
-            << (void*) bulked_data.begin()
-            << ", "
-            << (void*) bulked_data.end()
-            << ((bulked_data.begin() > bulked_data.end()) ?
-                "]\t\tDATA WRAP" : "]");
-
-        m_sent_events_queue.push(bulked_metadata);
-        bulked_events -= bulk_size;
-        first_bulked_metadata = last_bulked_metadata;
+      for (iovec i : iov) {
+        LOG(DEBUG) << i.iov_base << "\t[" << i.iov_len << "]";
       }
+
+      size_t bulk_load = 0;
+      std::for_each(iov.begin(), iov.end(),
+                    [&](iovec i) {bulk_load += i.iov_len;});
+
+      m_sent_events_queue.push(bulked_metadata);
+      bulked_events -= bulk_size;
+      first_bulked_metadata = bulked_metadata.end();
     }
   }
 }
