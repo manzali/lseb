@@ -34,6 +34,7 @@ class MetaDataRange {
   EventMetaData* m_end;
 
  public:
+  using value_type = EventMetaData;
   using iterator = EventMetaData*;
   using const_iterator = EventMetaData const*;
   MetaDataRange(EventMetaData* begin, EventMetaData* end)
@@ -59,6 +60,7 @@ class DataRange {
   unsigned char* m_end;
 
  public:
+  using value_type = unsigned char;
   using iterator = unsigned char*;
   using const_iterator = unsigned char const*;
   DataRange(unsigned char* begin, unsigned char* end)
@@ -88,6 +90,7 @@ class MetaDataBuffer {
   EventMetaData* m_next_write;
 
  public:
+  using value_type = EventMetaData;
   using iterator = EventMetaData*;
   using const_iterator = EventMetaData const*;
   MetaDataBuffer(unsigned char* begin, unsigned char* end)
@@ -142,6 +145,7 @@ class DataBuffer {
   unsigned char* m_next_write;
 
  public:
+  using value_type = unsigned char;
   using iterator = unsigned char*;
   using const_iterator = unsigned char const*;
   DataBuffer(unsigned char* begin, unsigned char* end)

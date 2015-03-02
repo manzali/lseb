@@ -51,13 +51,13 @@ void Sender::operator()(size_t bulk_size) {
 
       iov.insert(iov.end(), iov_data.begin(), iov_data.end());
 
-      for (iovec i : iov) {
+      for (auto& i : iov) {
         LOG(DEBUG) << i.iov_base << "\t[" << i.iov_len << "]";
       }
 
       size_t bulk_load = 0;
       std::for_each(iov.begin(), iov.end(),
-                    [&](iovec i) {bulk_load += i.iov_len;});
+                    [&](iovec const& i) {bulk_load += i.iov_len;});
 
       m_sent_events_queue.push(bulked_metadata);
       bulked_events -= bulk_size;

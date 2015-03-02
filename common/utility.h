@@ -53,7 +53,7 @@ typename R::iterator advance_in_range(typename R::iterator current,
 template<typename R, typename T>
 std::vector<iovec> create_iovec(R sub_range, T range) {
   std::vector<iovec> iov;
-  size_t const item_size = sizeof(*sub_range.begin());
+  size_t const item_size = sizeof(typename T::value_type);
   if (sub_range.begin() < sub_range.end()) {
     size_t len = distance_in_range(sub_range, range) * item_size;
     iov.push_back( { sub_range.begin(), len });

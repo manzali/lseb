@@ -23,7 +23,7 @@ void Controller::operator()(size_t generator_frequency) {
 
   auto const start_time = std::chrono::high_resolution_clock::now();
   size_t tot_generated_events = 0;
-  MetaDataRange::iterator current_metadata = m_metadata_range.begin();
+  auto current_metadata = m_metadata_range.begin();
 
   while (true) {
     double const elapsed_seconds = std::chrono::duration<double>(
@@ -38,7 +38,7 @@ void Controller::operator()(size_t generator_frequency) {
 
     // Send generated events
     if (generated_events) {
-      MetaDataRange::iterator previous_metadata = current_metadata;
+      auto previous_metadata = current_metadata;
       current_metadata = advance_in_range(current_metadata, generated_events,
                                           m_metadata_range);
       m_ready_events_queue.push(
