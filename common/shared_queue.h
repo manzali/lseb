@@ -18,10 +18,10 @@ class SharedQueue {
 
   T pop() {
     std::unique_lock<std::mutex> mlock(m_mutex);
-    while (m_queue.empty()) {
+    while (!m_closed && m_queue.empty()) {
       m_cond.wait(mlock);
     }
-    if (m_closed) {
+    if (m_closed && m_queue.empty()) {
       m_cond.notify_one();
       throw std::runtime_error(
           "Trying to retrieve an item from a closed queue.");
@@ -55,7 +55,7 @@ class SharedQueue {
   }
 
   SharedQueue()
-      : m_closed(0) {
+      : m_closed(false) {
   }
 
   SharedQueue(const SharedQueue&) = delete;             // disable copying
