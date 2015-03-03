@@ -42,10 +42,10 @@ struct Level {
   size_t depth;
 
   const std::string& operator[](const std::string& name) {
-    return values[name];
+    return values.at(name); // can throw out_of_range exception
   }
   Level& operator()(const std::string& name) {
-    return sections[name];
+    return sections.at(name); // can throw out_of_range exception
   }
 };
 
@@ -60,12 +60,12 @@ class Parser {
   Level& top() {
     return top_;
   }
-  void dump(std::ostream& s) {
-    dump(s, top(), "");
+  void dump(std::ostream& s) const {
+    dump(s, top_, "");
   }
 
  private:
-  void dump(std::ostream& s, const Level& l, const std::string& sname);
+  void dump(std::ostream& s, const Level& l, const std::string& sname) const;
   void parse(Level& l);
   void parseSLine(std::string& sname, size_t& depth);
   void err(const char* s);
@@ -163,7 +163,7 @@ inline void Parser::parse(Level& l) {
 }
 
 inline void Parser::dump(std::ostream& s, const Level& l,
-                         const std::string& sname) {
+                         const std::string& sname) const {
   if (!sname.empty())
     s << '\n';
   for (size_t i = 0; i < l.depth; ++i)
@@ -182,6 +182,11 @@ inline void Parser::dump(std::ostream& s, const Level& l,
     assert((*it)->second.depth == l.depth + 1);
     dump(s, (*it)->second, (*it)->first);
   }
+}
+
+std::ostream& operator<<(std::ostream& os, Parser const& parser){
+  parser.dump(os);
+  return os;
 }
 
 }
