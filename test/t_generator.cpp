@@ -13,8 +13,7 @@ using namespace lseb;
 int main() {
 
   size_t const data_size = 32 * 1024;
-  std::unique_ptr<unsigned char[]> const data_ptr(
-      new unsigned char[data_size]);
+  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
   size_t const mean = 400;
   size_t const stddev = 200;
@@ -63,12 +62,13 @@ int main() {
   while (current_event_id < generated_events) {
     // Check MetaData
     BOOST_TEST_EQ(current_metadata->id, current_event_id);
-    BOOST_TEST_EQ(current_metadata->offset, current_data - begin_data);
+    BOOST_TEST_EQ(current_metadata->offset,
+                  static_cast<uint64_t>(current_data - begin_data));
     // Check Data
     BOOST_TEST(current_data + current_metadata->length <= end_data);
     EventHeader const& header = *pointer_cast<EventHeader const>(current_data);
     BOOST_TEST_EQ(header.length, current_metadata->length);
-    BOOST_TEST_EQ(header.flags, 0);
+    BOOST_TEST_EQ(header.flags, static_cast<uint64_t>(0));
     BOOST_TEST_EQ(header.id, current_event_id);
     // missing check on payload
 
@@ -98,12 +98,13 @@ int main() {
   while (current_event_id < generated_events) {
     // Check MetaData
     BOOST_TEST_EQ(current_metadata->id, current_event_id);
-    BOOST_TEST_EQ(current_metadata->offset, current_data - begin_data);
+    BOOST_TEST_EQ(current_metadata->offset,
+                  static_cast<uint64_t>(current_data - begin_data));
     // Check Data
     BOOST_TEST(current_data + current_metadata->length <= end_data);
     EventHeader const& header = *pointer_cast<EventHeader const>(current_data);
     BOOST_TEST_EQ(header.length, current_metadata->length);
-    BOOST_TEST_EQ(header.flags, 0);
+    BOOST_TEST_EQ(header.flags, static_cast<uint64_t>(0));
     BOOST_TEST_EQ(header.id, current_event_id);
     // missing check on payload
 
