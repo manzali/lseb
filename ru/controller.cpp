@@ -48,9 +48,8 @@ void Controller::operator()(size_t generator_frequency) {
 
     // Receive events to release
     while (!m_sent_events_queue.empty()) {
-      MetaDataRange metadata_subrange(m_sent_events_queue.pop());
-      size_t const events_to_release = distance_in_range(metadata_subrange,
-                                                         m_metadata_range);
+      size_t const events_to_release = distance_in_range(
+          m_sent_events_queue.pop(), m_metadata_range);
       m_generator.releaseEvents(events_to_release);
     }
   }
