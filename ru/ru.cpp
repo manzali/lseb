@@ -1,6 +1,6 @@
 #include <memory>
 #include <thread>
-
+#include <string>
 #include <cstdlib>
 #include <cassert>
 
@@ -8,6 +8,9 @@
 #include "common/frequency_meter.h"
 #include "common/log.h"
 #include "common/utility.h"
+#include "common/endpoints.h"
+#include "common/iniparser.hpp"
+
 #include "generator/generator.h"
 #include "generator/length_generator.h"
 
@@ -18,27 +21,28 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  Log::init("ReadoutUnit", Log::DEBUG);
+  assert(argc <= 2 && "Missing configuration file as parameter!");
 
-  assert(argc == 2 && "The frequency is required as parameter!");
-  size_t const generator_frequency = atoi(argv[1]);
+  Parser parser(argv[1]);
 
-  size_t const mean = 400;
-  size_t const stddev = 200;
-  size_t const data_size = 32 * 1024 * 16;
+  Log::init("ReadoutUnit", Log::FromString(parser.top()("RU")["LOG_LEVEL"]));
 
-  size_t const bulk_size = 40;
+  size_t const generator_frequency = std::stol(
+      parser.top()("GENERATOR")["FREQUENCY"]);
+  size_t const mean = std::stol(parser.top()("GENERATOR")["MEAN"]);
+  size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
+  size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
+  size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
+  Endpoints const endpoints = get_endpoints(
+      parser.top()("GENERAL")["ENDPOINTS"]);
+
+  LOG(INFO) << parser << std::endl;
 
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
 
   LOG(INFO) << "Metadata buffer can contain " << max_buffered_events
             << " events";
-
-  LOG(INFO) << "Bulked submissions are composed by " << bulk_size << " events";
-
-  LOG(INFO) << "Asked frequency for events generation is "
-            << generator_frequency / 1000000. << " MHz";
 
   // Allocate memory
 
@@ -49,8 +53,9 @@ int main(int argc, char* argv[]) {
   MetaDataRange metadata_range(
       pointer_cast<EventMetaData>(metadata_ptr.get()),
       pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
-  MetaDataBuffer metadata_buffer(metadata_range.begin(), metadata_range.end());
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
+
+  MetaDataBuffer metadata_buffer(metadata_range.begin(), metadata_range.end());
   DataBuffer data_buffer(data_range.begin(), data_range.end());
 
   LengthGenerator payload_size_generator(mean, stddev);
@@ -64,7 +69,7 @@ int main(int argc, char* argv[]) {
   std::thread controller_th(controller, generator_frequency);
 
   Sender sender(metadata_range, data_range, ready_events_queue,
-                sent_events_queue);
+                sent_events_queue, endpoints);
   std::thread sender_th(sender, bulk_size);
 
   // Waiting

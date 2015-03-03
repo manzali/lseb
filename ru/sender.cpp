@@ -9,17 +9,19 @@ namespace lseb {
 
 Sender::Sender(MetaDataRange const& metadata_range, DataRange const& data_range,
                SharedQueue<MetaDataRange>& ready_events_queue,
-               SharedQueue<MetaDataRange>& sent_events_queue)
+               SharedQueue<MetaDataRange>& sent_events_queue, Endpoints const& endpoints)
     : m_metadata_range(metadata_range),
       m_data_range(data_range),
       m_ready_events_queue(ready_events_queue),
-      m_sent_events_queue(sent_events_queue) {
+      m_sent_events_queue(sent_events_queue),
+      m_endpoints(endpoints){
 }
 
 void Sender::operator()(size_t bulk_size) {
 
-  MetaDataRange::iterator first_bulked_metadata = m_metadata_range.begin();
+  auto first_bulked_metadata = m_metadata_range.begin();
   size_t bulked_events = 0;
+  size_t bu_id = 0;
 
   while (true) {
 
@@ -36,7 +38,7 @@ void Sender::operator()(size_t bulk_size) {
           first_bulked_metadata,
           advance_in_range(first_bulked_metadata, bulk_size, m_metadata_range));
 
-      MetaDataRange::iterator last_bulked_metadata = advance_in_range(
+      auto last_bulked_metadata = advance_in_range(
           bulked_metadata.begin(), bulk_size - 1, m_metadata_range);
 
       DataRange bulked_data(
@@ -51,14 +53,17 @@ void Sender::operator()(size_t bulk_size) {
 
       iov.insert(iov.end(), iov_data.begin(), iov_data.end());
 
-      for (auto& i : iov) {
-        LOG(DEBUG) << i.iov_base << "\t[" << i.iov_len << "]";
-      }
-
       size_t bulk_load = 0;
       std::for_each(iov.begin(), iov.end(),
                     [&](iovec const& i) {bulk_load += i.iov_len;});
 
+      LOG(INFO) << "Sending " << bulk_load << " to " << m_endpoints[bu_id];
+
+      for (auto& i : iov) {
+        LOG(DEBUG) << i.iov_base << "\t[" << i.iov_len << "]";
+      }
+
+      bu_id = (bu_id + 1) % m_endpoints.size();
       m_sent_events_queue.push(bulked_metadata);
       bulked_events -= bulk_size;
       first_bulked_metadata = bulked_metadata.end();
