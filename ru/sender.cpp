@@ -9,64 +9,83 @@ namespace lseb {
 
 Sender::Sender(MetaDataRange const& metadata_range, DataRange const& data_range,
                SharedQueue<MetaDataRange>& ready_events_queue,
-               SharedQueue<MetaDataRange>& sent_events_queue, Endpoints const& endpoints)
+               SharedQueue<MetaDataRange>& sent_events_queue,
+               Endpoints const& endpoints, size_t bulk_size, size_t ru_id)
     : m_metadata_range(metadata_range),
       m_data_range(data_range),
       m_ready_events_queue(ready_events_queue),
       m_sent_events_queue(sent_events_queue),
-      m_endpoints(endpoints){
+      m_endpoints(endpoints),
+      m_bulk_size(bulk_size),
+      m_ru_id(ru_id) {
 }
 
-void Sender::operator()(size_t bulk_size) {
+void Sender::operator()() {
 
   auto first_bulked_metadata = m_metadata_range.begin();
-  size_t bulked_events = 0;
+  size_t generated_events = 0;
   size_t bu_id = 0;
+
+  std::vector<std::pair<MetaDataRange, DataRange> > bulked_events;
 
   while (true) {
 
     // Get ready events
     MetaDataRange metadata_subrange = m_ready_events_queue.pop();
-    bulked_events += distance_in_range(metadata_subrange, m_metadata_range);
+    generated_events += distance_in_range(metadata_subrange, m_metadata_range);
 
     // Handle bulk submission and release events
-    while (bulked_events >= bulk_size) {
+    while (generated_events >= m_bulk_size) {
 
       // Create bulked metadata and data ranges
 
       MetaDataRange bulked_metadata(
           first_bulked_metadata,
-          advance_in_range(first_bulked_metadata, bulk_size, m_metadata_range));
+          advance_in_range(first_bulked_metadata, m_bulk_size,
+                           m_metadata_range));
 
-      auto last_bulked_metadata = advance_in_range(
-          bulked_metadata.begin(), bulk_size - 1, m_metadata_range);
+      auto last_bulked_metadata = advance_in_range(bulked_metadata.begin(),
+                                                   m_bulk_size - 1,
+                                                   m_metadata_range);
 
       DataRange bulked_data(
           m_data_range.begin() + bulked_metadata.begin()->offset,
           m_data_range.begin() + last_bulked_metadata->offset
               + last_bulked_metadata->length);
 
-      // Create iovec
+      bulked_events.push_back(std::make_pair(bulked_metadata, bulked_data));
+      generated_events -= m_bulk_size;
+      first_bulked_metadata = bulked_metadata.end();
+    }
 
-      std::vector<iovec> iov = create_iovec(bulked_metadata, m_metadata_range);
-      std::vector<iovec> iov_data = create_iovec(bulked_data, m_data_range);
+    if (!bulked_events.empty()) {
 
-      iov.insert(iov.end(), iov_data.begin(), iov_data.end());
+      LOG(INFO) << "Bulk size: " << bulked_events.size();
 
-      size_t bulk_load = 0;
-      std::for_each(iov.begin(), iov.end(),
-                    [&](iovec const& i) {bulk_load += i.iov_len;});
+      for (size_t i = m_ru_id, s = bulked_events.size(), e = i + s; i != e;
+          ++i) {
+        auto it = bulked_events.begin() + i % s;
 
-      LOG(INFO) << "Sending " << bulk_load << " to " << m_endpoints[bu_id];
+        std::vector<iovec> iov = create_iovec(it->first, m_metadata_range);
+        std::vector<iovec> iov_data = create_iovec(it->second, m_data_range);
+        iov.insert(iov.end(), iov_data.begin(), iov_data.end());
 
-      for (auto& i : iov) {
-        LOG(DEBUG) << i.iov_base << "\t[" << i.iov_len << "]";
+        size_t bulk_load = 0;
+        std::for_each(iov.begin(), iov.end(), [&](iovec const& i) {
+          bulk_load += i.iov_len; LOG(DEBUG) << i.iov_base << "\t["
+          << i.iov_len << "]";});
+
+        LOG(INFO) << "Sending " << bulk_load << " bytes to "
+                  << m_endpoints[(bu_id + i % s) % m_endpoints.size()];
       }
 
-      bu_id = (bu_id + 1) % m_endpoints.size();
-      m_sent_events_queue.push(bulked_metadata);
-      bulked_events -= bulk_size;
-      first_bulked_metadata = bulked_metadata.end();
+      // Release all events
+      m_sent_events_queue.push(
+          MetaDataRange(bulked_events.front().first.begin(),
+                        bulked_events.back().first.end()));
+
+      bu_id = (bu_id + bulked_events.size()) % m_endpoints.size();
+      bulked_events.clear();
     }
   }
 }

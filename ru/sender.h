@@ -13,15 +13,17 @@ class Sender {
   SharedQueue<MetaDataRange>& m_ready_events_queue;
   SharedQueue<MetaDataRange>& m_sent_events_queue;
   Endpoints m_endpoints;
+  size_t m_bulk_size;
+  size_t m_ru_id;
 
  public:
 
   Sender(MetaDataRange const& metadata_range, DataRange const& data_range,
          SharedQueue<MetaDataRange>& ready_events_queue,
          SharedQueue<MetaDataRange>& sent_events_queue,
-         Endpoints const& endpoints);
+         Endpoints const& endpoints, size_t bulk_size, size_t ru_id);
 
-  void operator()(size_t bulk_size);
+  void operator()();
 
 };
 

@@ -69,8 +69,8 @@ int main(int argc, char* argv[]) {
   std::thread controller_th(controller, generator_frequency);
 
   Sender sender(metadata_range, data_range, ready_events_queue,
-                sent_events_queue, endpoints);
-  std::thread sender_th(sender, bulk_size);
+                sent_events_queue, endpoints, bulk_size, 0);
+  std::thread sender_th(sender);
 
   // Waiting
 
