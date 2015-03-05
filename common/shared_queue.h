@@ -49,9 +49,9 @@ class SharedQueue {
     m_cond.notify_one();
   }
 
-  size_t size() const {
+  size_t size() {
     std::unique_lock<std::mutex> mlock(m_mutex);
-    return m_queue->size();
+    return m_queue.size();
   }
 
   SharedQueue()
