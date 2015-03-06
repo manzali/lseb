@@ -1,5 +1,7 @@
 #include "ru/sender.h"
 
+#include <random>
+
 #include <sys/uio.h>
 
 #include "common/log.h"
@@ -10,14 +12,13 @@ namespace lseb {
 Sender::Sender(MetaDataRange const& metadata_range, DataRange const& data_range,
                SharedQueue<MetaDataRange>& ready_events_queue,
                SharedQueue<MetaDataRange>& sent_events_queue,
-               Endpoints const& endpoints, size_t bulk_size, size_t ru_id)
+               Endpoints const& endpoints, size_t bulk_size)
     : m_metadata_range(metadata_range),
       m_data_range(data_range),
       m_ready_events_queue(ready_events_queue),
       m_sent_events_queue(sent_events_queue),
       m_endpoints(endpoints),
-      m_bulk_size(bulk_size),
-      m_ru_id(ru_id) {
+      m_bulk_size(bulk_size) {
 }
 
 void Sender::operator()() {
@@ -25,6 +26,8 @@ void Sender::operator()() {
   auto first_bulked_metadata = m_metadata_range.begin();
   size_t generated_events = 0;
   size_t bu_id = 0;
+  std::mt19937 mt_rand(
+      std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
   std::vector<std::pair<MetaDataRange, DataRange> > bulked_events;
 
@@ -62,8 +65,9 @@ void Sender::operator()() {
 
       LOG(INFO) << "Bulk size: " << bulked_events.size();
 
-      for (size_t i = m_ru_id, s = bulked_events.size(), e = i + s; i != e;
-          ++i) {
+      for (size_t s = bulked_events.size(), i = mt_rand() % s, e = i + s;
+          i != e; ++i) {
+
         auto it = bulked_events.begin() + i % s;
 
         std::vector<iovec> iov = create_iovec(it->first, m_metadata_range);
