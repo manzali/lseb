@@ -12,7 +12,6 @@ class Generator {
   LengthGenerator m_length_generator;
   MetaDataBuffer m_metadata_buffer;
   DataBuffer m_data_buffer;
-  size_t m_current_event_id;
 
  public:
   Generator(LengthGenerator const& length_generator,
