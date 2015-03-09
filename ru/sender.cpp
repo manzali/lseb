@@ -1,6 +1,7 @@
 #include "ru/sender.h"
 
 #include <random>
+#include <algorithm>
 
 #include <sys/uio.h>
 
