@@ -4,16 +4,6 @@ include_directories(
 )
 
 add_executable(
-  t_generator
-  t_generator.cpp
-)
-
-target_link_libraries(
-  t_generator
-  generator
-)
-
-add_executable(
   t_length_generator
   t_length_generator.cpp
 )
