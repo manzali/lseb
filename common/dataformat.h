@@ -10,11 +10,9 @@ namespace lseb {
 struct EventMetaData {
   uint64_t id;
   uint64_t length;  // of the event (it will be variable)
-  uint64_t offset;  // from the starting pointer of data shared memory
-  EventMetaData(uint64_t id, uint64_t length, uint64_t offset)
+  EventMetaData(uint64_t id, uint64_t length)
       : id(id),
-        length(length),
-        offset(offset) {
+        length(length) {
   }
 };
 
