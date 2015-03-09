@@ -49,7 +49,7 @@ void Controller::operator()(size_t generator_frequency) {
             MetaDataRange(previous_metadata, current_metadata));
         tot_generated_events += generated_events;
       } else {
-        LOG(WARNING) << "Not enough space for events generation!";
+        LOG(DEBUG) << "Not enough space for events generation!";
         wait_for_events = true;
       }
     }
