@@ -5,7 +5,6 @@
 #include <cassert>
 
 #include "common/dataformat.h"
-#include "common/frequency_meter.h"
 #include "common/log.h"
 #include "common/utility.h"
 #include "common/endpoints.h"
@@ -34,7 +33,7 @@ int main(int argc, char* argv[]) {
   size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   Endpoints const endpoints = get_endpoints(
-      parser.top()("GENERAL")["ENDPOINTS"]);
+      parser.top()("RU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
 
