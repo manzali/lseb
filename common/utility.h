@@ -4,6 +4,7 @@
 #include <vector>
 #include <iterator>
 #include <type_traits>
+#include <numeric>
 
 #include <cassert>
 
@@ -48,6 +49,18 @@ typename R::iterator advance_in_range(typename R::iterator current,
   return std::begin(range)
       + (current - std::begin(range) + advance)
           % std::distance(std::begin(range), std::end(range));
+}
+
+template<typename R, typename T, typename InitType, typename BinaryOperation>
+InitType accumulate_in_range(R sub_range, T range, InitType init,
+                                           BinaryOperation op) {
+  if (sub_range.begin() < sub_range.end()) {
+    return std::accumulate(std::begin(sub_range), std::end(sub_range), init, op);
+  } else {
+    init = std::accumulate(std::begin(sub_range), std::end(range), init, op);
+    return std::accumulate(std::begin(range), std::end(sub_range), init, op);
+  }
+
 }
 
 template<typename R, typename T>
