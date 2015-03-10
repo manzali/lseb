@@ -53,8 +53,9 @@ int main(int argc, char* argv[]) {
       pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
-  MetaDataBuffer metadata_buffer(metadata_range.begin(), metadata_range.end());
-  DataBuffer data_buffer(data_range.begin(), data_range.end());
+  MetaDataBuffer metadata_buffer(std::begin(metadata_range),
+                                 std::end(metadata_range));
+  DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   LengthGenerator payload_size_generator(mean, stddev);
   Generator generator(payload_size_generator, metadata_buffer, data_buffer);

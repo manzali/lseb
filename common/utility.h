@@ -67,14 +67,14 @@ template<typename R, typename T>
 std::vector<iovec> create_iovec(R sub_range, T range) {
   std::vector<iovec> iov;
   size_t const size = sizeof(typename T::value_type);
-  if (std::begin(sub_range) < std::end(sub_range)) {
-    size_t len = distance_in_range(sub_range, range) * size;
-    iov.push_back( { std::begin(sub_range), len });
-  } else {
+  if (std::begin(sub_range) > std::end(sub_range)) {
     size_t len = std::distance(std::begin(sub_range), std::end(range)) * size;
     iov.push_back( { std::begin(sub_range), len });
     len = std::distance(std::begin(range), std::end(sub_range)) * size;
-    iov.push_back( { range.begin(), len });
+    iov.push_back( { std::begin(range), len });
+  } else {
+    size_t len = distance_in_range(sub_range, range) * size;
+    iov.push_back( { std::begin(sub_range), len });
   }
   return iov;
 }
