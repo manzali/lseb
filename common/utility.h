@@ -53,8 +53,8 @@ typename R::iterator advance_in_range(typename R::iterator current,
 
 template<typename R, typename T, typename InitType, typename BinaryOperation>
 InitType accumulate_in_range(R sub_range, T range, InitType init,
-                                           BinaryOperation op) {
-  if (sub_range.begin() < sub_range.end()) {
+                             BinaryOperation op) {
+  if (std::begin(sub_range) < std::end(sub_range)) {
     return std::accumulate(std::begin(sub_range), std::end(sub_range), init, op);
   } else {
     init = std::accumulate(std::begin(sub_range), std::end(range), init, op);
@@ -66,14 +66,14 @@ InitType accumulate_in_range(R sub_range, T range, InitType init,
 template<typename R, typename T>
 std::vector<iovec> create_iovec(R sub_range, T range) {
   std::vector<iovec> iov;
-  size_t const item_size = sizeof(typename T::value_type);
-  if (sub_range.begin() < sub_range.end()) {
-    size_t len = distance_in_range(sub_range, range) * item_size;
-    iov.push_back( { sub_range.begin(), len });
+  size_t const size = sizeof(typename T::value_type);
+  if (std::begin(sub_range) < std::end(sub_range)) {
+    size_t len = distance_in_range(sub_range, range) * size;
+    iov.push_back( { std::begin(sub_range), len });
   } else {
-    size_t len = std::distance(sub_range.begin(), range.end()) * item_size;
-    iov.push_back( { sub_range.begin(), len });
-    len = std::distance(range.begin(), sub_range.end()) * item_size;
+    size_t len = std::distance(std::begin(sub_range), std::end(range)) * size;
+    iov.push_back( { std::begin(sub_range), len });
+    len = std::distance(std::begin(range), std::end(sub_range)) * size;
     iov.push_back( { range.begin(), len });
   }
   return iov;
