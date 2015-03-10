@@ -27,11 +27,9 @@ void Sender::operator()() {
 
   auto first_bulked_metadata = m_metadata_range.begin();
   auto first_bulked_data = m_data_range.begin();
-  size_t generated_events = 0;
-  size_t bu_id = 0;
-  std::mt19937 mt_rand(
-      std::chrono::high_resolution_clock::now().time_since_epoch().count());
-
+  unsigned int generated_events = 0;
+  int bu_id = 0;
+  std::mt19937 mt_rand(std::random_device { }());
   std::vector<std::pair<MetaDataRange, DataRange> > bulked_events;
 
   while (true) {
@@ -74,20 +72,19 @@ void Sender::operator()() {
       for (size_t s = bulked_events.size(), i = mt_rand() % s, e = i + s;
           i != e; ++i) {
 
-        auto it = bulked_events.begin() + i % s;
-
-        std::vector<iovec> iov = create_iovec(it->first, m_metadata_range);
-        std::vector<iovec> iov_data = create_iovec(it->second, m_data_range);
+        auto const& p = *(bulked_events.begin() + i % s);
+        std::vector<iovec> iov = create_iovec(p.first, m_metadata_range);
+        std::vector<iovec> iov_data = create_iovec(p.second, m_data_range);
         iov.insert(iov.end(), iov_data.begin(), iov_data.end());
 
         size_t bulk_load = 0;
         std::for_each(iov.begin(), iov.end(), [&](iovec const& i) {
           bulk_load += i.iov_len; LOG(DEBUG) << i.iov_base << "\t["
           << i.iov_len << "]";});
-        /*
-         LOG(DEBUG) << "Sending " << bulk_load << " bytes to "
-         << m_endpoints[(bu_id + i % s) % m_endpoints.size()];
-         */
+
+        LOG(DEBUG) << "Sending " << bulk_load << " bytes to "
+                   << m_endpoints[(bu_id + i % s) % m_endpoints.size()];
+
       }
 
       // Release all events

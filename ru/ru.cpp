@@ -32,8 +32,7 @@ int main(int argc, char* argv[]) {
   size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
   size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
-  Endpoints const endpoints = get_endpoints(
-      parser.top()("RU")["ENDPOINTS"]);
+  Endpoints const endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
 
