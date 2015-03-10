@@ -34,16 +34,12 @@ void Sender::operator()() {
 
   std::vector<std::pair<MetaDataRange, DataRange> > bulked_events;
 
-  FrequencyMeter memory_throughput(5);
-  FrequencyMeter events_frequency(5);
-
   while (true) {
 
     // Get ready events
     MetaDataRange metadata_subrange = m_ready_events_queue.pop();
-    size_t temp = distance_in_range(metadata_subrange, m_metadata_range);
-    events_frequency.add(temp);
-    generated_events += temp;
+    generated_events += distance_in_range(metadata_subrange, m_metadata_range);
+
     // Handle bulk submission and release events
     while (generated_events >= m_bulk_size) {
 
@@ -54,27 +50,16 @@ void Sender::operator()() {
           advance_in_range(first_bulked_metadata, m_bulk_size,
                            m_metadata_range));
 
-      size_t length = 0;
-
-      if (bulked_metadata.begin() < bulked_metadata.end()) {
-        for (auto it = bulked_metadata.begin();
-            it != bulked_metadata.end(); ++it) {
-          length += it->length;
-        }
-      } else {
-        for (auto it = bulked_metadata.begin();
-            it != m_metadata_range.end(); ++it) {
-          length += it->length;
-        }
-        for (auto it = m_metadata_range.begin();
-            it != bulked_metadata.end(); ++it) {
-          length += it->length;
-        }
-      }
+      size_t data_length =
+          accumulate_in_range(
+              bulked_metadata,
+              m_metadata_range,
+              size_t(0),
+              [](size_t partial, EventMetaData const& it) {return partial + it.length;});
 
       DataRange bulked_data(
           first_bulked_data,
-          advance_in_range(first_bulked_data, length, m_data_range));
+          advance_in_range(first_bulked_data, data_length, m_data_range));
 
       bulked_events.push_back(std::make_pair(bulked_metadata, bulked_data));
       generated_events -= m_bulk_size;
@@ -84,7 +69,7 @@ void Sender::operator()() {
 
     if (!bulked_events.empty()) {
 
-      //LOG(INFO) << "Bulk size: " << bulked_events.size();
+      LOG(INFO) << "Bulk size: " << bulked_events.size();
 
       for (size_t s = bulked_events.size(), i = mt_rand() % s, e = i + s;
           i != e; ++i) {
@@ -99,12 +84,10 @@ void Sender::operator()() {
         std::for_each(iov.begin(), iov.end(), [&](iovec const& i) {
           bulk_load += i.iov_len; LOG(DEBUG) << i.iov_base << "\t["
           << i.iov_len << "]";});
-/*
-        LOG(INFO) << "Sending " << bulk_load << " bytes to "
-                  << m_endpoints[(bu_id + i % s) % m_endpoints.size()];
-*/
-
-        memory_throughput.add(bulk_load);
+        /*
+         LOG(DEBUG) << "Sending " << bulk_load << " bytes to "
+         << m_endpoints[(bu_id + i % s) % m_endpoints.size()];
+         */
       }
 
       // Release all events
@@ -114,16 +97,6 @@ void Sender::operator()() {
 
       bu_id = (bu_id + bulked_events.size()) % m_endpoints.size();
       bulked_events.clear();
-    }
-
-    if (memory_throughput.check()) {
-      LOG(INFO) << "Throughput on memory is "
-                << memory_throughput.frequency() / std::giga::num * 8.
-                << " Gb/s";
-    }
-    if (events_frequency.check()) {
-      LOG(INFO) << "Real events generation frequency is "
-                << events_frequency.frequency() / std::mega::num << " MHz";
     }
   }
 }
