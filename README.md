@@ -10,4 +10,4 @@ cmake -DCMAKE\_BUILD\_TYPE=Release ..
 
 From build directory run the ru executable:
 
-./ru/ru 10000000
+./ru/ru ../test/configuration.ini
