@@ -37,7 +37,8 @@ else()
     # exit due to fatal error
 endif()
 
-add_subdirectory(common)
+add_subdirectory(transport)
 add_subdirectory(generator)
 add_subdirectory(ru)
+add_subdirectory(bu)
 add_subdirectory(test)

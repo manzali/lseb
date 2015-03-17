@@ -7,7 +7,6 @@
 #include "common/dataformat.h"
 #include "common/log.h"
 #include "common/utility.h"
-#include "common/endpoints.h"
 #include "common/iniparser.hpp"
 
 #include "generator/generator.h"
@@ -15,6 +14,9 @@
 
 #include "ru/controller.h"
 #include "ru/sender.h"
+
+#include "transport/endpoints.h"
+#include "transport/transport.h"
 
 using namespace lseb;
 
@@ -32,9 +34,14 @@ int main(int argc, char* argv[]) {
   size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
   size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
-  Endpoints const endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
+  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
+
+  std::vector<int> connection_ids;
+  for(auto const& endpoint : bu_endpoints){
+    connection_ids.push_back(lseb_connect(endpoint.hostname(), endpoint.port()));
+  }
 
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
@@ -68,7 +75,7 @@ int main(int argc, char* argv[]) {
   std::thread controller_th(controller, generator_frequency);
 
   Sender sender(metadata_range, data_range, ready_events_queue,
-                sent_events_queue, endpoints, bulk_size);
+                sent_events_queue, connection_ids, bulk_size);
   std::thread sender_th(sender);
 
   // Waiting

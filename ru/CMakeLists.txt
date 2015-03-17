@@ -23,5 +23,5 @@ target_link_libraries(
   controller
   sender
   generator
-  common
+  transport
 )

@@ -4,6 +4,6 @@ include_directories(
 )
 
 add_library(
-  common
-  endpoints.cpp
+  transport
+  transport.cpp
 )
