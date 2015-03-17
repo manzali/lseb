@@ -113,8 +113,7 @@ class BoundedInt {
     return *this;
   }
   BoundedInt& operator++() {
-    auto const offset = (m_counter - m_min + 1) % m_size;
-    m_counter = m_min + offset + (offset < 0 ? m_size : 0);
+    m_counter = m_min + (m_counter - m_min + 1) % m_size;
     return *this;
   }
   BoundedInt& operator--() {
