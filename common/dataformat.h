@@ -20,10 +20,10 @@ struct EventHeader {
   uint64_t id;
   uint64_t length;
   uint64_t flags;
-  EventHeader(uint64_t id, uint64_t length)
+  EventHeader(uint64_t id, uint64_t length, uint64_t flags)
       : id(id),
         length(length),
-        flags(0) {
+        flags(flags) {
   }
 };
 

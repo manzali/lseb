@@ -24,9 +24,11 @@ void Controller::operator()(size_t generator_frequency) {
   auto const start_time = std::chrono::high_resolution_clock::now();
   size_t tot_generated_events = 0;
   auto current_metadata = std::begin(m_metadata_range);
-  bool wait_for_events = false;
 
   while (true) {
+
+    bool wait_for_events = false;
+
     double const elapsed_seconds = std::chrono::duration<double>(
         std::chrono::high_resolution_clock::now() - start_time).count();
 

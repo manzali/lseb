@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   LengthGenerator payload_size_generator(mean, stddev);
-  Generator generator(payload_size_generator, metadata_buffer, data_buffer);
+  Generator generator(payload_size_generator, metadata_buffer, data_buffer, ru_id);
 
   SharedQueue<MetaDataRange> ready_events_queue;
   SharedQueue<MetaDataRange> sent_events_queue;

@@ -17,13 +17,17 @@ size_t roundUpPowerOf2(size_t val, size_t n) {
 
 Generator::Generator(LengthGenerator const& length_generator,
                      MetaDataBuffer const& metadata_buffer,
-                     DataBuffer const& data_buffer)
+                     DataBuffer const& data_buffer,
+                     size_t id)
     : m_length_generator(length_generator),
       m_metadata_buffer(metadata_buffer),
-      m_data_buffer(data_buffer) {
+      m_data_buffer(data_buffer),
+      m_id(id) {
 
   assert(data_padding >= sizeof(EventHeader));
   assert(m_data_buffer.size() % data_padding == 0);
+
+  uint64_t events_counter = 0;
 
   size_t metadata_avail = m_metadata_buffer.available();
   while (metadata_avail) {
@@ -43,12 +47,12 @@ Generator::Generator(LengthGenerator const& length_generator,
 
     // Set EventMetaData
     EventMetaData& metadata =
-        *(new (m_metadata_buffer.next_write()) EventMetaData(0, event_size));
+        *(new (m_metadata_buffer.next_write()) EventMetaData( events_counter, event_size));
 
     // Set EventHeader
     EventHeader& header = *(new (
         pointer_cast<EventHeader>(m_data_buffer.next_write())) EventHeader(
-        0, metadata.length));
+            events_counter, metadata.length, m_id));
 
     // The buffer can not be completely filled
     if (m_metadata_buffer.available() != 1) {
@@ -56,7 +60,8 @@ Generator::Generator(LengthGenerator const& length_generator,
       m_data_buffer.reserve(event_size);
     }
 
-    metadata_avail--;
+    --metadata_avail;
+    ++events_counter;
   }
 
   m_metadata_buffer.release(m_metadata_buffer.ready());
