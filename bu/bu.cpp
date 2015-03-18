@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "common/iniparser.hpp"
 #include "common/log.h"
@@ -51,11 +52,7 @@ int main(int argc, char* argv[]) {
       pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
-  SharedQueue<MetaDataRange> ready_events_queue;
-  SharedQueue<MetaDataRange> sent_events_queue;
-
-  Receiver receiver(metadata_range, data_range, ready_events_queue,
-                    sent_events_queue, connection_ids);
+  Receiver receiver(metadata_range, data_range, bulk_size, connection_ids);
   std::thread receiver_th(receiver);
 
   receiver_th.join();
