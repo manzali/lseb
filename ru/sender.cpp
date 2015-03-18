@@ -82,16 +82,23 @@ void Sender::operator()() {
 
         auto const& p = *(advance_in_range(it, offset, multievents));
         std::vector<iovec> iov = create_iovec(p.first, m_metadata_range);
-        size_t meta_load = 0;
-        std::for_each(std::begin(iov), std::end(iov), [&](iovec const& i) {
-          meta_load += i.iov_len;});
+        size_t meta_load = std::accumulate(
+            std::begin(iov),
+            std::end(iov),
+            0,
+            [](size_t partial, iovec const& v) {
+              return partial + v.iov_len;}
+        );
         LOG(DEBUG) << "Written for metadata " << meta_load << " bytes in " << iov.size() << " iovec";
 
         std::vector<iovec> iov_data = create_iovec(p.second, m_data_range);
-        size_t data_load = 0;
-        std::for_each(std::begin(iov_data), std::end(iov_data),
-                      [&](iovec const& i) {
-                        data_load += i.iov_len;});
+        size_t data_load = std::accumulate(
+            std::begin(iov_data),
+            std::end(iov_data),
+            0,
+            [](size_t partial, iovec const& v) {
+              return partial + v.iov_len;}
+        );
         LOG(DEBUG) << "Written for data " << data_load << " bytes in " << iov_data.size() << " iovec";
 
         iov.insert(std::end(iov), std::begin(iov_data), std::end(iov_data));

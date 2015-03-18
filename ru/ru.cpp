@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <cassert>
+#include <algorithm>
 
 #include "common/dataformat.h"
 #include "common/log.h"

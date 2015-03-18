@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <algorithm>
 
 #include "common/iniparser.hpp"
 #include "common/log.h"
