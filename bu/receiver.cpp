@@ -47,10 +47,14 @@ void Receiver::operator()() {
         bandwith.add(read_bytes);
 
         // Read data
-        size_t data_load = 0;
-        for (auto const& meta : multievent_meta) {
-          data_load += meta.length;
-        }
+        size_t data_load = std::accumulate(
+            std::begin(multievent_meta),
+            std::end(multievent_meta),
+            0,
+            [](size_t partial, EventMetaData const& meta) {
+              return partial + meta.length;
+            }
+        );
 
         read_bytes = lseb_read(it->fd, m_data_range.begin(), data_load);
         assert(read_bytes >= 0 && static_cast<size_t>(read_bytes) == data_load);
