@@ -1,7 +1,6 @@
 #include "bu/receiver.h"
 
 #include "common/log.h"
-#include "common/frequency_meter.h"
 #include "transport/transport.h"
 
 namespace lseb {
@@ -22,61 +21,50 @@ Receiver::Receiver(MetaDataRange const& metadata_range,
   );
 }
 
-void Receiver::operator()() {
+size_t Receiver::receive(int timeout_ms){
 
-  FrequencyMeter bandwith(1.0);
+  int nevents = lseb_poll(m_poll_fds, timeout_ms);
+  size_t read_bytes = 0;
 
-  while (true) {
+  for (auto it = m_poll_fds.begin(); nevents > 0 && it != m_poll_fds.end();
+      ++it) {
+    if (it->revents & POLLIN) {
 
-    int nevents = lseb_poll(m_poll_fds, 0);
+      // Read metadata
+      size_t const offset = std::distance(m_poll_fds.begin(), it)
+          * m_events_in_multievent;
+      MetaDataRange multievent_meta(
+          m_metadata_range.begin() + offset,
+          m_metadata_range.begin() + offset + m_events_in_multievent);
 
-    for (auto it = m_poll_fds.begin(); nevents > 0 && it != m_poll_fds.end();
-        ++it) {
-      if (it->revents & POLLIN) {
+      ssize_t read_meta = lseb_read(it->fd, multievent_meta.begin(), m_multievent_size);
+      assert(read_meta >= 0 && static_cast<size_t>(read_meta) == m_multievent_size);
 
-        // Read metadata
-        size_t const offset = std::distance(m_poll_fds.begin(), it)
-            * m_events_in_multievent;
-        MetaDataRange multievent_meta(
-            m_metadata_range.begin() + offset,
-            m_metadata_range.begin() + offset + m_events_in_multievent);
+      LOG(DEBUG) << "Read " << read_meta << " / " << m_multievent_size
+                 << " bytes";
 
-        ssize_t read_bytes = lseb_read(it->fd, multievent_meta.begin(), m_multievent_size);
-        assert(read_bytes >= 0 && static_cast<size_t>(read_bytes) == m_multievent_size);
+      // Read data
+      size_t data_load = std::accumulate(
+          std::begin(multievent_meta),
+          std::end(multievent_meta),
+          0,
+          [](size_t partial, EventMetaData const& meta) {
+            return partial + meta.length;
+          }
+      );
 
-        LOG(DEBUG) << "Read " << read_bytes << " / " << m_multievent_size
-                   << " bytes";
+      ssize_t read_data= lseb_read(it->fd, m_data_range.begin(), data_load);
+      assert(read_data >= 0 && static_cast<size_t>(read_data) == data_load);
 
-        bandwith.add(read_bytes);
+      LOG(DEBUG) << "Read " << read_data << " / " << data_load << " bytes";
 
-        // Read data
-        size_t data_load = std::accumulate(
-            std::begin(multievent_meta),
-            std::end(multievent_meta),
-            0,
-            [](size_t partial, EventMetaData const& meta) {
-              return partial + meta.length;
-            }
-        );
+      read_bytes += read_meta;
+      read_bytes += read_data;
 
-        read_bytes = lseb_read(it->fd, m_data_range.begin(), data_load);
-        assert(read_bytes >= 0 && static_cast<size_t>(read_bytes) == data_load);
-
-        LOG(DEBUG) << "Read " << read_bytes << " / " << data_load << " bytes";
-
-        bandwith.add(read_bytes);
-
-        nevents--;
-      }
+      nevents--;
     }
-
-    if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8.
-                << " Gb/s";
-    }
-
   }
-
+  return read_bytes;
 }
 
 }

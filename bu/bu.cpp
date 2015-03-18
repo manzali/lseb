@@ -1,8 +1,8 @@
 #include <memory>
 #include <string>
-#include <thread>
 #include <algorithm>
 
+#include "common/frequency_meter.h"
 #include "common/iniparser.hpp"
 #include "common/log.h"
 #include "common/dataformat.h"
@@ -59,9 +59,18 @@ int main(int argc, char* argv[]) {
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
   Receiver receiver(metadata_range, data_range, bulk_size, connection_ids);
-  std::thread receiver_th(receiver);
 
-  receiver_th.join();
+  FrequencyMeter bandwith(1.0);
+
+  while (true) {
+    size_t read_bytes = receiver.receive(0);
+    bandwith.add(read_bytes);
+
+    if (bandwith.check()) {
+      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8.
+                << " Gb/s";
+    }
+  }
 
 }
 

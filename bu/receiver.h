@@ -17,8 +17,7 @@ class Receiver {
  public:
   Receiver(MetaDataRange const& metadata_range, DataRange const& data_range,
            size_t events_in_multievent, std::vector<int> const& connection_ids);
-  void operator()();
-
+  size_t receive(int timeout_ms);
 };
 
 }
