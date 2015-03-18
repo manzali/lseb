@@ -13,28 +13,31 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  assert(argc <= 2 && "Missing configuration file as parameter!");
+  assert(argc == 3 && "bu <config_file> <id>");
 
   Parser parser(argv[1]);
+  size_t const bu_id = std::stol(argv[2]);
 
   Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
 
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
-  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
+  size_t const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"])
+      .size();
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
 
-  // Retrieve hostname and port for this host!! Now it is the first (hardcoded)
+  assert(bu_id < bu_endpoints.size() && "Wrong bu id");
 
   std::vector<int> connection_ids;
-  int server_sock = lseb_listen(bu_endpoints[0].hostname(), bu_endpoints[0].port());
-  for (size_t i = 0; i != ru_endpoints.size(); ++i) {
-    connection_ids.push_back(lseb_accept(server_sock)); // blocking call
+  int server_sock = lseb_listen(bu_endpoints[bu_id].hostname(),
+                                bu_endpoints[bu_id].port());
+  for (size_t i = 0; i != ru_endpoints; ++i) {
+    connection_ids.push_back(lseb_accept(server_sock));
   }
 
-  size_t const metadata_size = ru_endpoints.size() * bulk_size
+  size_t const metadata_size = connection_ids.size() * bulk_size
       * sizeof(EventMetaData);
 
   // Allocate memory

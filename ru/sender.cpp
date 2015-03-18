@@ -9,6 +9,8 @@
 #include "common/utility.h"
 #include "common/frequency_meter.h"
 
+#include "transport/transport.h"
+
 namespace lseb {
 
 Sender::Sender(MetaDataRange const& metadata_range, DataRange const& data_range,
@@ -24,6 +26,8 @@ Sender::Sender(MetaDataRange const& metadata_range, DataRange const& data_range,
 }
 
 void Sender::operator()() {
+
+  FrequencyMeter bandwith(1.0);
 
   auto first_multievent_metadata = std::begin(m_metadata_range);
   auto first_multievent_data = std::begin(m_data_range);
@@ -68,7 +72,7 @@ void Sender::operator()() {
 
     if (!multievents.empty()) {
 
-      LOG(INFO) << "Bulk size: " << multievents.size();
+      LOG(DEBUG) << "Bulk size: " << multievents.size();
 
       int const offset = mt_rand() % multievents.size();
 
@@ -78,16 +82,28 @@ void Sender::operator()() {
 
         auto const& p = *(advance_in_range(it, offset, multievents));
         std::vector<iovec> iov = create_iovec(p.first, m_metadata_range);
+        size_t meta_load = 0;
+        std::for_each(std::begin(iov), std::end(iov), [&](iovec const& i) {
+          meta_load += i.iov_len;});
+        LOG(DEBUG) << "Written for metadata " << meta_load << " bytes in " << iov.size() << " iovec";
+
         std::vector<iovec> iov_data = create_iovec(p.second, m_data_range);
+        size_t data_load = 0;
+        std::for_each(std::begin(iov_data), std::end(iov_data),
+                      [&](iovec const& i) {
+                        data_load += i.iov_len;});
+        LOG(DEBUG) << "Written for data " << data_load << " bytes in " << iov_data.size() << " iovec";
+
         iov.insert(std::end(iov), std::begin(iov_data), std::end(iov_data));
 
-        size_t load = 0;
-        std::for_each(std::begin(iov), std::end(iov), [&](iovec const& i) {
-          load += i.iov_len; LOG(DEBUG) << i.iov_base << "\t["
-          << i.iov_len << "]";});
+        ssize_t written_bytes = lseb_write(m_connection_ids[bu_id.get()], iov);
+        //ssize_t written_bytes = (meta_load + data_load);
 
-        LOG(DEBUG) << "Sending " << load << " bytes to "
-                   << m_connection_ids[bu_id.get()];
+        assert(written_bytes >= 0 && static_cast<size_t>(written_bytes) == (meta_load + data_load));
+
+        bandwith.add(meta_load);
+        bandwith.add(data_load);
+
         ++bu_id;
       }
       bu_id -= offset;
@@ -98,6 +114,12 @@ void Sender::operator()() {
                         std::end(multievents.back().first)));
       multievents.clear();
     }
+
+    if (bandwith.check()) {
+      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8.
+                << " Gb/s";
+    }
+
   }
 }
 

@@ -22,9 +22,10 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  assert(argc <= 2 && "Missing configuration file as parameter!");
+  assert(argc == 3 && "ru <config_file> <id>");
 
   Parser parser(argv[1]);
+  size_t const ru_id = std::stol(argv[2]);
 
   Log::init("ReadoutUnit", Log::FromString(parser.top()("RU")["LOG_LEVEL"]));
 
@@ -35,8 +36,11 @@ int main(int argc, char* argv[]) {
   size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
+
+  assert(ru_id < ru_endpoints.size() && "Wrong ru id");
 
   std::vector<int> connection_ids;
   for(auto const& endpoint : bu_endpoints){
