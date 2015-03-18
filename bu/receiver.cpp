@@ -14,9 +14,12 @@ Receiver::Receiver(MetaDataRange const& metadata_range,
       m_events_in_multievent(events_in_multievent),
       m_multievent_size(events_in_multievent * sizeof(EventMetaData)) {
   // Prepare the vector of file descriptors to be polled
-  for (auto const& id : connection_ids) {
-    m_poll_fds.push_back(pollfd { id, POLLIN, 0 });
-  }
+  std::transform(
+      std::begin(connection_ids),
+      std::end(connection_ids),
+      std::back_inserter(m_poll_fds),
+      [](int id) {return pollfd {id, POLLIN, 0};}
+  );
 }
 
 void Receiver::operator()() {
