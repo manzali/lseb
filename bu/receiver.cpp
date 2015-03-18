@@ -38,19 +38,11 @@ void Receiver::operator()() {
             m_metadata_range.begin() + offset,
             m_metadata_range.begin() + offset + m_events_in_multievent);
 
-        ssize_t read_bytes = 0;
-        while (static_cast<size_t>(read_bytes) != m_multievent_size) {
-          ssize_t temp = lseb_read(it->fd,
-                                   (char*) multievent_meta.begin() - read_bytes,
-                                   m_multievent_size - read_bytes);
-          assert(temp >= 0);
-          read_bytes += temp;
-        }
+        ssize_t read_bytes = lseb_read(it->fd, multievent_meta.begin(), m_multievent_size);
+        assert(read_bytes >= 0 && static_cast<size_t>(read_bytes) == m_multievent_size);
 
         LOG(DEBUG) << "Read " << read_bytes << " / " << m_multievent_size
                    << " bytes";
-
-        assert(static_cast<size_t>(read_bytes) == m_multievent_size);
 
         bandwith.add(read_bytes);
 
@@ -60,17 +52,10 @@ void Receiver::operator()() {
           data_load += meta.length;
         }
 
-        read_bytes = 0;
-        while (static_cast<size_t>(read_bytes) != data_load) {
-          ssize_t temp = lseb_read(it->fd, m_data_range.begin() + read_bytes,
-                                   data_load - read_bytes);
-          assert(temp >= 0);
-          read_bytes += temp;
-        }
+        read_bytes = lseb_read(it->fd, m_data_range.begin(), data_load);
+        assert(read_bytes >= 0 && static_cast<size_t>(read_bytes) == data_load);
 
         LOG(DEBUG) << "Read " << read_bytes << " / " << data_load << " bytes";
-
-        assert(static_cast<size_t>(read_bytes) == data_load);
 
         bandwith.add(read_bytes);
 
@@ -82,6 +67,7 @@ void Receiver::operator()() {
       LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8.
                 << " Gb/s";
     }
+
   }
 
 }

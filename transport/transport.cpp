@@ -95,9 +95,6 @@ int lseb_poll(std::vector<pollfd>& poll_fds, int timeout_ms) {
   if (ret == -1) {
     LOG(WARNING) << "Error on poll: " << strerror(errno);
   }
-  //else {
-  //  LOG(DEBUG) << "There are " << ret << " sockets ready to be read";
-  //}
   return ret;
 }
 
@@ -106,21 +103,24 @@ ssize_t lseb_write(int sockfd, std::vector<iovec> const& iov) {
   if (ret == -1) {
     LOG(WARNING) << "Error on writev: " << strerror(errno);
   }
-  //else {
-  //  LOG(DEBUG) << "Write " << ret << " bytes on socket " << sockfd;
-  //}
   return ret;
 }
 
 ssize_t lseb_read(int sockfd, void* buffer, size_t nbytes) {
-  ssize_t ret = read(sockfd, buffer, nbytes);
-  if (ret == -1) {
-    LOG(WARNING) << "Error on read: " << strerror(errno);
+  size_t read_bytes = 0;
+  while (read_bytes != nbytes) {
+    ssize_t ret = read(sockfd, (char*) buffer + read_bytes,
+                       nbytes - read_bytes);
+    if (ret == -1) {
+      LOG(WARNING) << "Error on read: " << strerror(errno);
+      return ret;
+    } else if (ret == 0) {
+      LOG(WARNING) << "Connection closed by peer.";
+      return ret;
+    }
+    read_bytes += ret;
   }
-  //else {
-  //  LOG(DEBUG) << "Read " << ret << " bytes on socket " << sockfd;
-  //}
-  return ret;
+  return read_bytes;
 }
 
 }
