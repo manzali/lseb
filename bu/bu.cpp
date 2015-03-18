@@ -23,20 +23,25 @@ int main(int argc, char* argv[]) {
 
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
-  size_t const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"])
-      .size();
+  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
 
   assert(bu_id < bu_endpoints.size() && "Wrong bu id");
 
+  int server_sock = lseb_listen(
+      bu_endpoints[bu_id].hostname(),
+      bu_endpoints[bu_id].port()
+  );
+
   std::vector<int> connection_ids;
-  int server_sock = lseb_listen(bu_endpoints[bu_id].hostname(),
-                                bu_endpoints[bu_id].port());
-  for (size_t i = 0; i != ru_endpoints; ++i) {
-    connection_ids.push_back(lseb_accept(server_sock));
-  }
+  std::transform(
+      std::begin(ru_endpoints),
+      std::end(ru_endpoints),
+      std::back_inserter(connection_ids),
+      [&](Endpoint const& endpoint) {return lseb_accept(server_sock);}
+  );
 
   size_t const metadata_size = connection_ids.size() * bulk_size
       * sizeof(EventMetaData);

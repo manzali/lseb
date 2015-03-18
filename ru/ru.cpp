@@ -43,9 +43,14 @@ int main(int argc, char* argv[]) {
   assert(ru_id < ru_endpoints.size() && "Wrong ru id");
 
   std::vector<int> connection_ids;
-  for(auto const& endpoint : bu_endpoints){
-    connection_ids.push_back(lseb_connect(endpoint.hostname(), endpoint.port()));
-  }
+  std::transform(
+      std::begin(bu_endpoints),
+      std::end(bu_endpoints),
+      std::back_inserter(connection_ids),
+      [](Endpoint const& endpoint) {
+        return lseb_connect(endpoint.hostname(), endpoint.port());
+      }
+  );
 
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
