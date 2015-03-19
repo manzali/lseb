@@ -15,7 +15,7 @@ Controller::Controller(Generator const& generator,
       m_generated_events(0) {
 }
 
-MetaDataRange Controller::generate() {
+MetaDataRange Controller::read() {
 
   double const elapsed_seconds = std::chrono::duration<double>(
       std::chrono::high_resolution_clock::now() - m_start_time).count();

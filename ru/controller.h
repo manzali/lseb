@@ -20,7 +20,7 @@ class Controller {
  public:
   Controller(Generator const& generator, MetaDataRange const& metadata_range,
              size_t generator_frequency);
-  MetaDataRange generate();
+  MetaDataRange read();
   void release(MetaDataRange metadata_range);
 
 };

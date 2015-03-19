@@ -1,5 +1,4 @@
 #include <memory>
-#include <thread>
 #include <string>
 #include <cstdlib>
 #include <cassert>
@@ -9,6 +8,7 @@
 #include "common/log.h"
 #include "common/utility.h"
 #include "common/iniparser.hpp"
+#include "common/frequency_meter.h"
 
 #include "generator/generator.h"
 #include "generator/length_generator.h"
@@ -75,28 +75,26 @@ int main(int argc, char* argv[]) {
   Generator generator(payload_size_generator, metadata_buffer, data_buffer,
                       ru_id);
 
-  SharedQueue<MetaDataRange> ready_events_queue;
-  SharedQueue<MetaDataRange> sent_events_queue;
-
   Controller controller(generator, metadata_range, generator_frequency);
+  Sender sender(metadata_range, data_range, connection_ids, bulk_size);
 
-  Sender sender(metadata_range, data_range, ready_events_queue,
-                sent_events_queue, connection_ids, bulk_size);
-  std::thread sender_th(sender);
+  FrequencyMeter frequency(1.0);
 
   while (true) {
-    MetaDataRange metadata_range = controller.generate();
-    ready_events_queue.push(metadata_range);
+    MetaDataRange ready_events = controller.read();
+    MultiEvents multievents = sender.add(ready_events);
 
-    // Receive events to release
-    while (!sent_events_queue.empty()) {
-      controller.release(sent_events_queue.pop());
+    if (multievents.size()) {
+      size_t sent_bytes = sender.send(multievents);
+      frequency.add(multievents.size() * bulk_size);
+      controller.release(
+          MetaDataRange(std::begin(multievents.front().first),
+                        std::end(multievents.back().first)));
+    }
+
+    if (frequency.check()) {
+      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num
+                << " MHz";
     }
   }
-
-  // Waiting
-
-  sender_th.join();
-
 }
-
