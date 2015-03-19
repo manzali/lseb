@@ -89,11 +89,11 @@ void Generator::releaseEvents(size_t n_events) {
 size_t Generator::generateEvents(size_t n_events) {
 
   // The buffer can not be completely filled
-  n_events =
+  size_t avail_events =
       (n_events <= m_metadata_buffer.available() - 1) ?
           n_events : m_metadata_buffer.available() - 1;
 
-  for (size_t i = 0; i != n_events; ++i) {
+  for (size_t i = 0; i != avail_events; ++i) {
 
     // Set EventMetaData
     EventMetaData const& metadata = *(pointer_cast<EventMetaData>(
@@ -101,6 +101,10 @@ size_t Generator::generateEvents(size_t n_events) {
 
     m_metadata_buffer.reserve(1);
     m_data_buffer.reserve(metadata.length);
+  }
+
+  if (n_events && !avail_events) {
+    LOG(WARNING) << "Not enough space for events generation!";
   }
 
   return n_events;
