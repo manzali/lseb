@@ -32,7 +32,7 @@ void Sender::operator()() {
   auto first_multievent_metadata = std::begin(m_metadata_range);
   auto first_multievent_data = std::begin(m_data_range);
   unsigned int generated_events = 0;
-  BoundedInt bu_id(0, m_connection_ids.size() - 1);
+  int bu_id = 0;
   std::mt19937 mt_rand(std::random_device { }());
   std::vector<std::pair<MetaDataRange, DataRange> > multievents;
 
@@ -103,7 +103,7 @@ void Sender::operator()() {
 
         iov.insert(std::end(iov), std::begin(iov_data), std::end(iov_data));
 
-        ssize_t written_bytes = lseb_write(m_connection_ids[bu_id.get()], iov);
+        ssize_t written_bytes = lseb_write(m_connection_ids[bu_id % m_connection_ids.size()], iov);
         //ssize_t written_bytes = (meta_load + data_load);
 
         assert(written_bytes >= 0 && static_cast<size_t>(written_bytes) == (meta_load + data_load));
@@ -113,7 +113,8 @@ void Sender::operator()() {
 
         ++bu_id;
       }
-      bu_id -= offset;
+      bu_id = (bu_id - offset) % m_connection_ids.size();
+      assert(bu_id >= 0 && "Wrong bu id");
 
       // Release all events
       m_sent_events_queue.push(

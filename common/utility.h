@@ -81,58 +81,6 @@ std::vector<iovec> create_iovec(R sub_range, T range) {
   return iov;
 }
 
-class BoundedInt {
-  int m_counter;
-  int m_min;
-  int m_size;
-
- public:
-  BoundedInt(int min, int max)
-      : m_counter(min),
-        m_min(min),
-        m_size(max - min + 1) {
-    assert(min <= max);
-  }
-  int get() const {
-    return m_counter;
-  }
-  int min() const {
-    return m_min;
-  }
-  int max() const {
-    return m_min + m_size - 1;
-  }
-  BoundedInt& operator+=(int num) {
-    auto const offset = (m_counter - m_min + num) % m_size;
-    m_counter = m_min + offset + (offset < 0 ? m_size : 0);
-    return *this;
-  }
-  BoundedInt& operator-=(int num) {
-    auto const offset = (m_counter - m_min - num) % m_size;
-    m_counter = m_min + offset + (offset < 0 ? m_size : 0);
-    return *this;
-  }
-  BoundedInt& operator++() {
-    m_counter = m_min + (m_counter - m_min + 1) % m_size;
-    return *this;
-  }
-  BoundedInt& operator--() {
-    auto const offset = (m_counter - m_min - 1) % m_size;
-    m_counter = m_min + offset + (offset < 0 ? m_size : 0);
-    return *this;
-  }
-  BoundedInt operator++(int) {
-    BoundedInt result(*this);
-    ++(*this);
-    return result;
-  }
-  BoundedInt operator--(int) {
-    BoundedInt result(*this);
-    --(*this);
-    return result;
-  }
-};
-
 }
 
 #endif
