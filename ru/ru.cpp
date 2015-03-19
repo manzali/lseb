@@ -88,17 +88,35 @@ int main(int argc, char* argv[]) {
 
   FrequencyMeter frequency(1.0);
 
+  FrequencyMeter read(1.0);
+  FrequencyMeter add(1.0);
+  FrequencyMeter send(1.0);
+  FrequencyMeter release(1.0);
+
   while (true) {
+    auto t0 = std::chrono::high_resolution_clock::now();
+
     MetaDataRange ready_events = controller.read();
+    auto t1 = std::chrono::high_resolution_clock::now();
+    read.add(std::chrono::duration<double>(t1 - t0).count());
+
     MultiEvents multievents = sender.add(ready_events);
+    t0 = std::chrono::high_resolution_clock::now();
+    add.add(std::chrono::duration<double>(t0 - t1).count());
 
     if (multievents.size()) {
       size_t sent_bytes = sender.send(multievents);
-      frequency.add(multievents.size() * bulk_size);
+      t1 = std::chrono::high_resolution_clock::now();
+      send.add(std::chrono::duration<double>(t1 - t0).count());
+
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
           std::end(multievents.back().first)));
+      t0 = std::chrono::high_resolution_clock::now();
+      release.add(std::chrono::duration<double>(t0 - t1).count());
+
+      frequency.add(multievents.size() * bulk_size);
     }
 
     if (frequency.check()) {
@@ -106,6 +124,19 @@ int main(int argc, char* argv[]) {
         << "Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
+    }
+
+    if (read.check()) {
+      LOG(INFO) << "read: " << read.frequency() << " s";
+    }
+    if (add.check()) {
+      LOG(INFO) << "add: " << add.frequency() << " s";
+    }
+    if (send.check()) {
+      LOG(INFO) << "send: " << send.frequency() << " s";
+    }
+    if (release.check()) {
+      LOG(INFO) << "release: " << release.frequency() << " s";
     }
   }
 }
