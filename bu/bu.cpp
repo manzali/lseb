@@ -32,30 +32,28 @@ int main(int argc, char* argv[]) {
   assert(bu_id < bu_endpoints.size() && "Wrong bu id");
 
   int server_sock = lseb_listen(
-      bu_endpoints[bu_id].hostname(),
-      bu_endpoints[bu_id].port()
-  );
+    bu_endpoints[bu_id].hostname(),
+    bu_endpoints[bu_id].port());
 
   std::vector<int> connection_ids;
   std::transform(
-      std::begin(ru_endpoints),
-      std::end(ru_endpoints),
-      std::back_inserter(connection_ids),
-      [&](Endpoint const& endpoint) {return lseb_accept(server_sock);}
-  );
+    std::begin(ru_endpoints),
+    std::end(ru_endpoints),
+    std::back_inserter(connection_ids),
+    [&](Endpoint const& endpoint) {return lseb_accept(server_sock);});
 
-  size_t const metadata_size = connection_ids.size() * bulk_size
-      * sizeof(EventMetaData);
+  size_t const metadata_size =
+    connection_ids.size() * bulk_size * sizeof(EventMetaData);
 
   // Allocate memory
 
   std::unique_ptr<unsigned char[]> const metadata_ptr(
-      new unsigned char[metadata_size]);
+    new unsigned char[metadata_size]);
   std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
   MetaDataRange metadata_range(
-      pointer_cast<EventMetaData>(metadata_ptr.get()),
-      pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
+    pointer_cast<EventMetaData>(metadata_ptr.get()),
+    pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
   Receiver receiver(metadata_range, data_range, bulk_size, connection_ids);
@@ -67,8 +65,10 @@ int main(int argc, char* argv[]) {
     bandwith.add(read_bytes);
 
     if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8.
-                << " Gb/s";
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
     }
   }
 
