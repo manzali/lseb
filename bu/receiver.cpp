@@ -1,5 +1,7 @@
 #include "bu/receiver.h"
 
+#include <algorithm>
+
 #include "common/log.h"
 #include "transport/transport.h"
 
