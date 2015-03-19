@@ -44,14 +44,11 @@ int main(int argc, char* argv[]) {
   assert(ru_id < ru_endpoints.size() && "Wrong ru id");
 
   std::vector<int> connection_ids;
-  std::transform(
-      std::begin(bu_endpoints),
-      std::end(bu_endpoints),
-      std::back_inserter(connection_ids),
-      [](Endpoint const& endpoint) {
-        return lseb_connect(endpoint.hostname(), endpoint.port());
-      }
-  );
+  std::transform(std::begin(bu_endpoints), std::end(bu_endpoints),
+                 std::back_inserter(connection_ids),
+                 [](Endpoint const& endpoint) {
+                   return lseb_connect(endpoint.hostname(), endpoint.port());
+                 });
 
   size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
   size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
@@ -81,17 +78,24 @@ int main(int argc, char* argv[]) {
   SharedQueue<MetaDataRange> ready_events_queue;
   SharedQueue<MetaDataRange> sent_events_queue;
 
-  Controller controller(generator, metadata_range, ready_events_queue,
-                        sent_events_queue);
-  std::thread controller_th(controller, generator_frequency);
+  Controller controller(generator, metadata_range, generator_frequency);
 
   Sender sender(metadata_range, data_range, ready_events_queue,
                 sent_events_queue, connection_ids, bulk_size);
   std::thread sender_th(sender);
 
+  while (true) {
+    MetaDataRange metadata_range = controller.generate();
+    ready_events_queue.push(metadata_range);
+
+    // Receive events to release
+    while (!sent_events_queue.empty()) {
+      controller.release(sent_events_queue.pop());
+    }
+  }
+
   // Waiting
 
-  controller_th.join();
   sender_th.join();
 
 }
