@@ -16,7 +16,8 @@ class Endpoint {
 
  public:
   Endpoint(std::string const& hostname, int port)
-      : m_hostname(hostname),
+      :
+        m_hostname(hostname),
         m_port(port) {
     assert(m_port > 0 && "Invalid port number");
   }
@@ -26,7 +27,7 @@ class Endpoint {
   int port() const {
     return m_port;
   }
-  friend std::ostream& operator<<(std::ostream& os, Endpoint const& endpoint){
+  friend std::ostream& operator<<(std::ostream& os, Endpoint const& endpoint) {
     os << endpoint.hostname() << ":" << endpoint.port();
     return os;
   }
