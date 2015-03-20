@@ -15,14 +15,12 @@ namespace lseb {
 
 template<typename T>
 bool is_aligned_for(void* p) {
-  return (reinterpret_cast<uintptr_t>(p) & (std::alignment_of<T>::value - 1))
-      == 0;
+  return (reinterpret_cast<uintptr_t>(p) & (std::alignment_of<T>::value - 1)) == 0;
 }
 
 template<typename T>
 bool is_aligned_for(void const* p) {
-  return (reinterpret_cast<uintptr_t>(p) & (std::alignment_of<T>::value - 1))
-      == 0;
+  return (reinterpret_cast<uintptr_t>(p) & (std::alignment_of<T>::value - 1)) == 0;
 }
 
 template<typename T>
@@ -44,19 +42,24 @@ size_t distance_in_range(R sub_range, T range) {
 }
 
 template<typename R>
-typename R::iterator advance_in_range(typename R::iterator current,
-                                      ssize_t advance, R& range) {
+typename R::iterator advance_in_range(
+  typename R::iterator current,
+  ssize_t advance,
+  R& range) {
   assert(std::begin(range) < std::end(range));
   assert(std::begin(range) <= current && current < std::end(range));
   auto const size = std::distance(std::begin(range), std::end(range));
-  auto const offset = (std::distance(std::begin(range), current) + advance)
-      % size;
+  auto const offset =
+    (std::distance(std::begin(range), current) + advance) % size;
   return std::begin(range) + offset + (offset < 0 ? size : 0);
 }
 
 template<typename R, typename T, typename InitType, typename BinaryOperation>
-InitType accumulate_in_range(R sub_range, T range, InitType init,
-                             BinaryOperation op) {
+InitType accumulate_in_range(
+  R sub_range,
+  T range,
+  InitType init,
+  BinaryOperation op) {
   if (std::begin(sub_range) < std::end(sub_range)) {
     return std::accumulate(std::begin(sub_range), std::end(sub_range), init, op);
   } else {
