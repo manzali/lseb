@@ -18,8 +18,10 @@ class Controller {
   size_t m_generated_events;
 
  public:
-  Controller(Generator const& generator, MetaDataRange const& metadata_range,
-             size_t generator_frequency);
+  Controller(
+    Generator const& generator,
+    MetaDataRange const& metadata_range,
+    size_t generator_frequency);
   MetaDataRange read();
   void release(MetaDataRange metadata_range);
 
