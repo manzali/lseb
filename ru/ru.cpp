@@ -9,6 +9,7 @@
 #include "common/utility.h"
 #include "common/iniparser.hpp"
 #include "common/frequency_meter.h"
+#include "common/timer.h"
 
 #include "generator/generator.h"
 #include "generator/length_generator.h"
@@ -90,33 +91,32 @@ int main(int argc, char* argv[]) {
 
   FrequencyMeter frequency(1.0);
 
-  FrequencyMeter read(1.0);
-  FrequencyMeter add(1.0);
-  FrequencyMeter send(1.0);
-  FrequencyMeter release(1.0);
+  Timer read_timer;
+  Timer add_timer;
+  Timer send_timer;
+  Timer release_timer;
 
   while (true) {
-    auto t0 = std::chrono::high_resolution_clock::now();
 
+    read_timer.start();
     MetaDataRange ready_events = controller.read();
-    auto t1 = std::chrono::high_resolution_clock::now();
-    read.add(std::chrono::duration<double>(t1 - t0).count());
+    read_timer.pause();
 
+    add_timer.start();
     MultiEvents multievents = accumulator.add(ready_events);
-    t0 = std::chrono::high_resolution_clock::now();
-    add.add(std::chrono::duration<double>(t0 - t1).count());
+    add_timer.pause();
 
     if (multievents.size()) {
+      send_timer.start();
       size_t sent_bytes = sender.send(multievents);
-      t1 = std::chrono::high_resolution_clock::now();
-      send.add(std::chrono::duration<double>(t1 - t0).count());
+      send_timer.pause();
 
+      release_timer.start();
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
           std::end(multievents.back().first)));
-      t0 = std::chrono::high_resolution_clock::now();
-      release.add(std::chrono::duration<double>(t0 - t1).count());
+      release_timer.pause();
 
       frequency.add(multievents.size() * bulk_size);
     }
@@ -126,19 +126,20 @@ int main(int argc, char* argv[]) {
         << "Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
-    }
+      LOG(INFO) << "read: " << read_timer.rate() << "%";
+      LOG(INFO) << "add: " << add_timer.rate() << "%";
+      LOG(INFO) << "send: " << send_timer.rate() << "%";
+      LOG(INFO) << "release: " << release_timer.rate() << "%";
+      LOG(INFO)
+        << "total: "
+        << read_timer.rate() + add_timer.rate() + send_timer.rate() + release_timer
+          .rate()
+        << "%";
 
-    if (read.check()) {
-      LOG(INFO) << "read: " << read.frequency() << " s";
-    }
-    if (add.check()) {
-      LOG(INFO) << "add: " << add.frequency() << " s";
-    }
-    if (send.check()) {
-      LOG(INFO) << "send: " << send.frequency() << " s";
-    }
-    if (release.check()) {
-      LOG(INFO) << "release: " << release.frequency() << " s";
+      read_timer.reset();
+      add_timer.reset();
+      send_timer.reset();
+      release_timer.reset();
     }
   }
 }
