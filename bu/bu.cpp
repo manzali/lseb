@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    size_t read_bytes = receiver.receive(0);
+    size_t read_bytes = receiver.receive(1);
     bandwith.add(read_bytes);
 
     if (bandwith.check()) {
