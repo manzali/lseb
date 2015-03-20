@@ -14,6 +14,7 @@
 #include "generator/length_generator.h"
 
 #include "ru/controller.h"
+#include "ru/accumulator.h"
 #include "ru/sender.h"
 
 #include "transport/endpoints.h"
@@ -84,7 +85,8 @@ int main(int argc, char* argv[]) {
     ru_id);
 
   Controller controller(generator, metadata_range, generator_frequency);
-  Sender sender(metadata_range, data_range, connection_ids, bulk_size);
+  Accumulator accumulator(metadata_range, data_range, bulk_size);
+  Sender sender(metadata_range, data_range, connection_ids);
 
   FrequencyMeter frequency(1.0);
 
@@ -100,7 +102,7 @@ int main(int argc, char* argv[]) {
     auto t1 = std::chrono::high_resolution_clock::now();
     read.add(std::chrono::duration<double>(t1 - t0).count());
 
-    MultiEvents multievents = sender.add(ready_events);
+    MultiEvents multievents = accumulator.add(ready_events);
     t0 = std::chrono::high_resolution_clock::now();
     add.add(std::chrono::duration<double>(t0 - t1).count());
 

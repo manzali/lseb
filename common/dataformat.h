@@ -81,6 +81,8 @@ class DataRange {
   }
 };
 
+using MultiEvents = std::vector<std::pair<MetaDataRange, DataRange> >;
+
 class MetaDataBuffer {
   EventMetaData* m_begin;
   EventMetaData* m_end;
