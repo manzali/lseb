@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <sstream>
 
@@ -7,8 +6,7 @@
 #include "common/boost_lightweight_test.hpp"
 #include "common/iniparser.hpp"
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 
   assert(argc == 2 && "The filename is required as parameter!");
 
