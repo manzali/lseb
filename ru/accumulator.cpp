@@ -49,7 +49,8 @@ MultiEvents Accumulator::add(MetaDataRange metadata_range) {
       advance_in_range(m_current_data, data_length, m_data_range));
     m_current_data = std::end(multievent_data);
 
-    multievents.push_back(std::make_pair(multievent_metadata, multievent_data));
+    multievents.emplace_back(
+      std::make_pair(multievent_metadata, multievent_data));
     m_generated_events -= m_events_in_multievent;
   }
   return multievents;
