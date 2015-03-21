@@ -10,10 +10,12 @@ namespace lseb {
 struct EventMetaData {
   uint64_t id;
   uint64_t length;
-  EventMetaData(uint64_t id, uint64_t length)
+  uint64_t offset;
+  EventMetaData(uint64_t id, uint64_t length, uint64_t offset)
       :
         id(id),
-        length(length) {
+        length(length),
+        offset(offset) {
   }
 };
 
