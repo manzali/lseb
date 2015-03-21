@@ -80,6 +80,8 @@ void Generator::releaseEvents(size_t n_events) {
 
   assert(m_metadata_buffer.ready() >= n_events);
 
+  size_t n_bytes = 0;
+
   for (size_t i = 0; i != n_events; ++i) {
 
     // Set EventMetaData
@@ -87,8 +89,9 @@ void Generator::releaseEvents(size_t n_events) {
       m_metadata_buffer.next_read()));
 
     m_metadata_buffer.release(1);
-    m_data_buffer.release(metadata.length);
+    n_bytes += metadata.length;
   }
+  m_data_buffer.release(n_bytes);
 }
 
 size_t Generator::generateEvents(size_t n_events) {
@@ -99,6 +102,8 @@ size_t Generator::generateEvents(size_t n_events) {
         n_events :
         m_metadata_buffer.available() - 1;
 
+  size_t n_bytes = 0;
+
   for (size_t i = 0; i != avail_events; ++i) {
 
     // Set EventMetaData
@@ -106,8 +111,10 @@ size_t Generator::generateEvents(size_t n_events) {
       m_metadata_buffer.next_write()));
 
     m_metadata_buffer.reserve(1);
-    m_data_buffer.reserve(metadata.length);
+    n_bytes += metadata.length;
   }
+
+  m_data_buffer.reserve(n_bytes);
 
   if (n_events && !avail_events) {
     LOG(WARNING) << "Not enough space for events generation!";
