@@ -113,7 +113,7 @@ size_t Generator::generateEvents(size_t n_events) {
     LOG(WARNING) << "Not enough space for events generation!";
   }
 
-  return n_events;
+  return avail_events;
 }
 
 }
