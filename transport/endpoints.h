@@ -42,7 +42,7 @@ inline Endpoints get_endpoints(std::string const& str) {
   while (std::getline(ss, token, ':')) {
     std::string hostname = token;
     std::getline(ss, token, ' ');
-    endpoints.push_back(Endpoint(hostname, std::stol(token)));
+    endpoints.emplace_back(std::move(hostname), std::move(std::stol(token)));
   }
   return endpoints;
 }

@@ -28,11 +28,11 @@ size_t Receiver::receive(int timeout_ms) {
 
   size_t const multievent_size = m_events_in_multievent * sizeof(EventMetaData);
 
-  int nevents = lseb_poll(m_poll_fds, timeout_ms);
+  int n_events = lseb_poll(m_poll_fds, timeout_ms);
   size_t read_bytes = 0;
 
   for (auto it = std::begin(m_poll_fds);
-      nevents > 0 && it != std::end(m_poll_fds); ++it) {
+      n_events > 0 && it != std::end(m_poll_fds); ++it) {
 
     if (it->revents & POLLIN) {
 
@@ -73,7 +73,7 @@ size_t Receiver::receive(int timeout_ms) {
       read_bytes += read_meta;
       read_bytes += read_data;
 
-      nevents--;
+      n_events--;
     }
   }
   return read_bytes;
