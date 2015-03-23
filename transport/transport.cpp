@@ -111,7 +111,7 @@ ssize_t lseb_read(int sockfd, void* buffer, size_t nbytes) {
   while (read_bytes != nbytes) {
     ssize_t ret = read(
       sockfd,
-      (char*) buffer + read_bytes,
+      static_cast<char*>(buffer) + read_bytes,
       nbytes - read_bytes);
     if (ret == -1) {
       LOG(WARNING) << "Error on read: " << strerror(errno);
