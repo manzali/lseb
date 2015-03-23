@@ -6,15 +6,9 @@
 #include "common/log.h"
 #include "common/utility.h"
 
-#if defined(TCP)
-#include "transport/transport.h"
 #include "ru/sender.h"
-#endif
 
-#if defined(RSOCKETS)
-#include "transport/transport_rsockets.h"
-#include "ru/sender_rsockets.h"
-#endif
+#include "transport/transport.h"
 
 namespace lseb {
 

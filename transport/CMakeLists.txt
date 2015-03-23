@@ -1,4 +1,4 @@
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/.")
+if(TRANSPORT STREQUAL "TCP")
 
 include_directories(
   ${LSEB_SOURCE_DIR}
@@ -6,20 +6,24 @@ include_directories(
 
 add_library(
   transport
-  transport.cpp
+  transport_tcp.cpp
+)
+
+elseif (TRANSPORT STREQUAL "RSOCKETS")
+
+include_directories(
+  ${LSEB_SOURCE_DIR}
+  ${RDMA_LIBRARIES}
 )
 
 add_library(
-transport_rsockets
-transport_rsockets.cpp 
+  transport
+  transport_rsockets.cpp
+  ${RDMA_LIBRARIES}
 )
 
-find_package (RDMA REQUIRED)
-
-include_directories(${RDMA_INCLUDE_DIRS})
-
-target_link_libraries(
-transport_rsockets
-${RDMA_LIBRARIES} -lrdmacm -libverbs
-)
+else()
+    message(FATAL_ERROR "The variable TRANSPORT is not properly set.")
+    # exit due to fatal error
+endif()
 

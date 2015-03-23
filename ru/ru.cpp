@@ -16,19 +16,10 @@
 
 #include "ru/controller.h"
 #include "ru/accumulator.h"
-
-#include "transport/endpoints.h"
-
-#if defined(TCP)
-#warning "Ru is using TCP"
-#include "transport/transport.h"
 #include "ru/sender.h"
-#endif
-#if defined(RSOCKETS)
-#warning "Ru is using RSOCKETS"
-#include "transport/transport_rsockets.h"
-#include "ru/sender_rsockets.h"
-#endif
+
+#include "transport/transport.h"
+#include "transport/endpoints.h"
 
 using namespace lseb;
 

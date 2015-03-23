@@ -37,6 +37,19 @@ else()
     # exit due to fatal error
 endif()
 
+# Handle TRANSPORT variable
+if(TRANSPORT STREQUAL "TCP")
+
+elseif (TRANSPORT STREQUAL "RSOCKETS")
+  find_package (RDMA REQUIRED)
+else()
+    message(FATAL_ERROR "The variable TRANSPORT is not properly set.")
+    # exit due to fatal error
+endif()
+
+MESSAGE(STATUS "Using ${TRANSPORT} transport layer")
+ADD_DEFINITIONS(-D${TRANSPORT})
+
 add_subdirectory(transport)
 add_subdirectory(generator)
 add_subdirectory(ru)
