@@ -21,16 +21,13 @@ int lseb_connect(std::string const& hostname, long port) {
   }
 
   sockaddr_in serv_addr;
-  std::fill(
-    reinterpret_cast<char*>(&serv_addr),
-    reinterpret_cast<char*>(&serv_addr) + sizeof(serv_addr),
-    0);
+  std::fill_n(reinterpret_cast<char*>(&serv_addr), sizeof(serv_addr), 0);
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port);
 
   hostent const& server = *(gethostbyname(hostname.c_str()));
-  std::copy(server.h_addr,
-  server.h_addr + server.h_length,
+  std::copy_n(server.h_addr,
+  server.h_length,
   reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
   );
 
@@ -54,16 +51,13 @@ int lseb_listen(std::string const& hostname, long port) {
   }
 
   sockaddr_in serv_addr;
-  std::fill(
-    reinterpret_cast<char*>(&serv_addr),
-    reinterpret_cast<char*>(&serv_addr) + sizeof(serv_addr),
-    0);
+  std::fill_n(reinterpret_cast<char*>(&serv_addr), sizeof(serv_addr), 0);
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port);
 
   hostent const& server = *(gethostbyname(hostname.c_str()));
-  std::copy(server.h_addr,
-  server.h_addr + server.h_length,
+  std::copy_n(server.h_addr,
+  server.h_length,
   reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
   );
 
