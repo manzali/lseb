@@ -1,2 +1,7 @@
 build/
 .project
+.cproject
+.kdev4/
+.settings/
+lseb.kdev4
+
