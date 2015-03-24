@@ -13,12 +13,16 @@ elseif (TRANSPORT STREQUAL "RSOCKETS")
 
 include_directories(
   ${LSEB_SOURCE_DIR}
-  ${RDMA_LIBRARIES}
+  ${RDMA_INCLUDE_DIRS}
 )
 
 add_library(
   transport
   transport_rsockets.cpp
+)
+
+target_link_libraries(
+  transport
   ${RDMA_LIBRARIES}
 )
 
@@ -27,3 +31,4 @@ else()
     # exit due to fatal error
 endif()
 
+MESSAGE(STATUS "Using ${TRANSPORT} transport layer")

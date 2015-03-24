@@ -37,18 +37,20 @@ else()
     # exit due to fatal error
 endif()
 
-# Handle TRANSPORT variable
 if(TRANSPORT STREQUAL "TCP")
 
 elseif (TRANSPORT STREQUAL "RSOCKETS")
-  find_package (RDMA REQUIRED)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
+find_package (RDMA REQUIRED)
+
 else()
     message(FATAL_ERROR "The variable TRANSPORT is not properly set.")
     # exit due to fatal error
 endif()
 
-MESSAGE(STATUS "Using ${TRANSPORT} transport layer")
-ADD_DEFINITIONS(-D${TRANSPORT})
+# Adding definition of TRANSPORT layer
+add_definitions(-D${TRANSPORT})
 
 add_subdirectory(transport)
 add_subdirectory(generator)
