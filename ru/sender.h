@@ -9,7 +9,6 @@ class Sender {
   MetaDataRange m_metadata_range;
   DataRange m_data_range;
   std::vector<int> m_connection_ids;
-  int m_bu_id;
 
  public:
   Sender(
