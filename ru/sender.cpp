@@ -8,8 +8,6 @@
 
 #include "ru/sender.h"
 
-#include "transport/transport.h"
-
 namespace lseb {
 
 static std::mt19937 mt_rand(std::random_device { }());
@@ -17,12 +15,11 @@ static std::mt19937 mt_rand(std::random_device { }());
 Sender::Sender(
   MetaDataRange const& metadata_range,
   DataRange const& data_range,
-  std::vector<int> const& connection_ids)
+  std::vector<RuConnectionId> const& connection_ids)
     :
       m_metadata_range(metadata_range),
       m_data_range(data_range),
-      m_connection_ids(connection_ids),
-      m_bu_id(0) {
+      m_connection_ids(connection_ids) {
 }
 
 size_t Sender::send(MultiEvents multievents) {
@@ -31,7 +28,8 @@ size_t Sender::send(MultiEvents multievents) {
 
   assert(multievents.size() != 0 && "Can't compute the module of zero!");
   int const offset = mt_rand() % multievents.size();
-  m_bu_id += offset;
+  int bu_id =
+    (multievents.begin()->first.begin()->id + offset) % m_connection_ids.size();
 
   for (auto it = std::begin(multievents); it != std::end(multievents); ++it) {
 
@@ -66,16 +64,12 @@ size_t Sender::send(MultiEvents multievents) {
 
     iov.insert(std::end(iov), std::begin(iov_data), std::end(iov_data));
 
-    ssize_t ret = lseb_write(
-      m_connection_ids[m_bu_id % m_connection_ids.size()],
-      iov);
+    ssize_t ret = lseb_write(m_connection_ids[bu_id], iov);
     assert(ret >= 0 && static_cast<size_t>(ret) == (meta_load + data_load));
 
     sent_bytes += ret;
-    ++m_bu_id;
+    bu_id = (bu_id + 1) % m_connection_ids.size();
   }
-  m_bu_id = (m_bu_id - offset) % m_connection_ids.size();
-  assert(m_bu_id >= 0 && "Wrong bu id");
 
   return sent_bytes;
 }

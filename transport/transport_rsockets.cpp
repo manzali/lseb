@@ -14,11 +14,11 @@
 
 namespace lseb {
 
-int lseb_connect(std::string const& hostname, long port) {
+RuConnectionId lseb_connect(std::string const& hostname, long port) {
   int sockfd = rsocket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
-    LOG(WARNING) << "Error on RSOCKET creation: " << strerror(errno);
-    return -1;
+    LOG(WARNING) << "Error on rsocket creation: " << strerror(errno);
+    return RuConnectionId(sockfd, 0);
   }
 
   sockaddr_in serv_addr;
@@ -36,22 +36,30 @@ int lseb_connect(std::string const& hostname, long port) {
   );
 
   if (rconnect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
-    LOG(WARNING) << "Error on RCONNECT: " << strerror(errno);
-    return -1;
+    LOG(WARNING) << "Error on rconnect: " << strerror(errno);
+    return RuConnectionId(sockfd, 0);
   }
+
+  // Offset stuff
+  off_t offset;
+  if (rrecv(sockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    return RuConnectionId(sockfd, 0);
+  }
+
   LOG(DEBUG)
     << "Connected to host "
     << inet_ntoa(serv_addr.sin_addr)
     << " on port "
     << port;
-  return sockfd;
+  return RuConnectionId(sockfd, offset);
 }
 
-int lseb_listen(std::string const& hostname, long port) {
+BuSocket lseb_listen(std::string const& hostname, long port) {
   int sockfd = rsocket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
     LOG(WARNING) << "Error on rsocket creation: " << strerror(errno);
-    return -1;
+    return sockfd;
   }
 
   sockaddr_in serv_addr;
@@ -70,9 +78,10 @@ int lseb_listen(std::string const& hostname, long port) {
 
   if (rbind(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr))) {
     LOG(WARNING) << "Error on rbind: " << strerror(errno);
-    return -1;
+    return sockfd;
   }
   rlisten(sockfd, 128);  // 128 seems to be the max number of waiting sockets in linux
+
   LOG(DEBUG)
     << "Host "
     << inet_ntoa(serv_addr.sin_addr)
@@ -81,20 +90,29 @@ int lseb_listen(std::string const& hostname, long port) {
   return sockfd;
 }
 
-int lseb_accept(int sockfd) {
+BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
-  int newsockfd = raccept(sockfd, (sockaddr*) &cli_addr, &clilen);
+  int newsockfd = raccept(socket, (sockaddr*) &cli_addr, &clilen);
   if (newsockfd == -1) {
     LOG(WARNING) << "Error on raccept: " << strerror(errno);
-  } else {
-    LOG(DEBUG)
-      << "Host "
-      << inet_ntoa(cli_addr.sin_addr)
-      << " connected on port "
-      << ntohs(cli_addr.sin_port);
+    return BuConnectionId(newsockfd, buffer, len);
   }
-  return newsockfd;
+
+  // Offset stuff
+  off_t offset = riomap(newsockfd, buffer, len, PROT_WRITE, 0, -1);
+  if (rsend(newsockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    return BuConnectionId(newsockfd, buffer, len);
+  }
+
+  LOG(DEBUG)
+    << "Host "
+    << inet_ntoa(cli_addr.sin_addr)
+    << " connected on port "
+    << ntohs(cli_addr.sin_port);
+
+  return BuConnectionId(newsockfd, buffer, len);
 }
 
 int lseb_poll(std::vector<pollfd>& poll_fds, int timeout_ms) {
@@ -105,32 +123,37 @@ int lseb_poll(std::vector<pollfd>& poll_fds, int timeout_ms) {
   return ret;
 }
 
+ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov) {
+  ssize_t bytes_written = 0;
+  for (iovec const& i : iov) {
+    bytes_written += riowrite(
+      conn.socket,
+      i.iov_base,
+      i.iov_len,
+      conn.offset,
+      0);
+  }
 
-ssize_t lseb_write(int sockfd, std::vector<iovec> const& iov) {
-  ssize_t ret = rwritev(sockfd, iov.data(), iov.size());
+  ssize_t ret = rsend(conn.socket, &bytes_written, sizeof(bytes_written), 0);
   if (ret == -1) {
     LOG(WARNING) << "Error on rwritev: " << strerror(errno);
+    return ret;
   }
-  return ret;
+  return bytes_written;
 }
 
-ssize_t lseb_read(int sockfd, void* buffer, size_t nbytes) {
-  size_t read_bytes = 0;
-  while (read_bytes != nbytes) {
-    ssize_t ret = rread(
-      sockfd,
-      (char*) buffer + read_bytes,
-      nbytes - read_bytes);
-    if (ret == -1) {
-      LOG(WARNING) << "Error on read: " << strerror(errno);
-      return ret;
-    } else if (ret == 0) {
-      LOG(WARNING) << "Connection closed by peer.";
-      return ret;
-    }
-    read_bytes += ret;
+ssize_t lseb_read(BuConnectionId const& conn) {
+  ssize_t bytes_read = 0;
+  ssize_t ret = rrecv(
+    conn.socket,
+    &bytes_read,
+    sizeof(bytes_read),
+    MSG_WAITALL);
+  if (ret == -1) {
+    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    return ret;
   }
-  return read_bytes;
+  return bytes_read;
 }
 
 }

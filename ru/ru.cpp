@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 
   assert(ru_id < ru_endpoints.size() && "Wrong ru id");
 
-  std::vector<int> connection_ids;
+  std::vector<RuConnectionId> connection_ids;
   std::transform(
     std::begin(bu_endpoints),
     std::end(bu_endpoints),
