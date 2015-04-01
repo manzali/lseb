@@ -41,12 +41,8 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
   }
 
   int val = 1;
-  rsetsockopt(
-    sockfd,
-    SOL_RDMA,
-    RDMA_IOMAPSIZE,
-    static_cast<void*>(&val),
-    sizeof(val));
+  rsetsockopt(sockfd,
+  SOL_RDMA, RDMA_IOMAPSIZE, static_cast<void*>(&val), sizeof(val));
 
   // Offset stuff
   off_t offset;
@@ -108,26 +104,22 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   }
 
   int val = 1;
-  rsetsockopt(
-    newsockfd,
-    SOL_RDMA,
-    RDMA_IOMAPSIZE,
-    static_cast<void*>(&val),
-    sizeof(val));
+  rsetsockopt(newsockfd,
+  SOL_RDMA, RDMA_IOMAPSIZE, static_cast<void*>(&val), sizeof(val));
 
   // Offset stuff
   off_t offset = riomap(newsockfd, buffer, len, PROT_WRITE, 0, -1);
-  if (rsend(newsockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+  if (offset == -1) {
+    LOG(WARNING) << "Error on riomap: " << strerror(errno);
+  } else if (rsend(newsockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
     LOG(WARNING) << "Error on rsend: " << strerror(errno);
-    return BuConnectionId(newsockfd, buffer, len);
+  } else {
+    LOG(DEBUG)
+      << "Host "
+      << inet_ntoa(cli_addr.sin_addr)
+      << " connected on port "
+      << ntohs(cli_addr.sin_port);
   }
-
-  LOG(DEBUG)
-    << "Host "
-    << inet_ntoa(cli_addr.sin_addr)
-    << " connected on port "
-    << ntohs(cli_addr.sin_port);
-
   return BuConnectionId(newsockfd, buffer, len);
 }
 
@@ -160,11 +152,8 @@ ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov) {
 
 ssize_t lseb_read(BuConnectionId const& conn) {
   ssize_t bytes_read = 0;
-  ssize_t ret = rrecv(
-    conn.socket,
-    &bytes_read,
-    sizeof(bytes_read),
-    MSG_WAITALL);
+  ssize_t ret = rrecv(conn.socket, &bytes_read, sizeof(bytes_read),
+  MSG_WAITALL);
   if (ret == -1) {
     LOG(WARNING) << "Error on rrecv: " << strerror(errno);
     return ret;
