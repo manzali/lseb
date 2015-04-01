@@ -40,6 +40,14 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
     return RuConnectionId(sockfd, 0);
   }
 
+  int val = 1;
+  rsetsockopt(
+    sockfd,
+    SOL_RDMA,
+    RDMA_IOMAPSIZE,
+    static_cast<void*>(&val),
+    sizeof(val));
+
   // Offset stuff
   off_t offset;
   if (rrecv(sockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
@@ -98,6 +106,14 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
     LOG(WARNING) << "Error on raccept: " << strerror(errno);
     return BuConnectionId(newsockfd, buffer, len);
   }
+
+  int val = 1;
+  rsetsockopt(
+    newsockfd,
+    SOL_RDMA,
+    RDMA_IOMAPSIZE,
+    static_cast<void*>(&val),
+    sizeof(val));
 
   // Offset stuff
   off_t offset = riomap(newsockfd, buffer, len, PROT_WRITE, 0, -1);
