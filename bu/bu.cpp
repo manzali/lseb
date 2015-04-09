@@ -23,27 +23,18 @@ int main(int argc, char* argv[]) {
   Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
 
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
-  size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+  size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
 
   LOG(INFO) << parser << std::endl;
 
   assert(bu_id < bu_endpoints.size() && "Wrong bu id");
 
-  size_t const metadata_size =
-    ru_endpoints.size() * bulk_size * sizeof(EventMetaData);
-
   // Allocate memory
 
-  std::unique_ptr<unsigned char[]> const metadata_ptr(
-    new unsigned char[metadata_size]);
-  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
-
-  MetaDataRange metadata_range(
-    pointer_cast<EventMetaData>(metadata_ptr.get()),
-    pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
-  DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
+  std::unique_ptr<unsigned char[]> const data_ptr(
+    new unsigned char[data_size * ru_endpoints.size()]);
 
   // Connections
 
@@ -52,18 +43,26 @@ int main(int argc, char* argv[]) {
     bu_endpoints[bu_id].port());
 
   std::vector<BuConnectionId> connection_ids;
+
+  int endpoint_count = 0;
   std::transform(
     std::begin(ru_endpoints),
     std::end(ru_endpoints),
     std::back_inserter(connection_ids),
-    [&](Endpoint const& endpoint) {return lseb_accept(socket, data_ptr.get(), data_size);});
+    [&](Endpoint const& endpoint) {
+      return lseb_accept(
+          socket,
+          data_ptr.get() + endpoint_count++ * data_size,
+          data_size
+      );
+    });
 
-  Receiver receiver(metadata_range, data_range, bulk_size, connection_ids);
+  Receiver receiver(bulk_size, connection_ids);
 
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    size_t read_bytes = receiver.receive(1);
+    size_t read_bytes = receiver.receive();
     bandwith.add(read_bytes);
 
     if (bandwith.check()) {

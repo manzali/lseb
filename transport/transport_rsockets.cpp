@@ -1,6 +1,7 @@
 #include "transport/transport_rsockets.h"
 
 #include <algorithm>
+#include <stdexcept>
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -9,156 +10,255 @@
 #include <string.h>
 #include <errno.h>
 
-#include "common/log.h"
 #include <rdma/rsocket.h>
+
+#include "common/log.h"
+#include "common/dataformat.h"
+#include "common/utility.h"
+
+void set_rdma_options(int socket) {
+  int val = 1;
+  rsetsockopt(socket, SOL_RDMA, RDMA_IOMAPSIZE, &val, sizeof val);
+  val = 0;
+  rsetsockopt(socket, SOL_RDMA, RDMA_INLINE, &val, sizeof val);
+}
 
 namespace lseb {
 
 RuConnectionId lseb_connect(std::string const& hostname, long port) {
-  int sockfd = rsocket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1) {
-    LOG(WARNING) << "Error on rsocket creation: " << strerror(errno);
-    return RuConnectionId(sockfd, 0);
+
+  addrinfo *res;
+  if (getaddrinfo(hostname.c_str(), std::to_string(port).c_str(), NULL, &res)) {
+    //LOG(WARNING) << "Error on getaddrinfo: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on getaddrinfo: " + std::string(strerror(errno)));
   }
 
-  sockaddr_in serv_addr;
-  std::fill(
-    reinterpret_cast<char*>(&serv_addr),
-    reinterpret_cast<char*>(&serv_addr) + sizeof(serv_addr),
-    0);
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(port);
-
-  hostent const& server = *(gethostbyname(hostname.c_str()));
-  std::copy(server.h_addr,
-  server.h_addr + server.h_length,
-  reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
-  );
-
-  if (rconnect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
-    LOG(WARNING) << "Error on rconnect: " << strerror(errno);
-    return RuConnectionId(sockfd, 0);
+  int socket = rsocket(res->ai_family, res->ai_socktype, res->ai_protocol);
+  if (socket < 0) {
+    freeaddrinfo(res);
+    //LOG(WARNING) << "Error on rsocket creation: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on rsocket creation: " + std::string(strerror(errno)));
   }
 
-  int val = 1;
-  rsetsockopt(sockfd,
-  SOL_RDMA, RDMA_IOMAPSIZE, static_cast<void*>(&val), sizeof(val));
+  set_rdma_options(socket);
 
-  // Offset stuff
-  off_t offset;
-  if (rrecv(sockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
-    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
-    return RuConnectionId(sockfd, 0);
+  if (rconnect(socket, res->ai_addr, res->ai_addrlen)) {
+    rclose(socket);
+    freeaddrinfo(res);
+    //LOG(WARNING) << "Error on rconnect: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on rconnect: " + std::string(strerror(errno)));
   }
 
-  LOG(DEBUG)
-    << "Connected to host "
-    << inet_ntoa(serv_addr.sin_addr)
-    << " on port "
-    << port;
-  return RuConnectionId(sockfd, offset);
+  LOG(DEBUG) << "Connected to host " << hostname << " on port " << port;
+
+  freeaddrinfo(res);
+  return RuConnectionId(socket);
 }
 
 BuSocket lseb_listen(std::string const& hostname, long port) {
-  int sockfd = rsocket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1) {
-    LOG(WARNING) << "Error on rsocket creation: " << strerror(errno);
-    return sockfd;
-  }
-
-  sockaddr_in serv_addr;
+  addrinfo hints, *res;
   std::fill(
-    reinterpret_cast<char*>(&serv_addr),
-    reinterpret_cast<char*>(&serv_addr) + sizeof(serv_addr),
+    reinterpret_cast<char*>(&hints),
+    reinterpret_cast<char*>(&hints) + sizeof(hints),
     0);
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(port);
 
-  hostent const& server = *(gethostbyname(hostname.c_str()));
-  std::copy(server.h_addr,
-  server.h_addr + server.h_length,
-  reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
-  );
-
-  if (rbind(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr))) {
-    LOG(WARNING) << "Error on rbind: " << strerror(errno);
-    return sockfd;
+  hints.ai_flags = AI_PASSIVE;
+  if (getaddrinfo(NULL, std::to_string(port).c_str(), &hints, &res)) {
+    //LOG(WARNING) << "Error on getaddrinfo: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on getaddrinfo: " + std::string(strerror(errno)));
   }
-  rlisten(sockfd, 128);  // 128 seems to be the max number of waiting sockets in linux
 
-  LOG(DEBUG)
-    << "Host "
-    << inet_ntoa(serv_addr.sin_addr)
-    << " is listening on port "
-    << port;
-  return sockfd;
+  int socket = rsocket(res->ai_family, res->ai_socktype, res->ai_protocol);
+  if (socket < 0) {
+    freeaddrinfo(res);
+    //LOG(WARNING) << "Error on rsocket creation: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on rsocket creation: " + std::string(strerror(errno)));
+  }
+
+  int val = 1;
+  if (rsetsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof val)) {
+    rclose(socket);
+    freeaddrinfo(res);
+    //LOG(WARNING) << "Error on rsetsockopt: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on rsetsockopt: " + std::string(strerror(errno)));
+  }
+
+  if (rbind(socket, res->ai_addr, res->ai_addrlen)) {
+    rclose(socket);
+    freeaddrinfo(res);
+    //LOG(WARNING) << "Error on rbind: " << strerror(errno);
+    throw std::runtime_error("Error on rbind: " + std::string(strerror(errno)));
+  }
+
+  if (rlisten(socket, 128)) {  // 128 seems to be the max number of waiting sockets in linux
+    rclose(socket);
+    freeaddrinfo(res);
+    //LOG(WARNING) << "Error on rlisten: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on rlisten: " + std::string(strerror(errno)));
+  }
+
+  set_rdma_options(socket);
+
+  freeaddrinfo(res);
+  return socket;
 }
 
 BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
-  int newsockfd = raccept(socket, (sockaddr*) &cli_addr, &clilen);
-  if (newsockfd == -1) {
-    LOG(WARNING) << "Error on raccept: " << strerror(errno);
-    return BuConnectionId(newsockfd, buffer, len);
+  int new_socket = raccept(
+    socket,
+    static_cast<sockaddr*>(static_cast<void*>(&cli_addr)),
+    &clilen);
+  if (new_socket == -1) {
+    //LOG(WARNING) << "Error on raccept: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on raccept: " + std::string(strerror(errno)));
   }
 
-  int val = 1;
-  rsetsockopt(newsockfd,
-  SOL_RDMA, RDMA_IOMAPSIZE, static_cast<void*>(&val), sizeof(val));
+  LOG(DEBUG)
+    << "Host "
+    << inet_ntoa(cli_addr.sin_addr)
+    << " connected on port "
+    << ntohs(cli_addr.sin_port);
 
-  // Offset stuff
-  off_t offset = riomap(newsockfd, buffer, len, PROT_WRITE, 0, -1);
+  set_rdma_options(new_socket);
+
+  return BuConnectionId(new_socket, buffer, len);
+}
+
+bool lseb_register(RuConnectionId& conn) {
+
+  // Receiving offset of buffer
+  if (rrecv(conn.socket, &conn.offset, sizeof(conn.offset), MSG_WAITALL) == -1) {
+    //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
+  // Register poll_byte
+  off_t offset = riomap(
+    conn.socket,
+    (void*) &conn.poll_byte,
+    sizeof(conn.poll_byte),
+    PROT_WRITE,
+    0,
+    -1);
+  if (offset == -1) {
+    //LOG(WARNING) << "Error on riomap: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on riomap: " + std::string(strerror(errno)));
+  }
+
+  // Sending offset of poll_byte
+  if (rsend(conn.socket, &offset, sizeof(offset), 0) == -1) {
+    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+  }
+
+  return true;
+}
+
+bool lseb_register(BuConnectionId& conn) {
+
+  // Register buffer
+  off_t offset = riomap(
+    conn.socket,
+    (void*) conn.buffer,
+    conn.len,
+    PROT_WRITE,
+    0,
+    -1);
   if (offset == -1) {
     LOG(WARNING) << "Error on riomap: " << strerror(errno);
-  } else if (rsend(newsockfd, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+    throw std::runtime_error(
+      "Error on riomap: " + std::string(strerror(errno)));
+  }
+
+  // Sending offset of buffer
+  if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
     LOG(WARNING) << "Error on rsend: " << strerror(errno);
-  } else {
-    LOG(DEBUG)
-      << "Host "
-      << inet_ntoa(cli_addr.sin_addr)
-      << " connected on port "
-      << ntohs(cli_addr.sin_port);
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
-  return BuConnectionId(newsockfd, buffer, len);
+
+  // Receiving offset of poll_byte
+  if (rrecv(conn.socket, &conn.offset, sizeof(conn.offset), MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
+  return true;
 }
 
-int lseb_poll(std::vector<pollfd>& poll_fds, int timeout_ms) {
-  int ret = rpoll(poll_fds.data(), poll_fds.size(), timeout_ms);
-  if (ret == -1) {
-    LOG(WARNING) << "Error on rpoll: " << strerror(errno);
-  }
-  return ret;
+bool lseb_poll(RuConnectionId& conn) {
+  return conn.poll_byte == READY_TO_WRITE;
 }
 
-ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov) {
-  ssize_t bytes_written = 0;
+bool lseb_poll(BuConnectionId& conn) {
+  if (conn.counter != 0) {
+    uint64_t id =
+      static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn
+        .buffer))->id;
+    return conn.counter != id;
+  }
+  uint64_t length =
+    static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn.buffer))
+      ->length;
+  return length != 0;
+}
+
+ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
+
+  while (!lseb_poll(conn)) {
+    ;
+  }
+  conn.poll_byte = READY_TO_READ;
+
+  size_t bytes_written = 0;
   for (iovec const& i : iov) {
     bytes_written += riowrite(
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.offset,
+      conn.offset + bytes_written,
       0);
-  }
-
-  ssize_t ret = rsend(conn.socket, &bytes_written, sizeof(bytes_written), 0);
-  if (ret == -1) {
-    LOG(WARNING) << "Error on rwritev: " << strerror(errno);
-    return ret;
   }
   return bytes_written;
 }
 
-ssize_t lseb_read(BuConnectionId const& conn) {
-  ssize_t bytes_read = 0;
-  ssize_t ret = rrecv(conn.socket, &bytes_read, sizeof(bytes_read),
-  MSG_WAITALL);
-  if (ret == -1) {
-    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
-    return ret;
+ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent) {
+
+  while (!lseb_poll(conn)) {
+    ;
   }
-  return bytes_read;
+
+  conn.counter =
+    static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn.buffer))
+      ->id;
+
+  ssize_t bytes_read = 0;
+
+  for (size_t i = 0; i < events_in_multievent; ++i) {
+    bytes_read +=
+      static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn
+        .buffer + sizeof(EventMetaData) * i))->length + sizeof(EventMetaData);
+  }
+
+  uint8_t poll_byte = READY_TO_WRITE;
+  riowrite(
+    conn.socket,
+    static_cast<void*>(&poll_byte),
+    sizeof(poll_byte),
+    conn.offset,
+    0);
+
+  return bytes_read;  // This is not a real read but just an ack for sender
 }
 
 }

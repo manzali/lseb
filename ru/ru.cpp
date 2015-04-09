@@ -36,14 +36,17 @@ int main(int argc, char* argv[]) {
     parser.top()("GENERATOR")["FREQUENCY"]);
   size_t const mean = std::stol(parser.top()("GENERATOR")["MEAN"]);
   size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
-  size_t const data_size = std::stol(parser.top()("GENERAL")["DATA_BUFFER"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
-  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+  size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
+  size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
+  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
   LOG(INFO) << parser << std::endl;
 
   assert(ru_id < ru_endpoints.size() && "Wrong ru id");
+
+  assert(meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
   std::vector<RuConnectionId> connection_ids;
   std::transform(
@@ -54,23 +57,15 @@ int main(int argc, char* argv[]) {
       return lseb_connect(endpoint.hostname(), endpoint.port());
     });
 
-  size_t const max_buffered_events = data_size / (sizeof(EventHeader) + mean);
-  size_t const metadata_size = max_buffered_events * sizeof(EventMetaData);
-
-  LOG(INFO)
-    << "Metadata buffer can contain "
-    << max_buffered_events
-    << " events";
-
   // Allocate memory
 
   std::unique_ptr<unsigned char[]> const metadata_ptr(
-    new unsigned char[metadata_size]);
+    new unsigned char[meta_size]);
   std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
   MetaDataRange metadata_range(
     pointer_cast<EventMetaData>(metadata_ptr.get()),
-    pointer_cast<EventMetaData>(metadata_ptr.get() + metadata_size));
+    pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
   MetaDataBuffer metadata_buffer(
@@ -90,6 +85,7 @@ int main(int argc, char* argv[]) {
   Sender sender(metadata_range, data_range, connection_ids);
 
   FrequencyMeter frequency(1.0);
+  FrequencyMeter bandwith(1.0);
 
   Timer read_timer;
   Timer add_timer;
@@ -110,6 +106,8 @@ int main(int argc, char* argv[]) {
       send_timer.start();
       size_t sent_bytes = sender.send(multievents);
       send_timer.pause();
+
+      bandwith.add(sent_bytes);
 
       release_timer.start();
       controller.release(
@@ -140,6 +138,13 @@ int main(int argc, char* argv[]) {
       add_timer.reset();
       send_timer.reset();
       release_timer.reset();
+    }
+
+    if (bandwith.check()) {
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
     }
   }
 }

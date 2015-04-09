@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <random>
 
+#include <cstring>
 #include <sys/uio.h>
 
 #include "common/log.h"
@@ -20,6 +21,12 @@ Sender::Sender(
       m_metadata_range(metadata_range),
       m_data_range(data_range),
       m_connection_ids(connection_ids) {
+
+  // Registration
+  for (auto& id : m_connection_ids) {
+    lseb_register(id);
+  }
+
 }
 
 size_t Sender::send(MultiEvents multievents) {

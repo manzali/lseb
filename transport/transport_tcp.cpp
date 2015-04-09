@@ -1,6 +1,7 @@
 #include "transport/transport_tcp.h"
 
 #include <algorithm>
+#include <stdexcept>
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -16,8 +17,8 @@ namespace lseb {
 RuConnectionId lseb_connect(std::string const& hostname, long port) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
-    LOG(WARNING) << "Error on socket creation: " << strerror(errno);
-    return RuConnectionId(sockfd);
+    //LOG(WARNING) << "Error on socket creation: " << strerror(errno);
+    throw std::runtime_error("Error on socket creation: " + std::string(strerror(errno)));
   }
 
   sockaddr_in serv_addr;
@@ -35,8 +36,8 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
   );
 
   if (connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
-    LOG(WARNING) << "Error on connect: " << strerror(errno);
-    return RuConnectionId(sockfd);
+    //LOG(WARNING) << "Error on connect: " << strerror(errno);
+    throw std::runtime_error("Error on connect: " + std::string(strerror(errno)));
   }
 
   LOG(DEBUG)
@@ -50,8 +51,8 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
 BuSocket lseb_listen(std::string const& hostname, long port) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
-    LOG(WARNING) << "Error on socket creation: " << strerror(errno);
-    return sockfd;
+    //LOG(WARNING) << "Error on socket creation: " << strerror(errno);
+    throw std::runtime_error("Error on socket creation: " + std::string(strerror(errno)));
   }
 
   sockaddr_in serv_addr;
@@ -69,8 +70,8 @@ BuSocket lseb_listen(std::string const& hostname, long port) {
   );
 
   if (bind(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr))) {
-    LOG(WARNING) << "Error on bind: " << strerror(errno);
-    return sockfd;
+    //LOG(WARNING) << "Error on bind: " << strerror(errno);
+    throw std::runtime_error("Error on bind: " + std::string(strerror(errno)));
   }
   listen(sockfd, 128);  // 128 seems to be the max number of waiting sockets in linux
 
@@ -87,8 +88,8 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   socklen_t clilen = sizeof(cli_addr);
   int newsockfd = accept(socket, (sockaddr*) &cli_addr, &clilen);
   if (newsockfd == -1) {
-    LOG(WARNING) << "Error on accept: " << strerror(errno);
-    return BuConnectionId(newsockfd, buffer, len);
+    //LOG(WARNING) << "Error on accept: " << strerror(errno);
+    throw std::runtime_error("Error on accept: " + std::string(strerror(errno)));
   }
 
   LOG(DEBUG)
@@ -100,26 +101,42 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   return BuConnectionId(newsockfd, buffer, len);
 }
 
-int lseb_poll(std::vector<pollfd>& poll_fds, int timeout_ms) {
-  int ret = poll(poll_fds.data(), poll_fds.size(), timeout_ms);
+bool lseb_register(RuConnectionId const& conn){
+  return true;
+}
+
+bool lseb_register(BuConnectionId const& conn){
+  return true;
+}
+
+bool lseb_poll(RuConnectionId const& conn){
+  return true;
+}
+
+bool lseb_poll(BuConnectionId const& conn) {
+  pollfd poll_fd{conn.socket, POLLIN, 0};
+  int ret = poll(&poll_fd, 1, 0);
   if (ret == -1) {
-    LOG(WARNING) << "Error on poll: " << strerror(errno);
+    //LOG(WARNING) << "Error on poll: " << strerror(errno);
+    throw std::runtime_error("Error on poll: " + std::string(strerror(errno)));
   }
-  return ret;
+  return ret != 0;
 }
 
 ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov) {
   ssize_t ret = writev(conn.socket, iov.data(), iov.size());
   if (ret == -1) {
-    LOG(WARNING) << "Error on writev: " << strerror(errno);
+    //LOG(WARNING) << "Error on writev: " << strerror(errno);
+    throw std::runtime_error("Error on writev: " + std::string(strerror(errno)));
   }
   return ret;
 }
 
-ssize_t lseb_read(BuConnectionId const& conn) {
+ssize_t lseb_read(BuConnectionId const& conn, size_t events_in_multievent) {
   ssize_t ret = recv(conn.socket, conn.buffer, conn.len, MSG_WAITALL);
   if (ret == -1) {
-    LOG(WARNING) << "Error on recv: " << strerror(errno);
+    //LOG(WARNING) << "Error on recv: " << strerror(errno);
+    throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   }
   return ret;
 }
