@@ -1,9 +1,5 @@
 #include "bu/receiver.h"
 
-#include <algorithm>
-
-#include "common/log.h"
-
 namespace lseb {
 
 Receiver::Receiver(
@@ -14,20 +10,39 @@ Receiver::Receiver(
       m_connection_ids(connection_ids) {
 
   // Registration
-  for(auto& id : m_connection_ids){
-    lseb_register(id);
+  for (auto& conn : m_connection_ids) {
+    lseb_register(conn);
   }
 
 }
 
 size_t Receiver::receive() {
+
+  // Create a vector of iterators and  wait until all rus have written
+  std::vector<std::vector<BuConnectionId>::iterator> conn_iterators;
+  for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
+    if(!lseb_poll(*it)){
+      conn_iterators.emplace_back(it);
+    }
+  }
+  auto it = std::begin(conn_iterators);
+  while (it != std::end(conn_iterators)) {
+    if (lseb_poll(**it)) {
+      it = conn_iterators.erase(it);
+    } else {
+      ++it;
+    }
+    if(it == std::end(conn_iterators)){
+      it = std::begin(conn_iterators);
+    }
+  }
+
+  // Read all data
   size_t read_bytes = 0;
   for (auto& conn : m_connection_ids) {
-    if (lseb_poll(conn)) {
-      ssize_t ret = lseb_read(conn, m_events_in_multievent);
-      assert(ret != -1);
-      read_bytes += ret;
-    }
+    ssize_t ret = lseb_read(conn, m_events_in_multievent);
+    assert(ret != -1);
+    read_bytes += ret;
   }
   return read_bytes;
 }
