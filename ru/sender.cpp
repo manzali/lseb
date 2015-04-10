@@ -23,8 +23,8 @@ Sender::Sender(
       m_connection_ids(connection_ids) {
 
   // Registration
-  for (auto& id : m_connection_ids) {
-    lseb_register(id);
+  for (auto& conn : m_connection_ids) {
+    lseb_register(conn);
   }
 
 }
