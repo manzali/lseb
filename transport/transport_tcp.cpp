@@ -110,7 +110,13 @@ bool lseb_register(BuConnectionId const& conn){
 }
 
 bool lseb_poll(RuConnectionId const& conn){
-  return true;
+  pollfd poll_fd{conn.socket, POLLOUT, 0};
+  int ret = poll(&poll_fd, 1, 0);
+  if (ret == -1) {
+    //LOG(WARNING) << "Error on poll: " << strerror(errno);
+    throw std::runtime_error("Error on poll: " + std::string(strerror(errno)));
+  }
+  return ret != 0;
 }
 
 bool lseb_poll(BuConnectionId const& conn) {
