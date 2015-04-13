@@ -9,7 +9,6 @@
 #include "common/utility.h"
 #include "common/iniparser.hpp"
 #include "common/frequency_meter.h"
-#include "common/timer.h"
 
 #include "generator/generator.h"
 #include "generator/length_generator.h"
@@ -39,6 +38,7 @@ int main(int argc, char* argv[]) {
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
+  size_t const max_sending_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
@@ -46,7 +46,8 @@ int main(int argc, char* argv[]) {
 
   assert(ru_id < ru_endpoints.size() && "Wrong ru id");
 
-  assert(meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
+  assert(
+    meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
   std::vector<RuConnectionId> connection_ids;
   std::transform(
@@ -74,7 +75,7 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
-  Sender sender(metadata_range, data_range, connection_ids);
+  Sender sender(metadata_range, data_range, connection_ids, max_sending_size);
 
   LengthGenerator payload_size_generator(mean, stddev);
   Generator generator(
@@ -86,37 +87,17 @@ int main(int argc, char* argv[]) {
   Controller controller(generator, metadata_range, generator_frequency);
 
   FrequencyMeter frequency(1.0);
-  FrequencyMeter bandwith(1.0);
-
-  Timer read_timer;
-  Timer add_timer;
-  Timer send_timer;
-  Timer release_timer;
 
   while (true) {
-
-    read_timer.start();
     MetaDataRange ready_events = controller.read();
-    read_timer.pause();
-
-    add_timer.start();
     MultiEvents multievents = accumulator.add(ready_events);
-    add_timer.pause();
 
     if (multievents.size()) {
-      send_timer.start();
-      size_t sent_bytes = sender.send(multievents);
-      send_timer.pause();
-
-      bandwith.add(sent_bytes);
-
-      release_timer.start();
+      sender.send(multievents);
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
           std::end(multievents.back().first)));
-      release_timer.pause();
-
       frequency.add(multievents.size() * bulk_size);
     }
 
@@ -125,27 +106,6 @@ int main(int argc, char* argv[]) {
         << "Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
-      LOG(INFO) << "read: " << read_timer.rate() << "%";
-      LOG(INFO) << "add: " << add_timer.rate() << "%";
-      LOG(INFO) << "send: " << send_timer.rate() << "%";
-      LOG(INFO) << "release: " << release_timer.rate() << "%";
-      LOG(INFO)
-        << "total: "
-        << read_timer.rate() + add_timer.rate() + send_timer.rate() + release_timer
-          .rate()
-        << "%";
-
-      read_timer.reset();
-      add_timer.reset();
-      send_timer.reset();
-      release_timer.reset();
-    }
-
-    if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
     }
   }
 }

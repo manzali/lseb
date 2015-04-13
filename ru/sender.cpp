@@ -16,12 +16,15 @@ static std::mt19937 mt_rand(std::random_device { }());
 Sender::Sender(
   MetaDataRange const& metadata_range,
   DataRange const& data_range,
-  std::vector<RuConnectionId> const& connection_ids)
+  std::vector<RuConnectionId> const& connection_ids,
+  size_t max_sending_size)
     :
       m_metadata_range(metadata_range),
       m_data_range(data_range),
       m_connection_ids(connection_ids),
-      m_next_bu(std::begin(m_connection_ids)) {
+      m_next_bu(std::begin(m_connection_ids)),
+      m_max_sending_size(max_sending_size),
+      m_bandwith(1.0){
 
   // Registration
   for (auto& conn : m_connection_ids) {
@@ -88,7 +91,13 @@ size_t Sender::send(MultiEvents multievents) {
 
       LOG(DEBUG) << "Sending iovec to connection id " << m_next_bu->socket;
 
+      assert((meta_load + data_load) <= m_max_sending_size &&
+        "Trying to send a buffer bigger than the receiver one");
+
+      m_send_timer.start();
       ssize_t ret = lseb_write(*conn_it, iov);
+      m_send_timer.pause();
+
       assert(ret >= 0 && static_cast<size_t>(ret) == (meta_load + data_load));
 
       sent_bytes += ret;
@@ -102,6 +111,17 @@ size_t Sender::send(MultiEvents multievents) {
       it) == m_connection_ids.size()) {
       it = std::begin(conn_iterators);
     }
+  }
+
+  m_bandwith.add(sent_bytes);
+  if (m_bandwith.check()) {
+    LOG(INFO)
+      << "Bandwith: "
+      << m_bandwith.frequency() / std::giga::num * 8.
+      << " Gb/s";
+
+    LOG(INFO) << "Sending time: " << m_send_timer.rate() << "%";
+    m_send_timer.reset();
   }
 
   return sent_bytes;
