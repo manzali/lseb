@@ -73,6 +73,9 @@ int main(int argc, char* argv[]) {
     std::end(metadata_range));
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
+  Accumulator accumulator(metadata_range, data_range, bulk_size);
+  Sender sender(metadata_range, data_range, connection_ids);
+
   LengthGenerator payload_size_generator(mean, stddev);
   Generator generator(
     payload_size_generator,
@@ -81,8 +84,6 @@ int main(int argc, char* argv[]) {
     ru_id);
 
   Controller controller(generator, metadata_range, generator_frequency);
-  Accumulator accumulator(metadata_range, data_range, bulk_size);
-  Sender sender(metadata_range, data_range, connection_ids);
 
   FrequencyMeter frequency(1.0);
   FrequencyMeter bandwith(1.0);
