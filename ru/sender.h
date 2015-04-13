@@ -11,6 +11,7 @@ class Sender {
   MetaDataRange m_metadata_range;
   DataRange m_data_range;
   std::vector<RuConnectionId> m_connection_ids;
+  std::vector<RuConnectionId>::iterator m_next_bu;
 
  public:
   Sender(
