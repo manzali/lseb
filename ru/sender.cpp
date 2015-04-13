@@ -35,6 +35,8 @@ Sender::Sender(
 
 size_t Sender::send(MultiEvents multievents) {
 
+  m_send_timer.start();
+
   assert(multievents.size() != 0 && "Can't compute the module of zero!");
 
   std::vector<
@@ -47,7 +49,7 @@ size_t Sender::send(MultiEvents multievents) {
     }
   }
 
-  size_t sent_bytes = 0;
+  size_t written_bytes = 0;
 
   auto it = std::begin(conn_iterators);
   while (it != std::end(conn_iterators)) {
@@ -94,13 +96,13 @@ size_t Sender::send(MultiEvents multievents) {
       assert((meta_load + data_load) <= m_max_sending_size &&
         "Trying to send a buffer bigger than the receiver one");
 
-      m_send_timer.start();
+      m_write_timer.start();
       ssize_t ret = lseb_write(*conn_it, iov);
-      m_send_timer.pause();
+      m_write_timer.pause();
 
       assert(ret >= 0 && static_cast<size_t>(ret) == (meta_load + data_load));
 
-      sent_bytes += ret;
+      written_bytes += ret;
 
       it = conn_iterators.erase(it);
     } else {
@@ -113,18 +115,22 @@ size_t Sender::send(MultiEvents multievents) {
     }
   }
 
-  m_bandwith.add(sent_bytes);
+  m_send_timer.pause();
+
+  m_bandwith.add(written_bytes);
   if (m_bandwith.check()) {
     LOG(INFO)
       << "Bandwith: "
       << m_bandwith.frequency() / std::giga::num * 8.
       << " Gb/s";
 
-    LOG(INFO) << "Sending time: " << m_send_timer.rate() << "%";
+    LOG(INFO) << "lseb_write() time: " << m_write_timer.rate() << "%";
+    LOG(INFO) << "Sender::send() time: " << m_send_timer.rate() << "%";
+    m_write_timer.reset();
     m_send_timer.reset();
   }
 
-  return sent_bytes;
+  return written_bytes;
 }
 
 }

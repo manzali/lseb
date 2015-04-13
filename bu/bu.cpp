@@ -2,7 +2,6 @@
 #include <string>
 #include <algorithm>
 
-#include "common/frequency_meter.h"
 #include "common/iniparser.hpp"
 #include "common/log.h"
 #include "common/dataformat.h"
@@ -59,18 +58,8 @@ int main(int argc, char* argv[]) {
 
   Receiver receiver(bulk_size, connection_ids);
 
-  FrequencyMeter bandwith(1.0);
-
   while (true) {
-    size_t read_bytes = receiver.receive();
-    bandwith.add(read_bytes);
-
-    if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
-    }
+    receiver.receive();
   }
 
 }

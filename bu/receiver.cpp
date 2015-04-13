@@ -1,5 +1,7 @@
 #include "bu/receiver.h"
 
+#include "common/log.h"
+
 namespace lseb {
 
 Receiver::Receiver(
@@ -7,7 +9,8 @@ Receiver::Receiver(
   std::vector<BuConnectionId> const& connection_ids)
     :
       m_events_in_multievent(events_in_multievent),
-      m_connection_ids(connection_ids) {
+      m_connection_ids(connection_ids),
+      m_bandwith(1.0) {
 
   // Registration
   for (auto& conn : m_connection_ids) {
@@ -17,6 +20,8 @@ Receiver::Receiver(
 }
 
 size_t Receiver::receive() {
+
+  m_recv_timer.start();
 
   // Create a vector of iterators and  wait until all rus have written
   std::vector<std::vector<BuConnectionId>::iterator> conn_iterators;
@@ -40,9 +45,26 @@ size_t Receiver::receive() {
   // Read all data
   size_t read_bytes = 0;
   for (auto& conn : m_connection_ids) {
+    m_read_timer.start();
     ssize_t ret = lseb_read(conn, m_events_in_multievent);
+    m_read_timer.pause();
     assert(ret != -1);
     read_bytes += ret;
+  }
+
+  m_recv_timer.pause();
+
+  m_bandwith.add(read_bytes);
+  if (m_bandwith.check()) {
+    LOG(INFO)
+      << "Bandwith: "
+      << m_bandwith.frequency() / std::giga::num * 8.
+      << " Gb/s";
+
+    LOG(INFO) << "lseb_read() time: " << m_read_timer.rate() << "%";
+    LOG(INFO) << "Receiver::receive() time: " << m_recv_timer.rate() << "%";
+    m_read_timer.reset();
+    m_recv_timer.reset();
   }
   return read_bytes;
 }
