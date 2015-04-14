@@ -1,5 +1,7 @@
 #include "bu/receiver.h"
 
+#include <list>
+
 #include "common/log.h"
 
 namespace lseb {
@@ -23,8 +25,8 @@ size_t Receiver::receive() {
 
   m_recv_timer.start();
 
-  // Create a vector of iterators and  wait until all rus have written
-  std::vector<std::vector<BuConnectionId>::iterator> conn_iterators;
+  // Create a list of iterators and  wait until all rus have written
+  std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
   for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
     if(!lseb_poll(*it)){
       conn_iterators.emplace_back(it);

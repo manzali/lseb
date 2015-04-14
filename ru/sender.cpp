@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <random>
 #include <list>
 
 #include <cstring>
@@ -12,7 +11,14 @@
 
 namespace lseb {
 
-static std::mt19937 mt_rand(std::random_device { }());
+static size_t iovec_length(std::vector<iovec> const& iov) {
+  return std::accumulate(
+    std::begin(iov),
+    std::end(iov),
+    0,
+    [](size_t partial, iovec const& v) {
+      return partial + v.iov_len;});
+}
 
 Sender::Sender(
   MetaDataRange const& metadata_range,
@@ -52,7 +58,9 @@ size_t Sender::send(MultiEvents multievents) {
 
   size_t written_bytes = 0;
 
-  auto it = std::begin(conn_iterators);
+  auto it = select_randomly(
+    std::begin(conn_iterators),
+    std::next(std::begin(conn_iterators), m_connection_ids.size()));
   while (it != std::end(conn_iterators)) {
 
     auto& conn_it = it->first;
@@ -61,12 +69,8 @@ size_t Sender::send(MultiEvents multievents) {
       auto& multi_it = it->second;
 
       std::vector<iovec> iov = create_iovec(multi_it->first, m_metadata_range);
-      size_t meta_load = std::accumulate(
-        std::begin(iov),
-        std::end(iov),
-        0,
-        [](size_t partial, iovec const& v) {
-          return partial + v.iov_len;});
+      size_t meta_load = iovec_length(iov);
+
       LOG(DEBUG)
         << "Written for metadata "
         << meta_load
@@ -74,23 +78,17 @@ size_t Sender::send(MultiEvents multievents) {
         << iov.size()
         << " iovec";
 
-      std::vector<iovec> iov_data = create_iovec(
-        multi_it->second,
-        m_data_range);
-      size_t data_load = std::accumulate(
-        std::begin(iov_data),
-        std::end(iov_data),
-        0,
-        [](size_t partial, iovec const& v) {
-          return partial + v.iov_len;});
+      std::vector<iovec> iov_d = create_iovec(multi_it->second, m_data_range);
+      size_t data_load = iovec_length(iov_d);
+
       LOG(DEBUG)
         << "Written for data "
         << data_load
         << " bytes in "
-        << iov_data.size()
+        << iov_d.size()
         << " iovec";
 
-      iov.insert(std::end(iov), std::begin(iov_data), std::end(iov_data));
+      iov.insert(std::end(iov), std::begin(iov_d), std::end(iov_d));
 
       LOG(DEBUG) << "Sending iovec to connection id " << conn_it->socket;
 
