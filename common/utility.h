@@ -6,6 +6,7 @@
 #include <iterator>
 #include <type_traits>
 #include <numeric>
+#include <random>
 
 #include <cassert>
 
@@ -82,6 +83,15 @@ std::vector<iovec> create_iovec(R sub_range, T range) {
     iov.push_back( { std::begin(range), len });
   }
   return iov;
+}
+
+// http://stackoverflow.com/questions/6942273/get-random-element-from-container-c-stl
+template<typename Iter>
+Iter select_randomly(Iter start, Iter end) {
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+  return std::next(start, dis(gen));
 }
 
 }
