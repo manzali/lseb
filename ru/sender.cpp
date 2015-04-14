@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <random>
+#include <list>
 
 #include <cstring>
 #include <sys/uio.h>
@@ -39,7 +40,7 @@ size_t Sender::send(MultiEvents multievents) {
 
   assert(multievents.size() != 0 && "Can't compute the module of zero!");
 
-  std::vector<
+  std::list<
       std::pair<std::vector<RuConnectionId>::iterator, MultiEvents::iterator> > conn_iterators;
 
   for (auto it = std::begin(multievents); it != std::end(multievents); ++it) {
@@ -91,9 +92,9 @@ size_t Sender::send(MultiEvents multievents) {
 
       iov.insert(std::end(iov), std::begin(iov_data), std::end(iov_data));
 
-      LOG(DEBUG) << "Sending iovec to connection id " << m_next_bu->socket;
+      LOG(DEBUG) << "Sending iovec to connection id " << conn_it->socket;
 
-      assert((meta_load + data_load) <= m_max_sending_size &&
+      assert(meta_load + data_load <= m_max_sending_size &&
         "Trying to send a buffer bigger than the receiver one");
 
       m_write_timer.start();
