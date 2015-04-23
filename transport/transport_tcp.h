@@ -20,11 +20,13 @@ struct BuConnectionId {
   int socket;
   void* buffer;
   size_t len;
+  uint64_t event_id;
   BuConnectionId(int socket, void* buffer, size_t len)
       :
         socket(socket),
         buffer(buffer),
-        len(len){
+        len(len),
+        event_id(0) {
   }
 };
 
@@ -37,8 +39,8 @@ bool lseb_register(RuConnectionId const& conn);
 bool lseb_register(BuConnectionId const& conn);
 bool lseb_poll(RuConnectionId const& conn);
 bool lseb_poll(BuConnectionId const& conn);
-ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov);
-ssize_t lseb_read(BuConnectionId const& conn, size_t events_in_multievent);
+ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov);
+ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent);
 
 }
 

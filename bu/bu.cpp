@@ -16,8 +16,10 @@ int main(int argc, char* argv[]) {
 
   assert(argc == 3 && "bu <config_file> <id>");
 
+  int const bu_id = std::stol(argv[2]);
+  assert(bu_id >= 0 && "Negative bu id");
+
   Parser parser(argv[1]);
-  size_t const bu_id = std::stol(argv[2]);
 
   Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
 
@@ -56,7 +58,7 @@ int main(int argc, char* argv[]) {
       );
     });
 
-  Receiver receiver(bulk_size, connection_ids);
+  Receiver receiver(bu_id, bu_endpoints.size(), bulk_size, connection_ids);
 
   while (true) {
     receiver.receive();

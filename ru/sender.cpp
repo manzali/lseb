@@ -31,7 +31,7 @@ Sender::Sender(
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
       m_max_sending_size(max_sending_size),
-      m_bandwith(1.0){
+      m_bandwith(1.0) {
 
   // Registration
   for (auto& conn : m_connection_ids) {
@@ -58,48 +58,34 @@ size_t Sender::send(MultiEvents multievents) {
 
   size_t written_bytes = 0;
 
-  auto it = select_randomly(
+  auto it = std::begin(conn_iterators);
+      /*select_randomly(
     std::begin(conn_iterators),
     std::next(std::begin(conn_iterators), m_connection_ids.size()));
+  */
+
+
   while (it != std::end(conn_iterators)) {
 
     auto& conn_it = it->first;
     if (lseb_poll(*conn_it)) {
 
-      auto& multi_it = it->second;
+      // Sending only data (no metadata)
+      std::vector<iovec> iov = create_iovec(it->second->second, m_data_range);
 
-      std::vector<iovec> iov = create_iovec(multi_it->first, m_metadata_range);
-      size_t meta_load = iovec_length(iov);
+      size_t load = iovec_length(iov);
 
-      LOG(DEBUG)
-        << "Written for metadata "
-        << meta_load
-        << " bytes in "
-        << iov.size()
-        << " iovec";
+      LOG(DEBUG) << "Written " << load << " bytes in " << iov.size() << " iovec and sending to connection id " << conn_it
+        ->socket;
 
-      std::vector<iovec> iov_d = create_iovec(multi_it->second, m_data_range);
-      size_t data_load = iovec_length(iov_d);
-
-      LOG(DEBUG)
-        << "Written for data "
-        << data_load
-        << " bytes in "
-        << iov_d.size()
-        << " iovec";
-
-      iov.insert(std::end(iov), std::begin(iov_d), std::end(iov_d));
-
-      LOG(DEBUG) << "Sending iovec to connection id " << conn_it->socket;
-
-      assert(meta_load + data_load <= m_max_sending_size &&
-        "Trying to send a buffer bigger than the receiver one");
+      assert(
+        load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
 
       m_write_timer.start();
       ssize_t ret = lseb_write(*conn_it, iov);
       m_write_timer.pause();
 
-      assert(ret >= 0 && static_cast<size_t>(ret) == (meta_load + data_load));
+      assert(ret >= 0 && static_cast<size_t>(ret) == load);
 
       written_bytes += ret;
 

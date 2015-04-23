@@ -28,14 +28,14 @@ struct BuConnectionId {
   off_t offset;
   void volatile* buffer;
   size_t len;
-  uint64_t counter;
+  uint64_t event_id;
   BuConnectionId(int socket, void* buffer, size_t len)
       :
         socket(socket),
         offset(-1),
         buffer(buffer),
         len(len),
-        counter(0) {
+        event_id(0) {
   }
 };
 

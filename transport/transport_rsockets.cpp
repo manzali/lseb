@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <string.h>
+#include <cstring>
 #include <errno.h>
 
 #include <rdma/rsocket.h>
@@ -201,14 +201,14 @@ bool lseb_poll(RuConnectionId& conn) {
 }
 
 bool lseb_poll(BuConnectionId& conn) {
-  if (conn.counter != 0) {
+  if (conn.event_id != 0) {
     uint64_t id =
-      static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn
+      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
         .buffer))->id;
-    return conn.counter != id;
+    return conn.event_id != id;
   }
   uint64_t length =
-    static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn.buffer))
+    static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
       ->length;
   return length != 0;
 }
@@ -218,18 +218,31 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
   while (!lseb_poll(conn)) {
     ;
   }
+
   conn.poll_byte = READY_TO_READ;
 
-  size_t bytes_written = 0;
-  for (iovec const& i : iov) {
-    bytes_written += riowrite(
-      conn.socket,
-      i.iov_base,
-      i.iov_len,
-      conn.offset + bytes_written,
-      0);
+  size_t length;
+  void* buffer;
+
+  if (iov.size() == 1) {
+    buffer = iov[0].iov_base;
+    length = iov[0].iov_len;
   }
-  return bytes_written;
+  else{
+    length = 0;
+    for (iovec const& i : iov) {
+      length += i.iov_len;
+    }
+    uint8_t single_iov[length];
+    length = 0;
+    for (iovec const& i : iov) {
+      memcpy(single_iov + length, i.iov_base, i.iov_len);
+      length += i.iov_len;
+    }
+    buffer = single_iov;
+  }
+
+  return riowrite(conn.socket, buffer, length, conn.offset, 0);
 }
 
 ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent) {
@@ -238,16 +251,15 @@ ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent) {
     ;
   }
 
-  conn.counter =
-    static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn.buffer))
+  conn.event_id =
+    static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
       ->id;
 
   ssize_t bytes_read = 0;
-
   for (size_t i = 0; i < events_in_multievent; ++i) {
     bytes_read +=
-      static_cast<EventMetaData volatile*>(static_cast<void volatile*>(conn
-        .buffer + sizeof(EventMetaData) * i))->length + sizeof(EventMetaData);
+      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
+        .buffer + bytes_read))->length;
   }
 
   uint8_t poll_byte = READY_TO_WRITE;
