@@ -16,10 +16,9 @@
 #include "common/dataformat.h"
 #include "common/utility.h"
 
-void set_rdma_options(int socket) {
-  int val = 1;
-  rsetsockopt(socket, SOL_RDMA, RDMA_IOMAPSIZE, &val, sizeof val);
-  val = 0;
+void set_rdma_options(int socket, int iomap_val) {
+  rsetsockopt(socket, SOL_RDMA, RDMA_IOMAPSIZE, &iomap_val, sizeof iomap_val);
+  int val = 0;
   rsetsockopt(socket, SOL_RDMA, RDMA_INLINE, &val, sizeof val);
 }
 
@@ -42,7 +41,7 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
       "Error on rsocket creation: " + std::string(strerror(errno)));
   }
 
-  set_rdma_options(socket);
+  set_rdma_options(socket, 2);
 
   if (rconnect(socket, res->ai_addr, res->ai_addrlen)) {
     rclose(socket);
@@ -104,7 +103,7 @@ BuSocket lseb_listen(std::string const& hostname, long port) {
       "Error on rlisten: " + std::string(strerror(errno)));
   }
 
-  set_rdma_options(socket);
+  set_rdma_options(socket, 1);
 
   freeaddrinfo(res);
   return socket;
@@ -129,24 +128,32 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
     << " connected on port "
     << ntohs(cli_addr.sin_port);
 
-  set_rdma_options(new_socket);
+  set_rdma_options(new_socket, 1);
 
   return BuConnectionId(new_socket, buffer, len);
 }
 
 bool lseb_register(RuConnectionId& conn) {
 
-  // Receiving offset of buffer
-  if (rrecv(conn.socket, &conn.offset, sizeof(conn.offset), MSG_WAITALL) == -1) {
+  // Receiving offset of avail
+  if (rrecv(conn.socket, &conn.avail_offset, sizeof(conn.avail_offset),
+  MSG_WAITALL) == -1) {
     //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
   }
 
-  // Register poll_byte
+  // Receiving offset of buffer
+  if (rrecv(conn.socket, &conn.buffer_offset, sizeof(conn.buffer_offset),
+  MSG_WAITALL) == -1) {
+    //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
+  // Register poll
   off_t offset = riomap(
     conn.socket,
-    (void*) &conn.poll_byte,
-    sizeof(conn.poll_byte),
+    (void*) &conn.poll,
+    sizeof(conn.poll),
     PROT_WRITE,
     0,
     -1);
@@ -156,7 +163,7 @@ bool lseb_register(RuConnectionId& conn) {
       "Error on riomap: " + std::string(strerror(errno)));
   }
 
-  // Sending offset of poll_byte
+  // Sending offset of poll
   if (rsend(conn.socket, &offset, sizeof(offset), 0) == -1) {
     LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
@@ -167,8 +174,28 @@ bool lseb_register(RuConnectionId& conn) {
 
 bool lseb_register(BuConnectionId& conn) {
 
-  // Register buffer
+  // Register avail
   off_t offset = riomap(
+    conn.socket,
+    (void*) &conn.avail,
+    sizeof(conn.avail),
+    PROT_WRITE,
+    0,
+    -1);
+  if (offset == -1) {
+    LOG(WARNING) << "Error on riomap: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on riomap: " + std::string(strerror(errno)));
+  }
+
+  // Sending offset of avail
+  if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+  }
+
+  // Register buffer
+  offset = riomap(
     conn.socket,
     (void*) conn.buffer,
     conn.len,
@@ -187,8 +214,9 @@ bool lseb_register(BuConnectionId& conn) {
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
-  // Receiving offset of poll_byte
-  if (rrecv(conn.socket, &conn.offset, sizeof(conn.offset), MSG_WAITALL) == -1) {
+  // Receiving offset of poll
+  if (rrecv(conn.socket, &conn.poll_offset, sizeof(conn.poll_offset),
+  MSG_WAITALL) == -1) {
     LOG(WARNING) << "Error on rrecv: " << strerror(errno);
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
   }
@@ -197,20 +225,11 @@ bool lseb_register(BuConnectionId& conn) {
 }
 
 bool lseb_poll(RuConnectionId& conn) {
-  return conn.poll_byte == READY_TO_WRITE;
+  return conn.poll == READY_TO_WRITE;
 }
 
 bool lseb_poll(BuConnectionId& conn) {
-  if (conn.event_id != 0) {
-    uint64_t id =
-      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
-        .buffer))->id;
-    return conn.event_id != id;
-  }
-  uint64_t length =
-    static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
-      ->length;
-  return length != 0;
+  return conn.avail != 0;
 }
 
 ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
@@ -219,58 +238,59 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
     ;
   }
 
-  conn.poll_byte = READY_TO_READ;
+  conn.poll = READY_TO_READ;
 
-  size_t length;
-  void* buffer;
-
-  if (iov.size() == 1) {
-    buffer = iov[0].iov_base;
-    length = iov[0].iov_len;
-  }
-  else{
-    length = 0;
-    for (iovec const& i : iov) {
-      length += i.iov_len;
-    }
-    uint8_t single_iov[length];
-    length = 0;
-    for (iovec const& i : iov) {
-      memcpy(single_iov + length, i.iov_base, i.iov_len);
-      length += i.iov_len;
-    }
-    buffer = single_iov;
+  size_t length = 0;
+  for (iovec const& i : iov) {
+    length += riowrite(
+      conn.socket,
+      i.iov_base,
+      i.iov_len,
+      conn.buffer_offset + length,
+      0);
   }
 
-  return riowrite(conn.socket, buffer, length, conn.offset, 0);
+  riowrite(conn.socket, &length, sizeof(length), conn.avail_offset, 0);
+
+  return length;
 }
 
-ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent) {
+ssize_t lseb_read(BuConnectionId& conn) {
 
   while (!lseb_poll(conn)) {
     ;
   }
 
-  conn.event_id =
+  uint64_t check_event_id =
     static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
       ->id;
 
-  ssize_t bytes_read = 0;
-  for (size_t i = 0; i < events_in_multievent; ++i) {
+  size_t bytes_read = 0;
+
+  while (bytes_read < conn.avail) {
+    uint64_t current_event_id =
+      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer + bytes_read))
+        ->id;
+    assert(check_event_id == current_event_id || current_event_id == 0);
+    check_event_id = current_event_id + 1;
     bytes_read +=
-      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
-        .buffer + bytes_read))->length;
+      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer + bytes_read))
+        ->length;
   }
 
-  uint8_t poll_byte = READY_TO_WRITE;
+  assert(bytes_read == conn.avail);
+
+  conn.avail = 0;
+
+  uint8_t poll = READY_TO_WRITE;
   riowrite(
     conn.socket,
-    static_cast<void*>(&poll_byte),
-    sizeof(poll_byte),
-    conn.offset,
+    static_cast<void*>(&poll),
+    sizeof(poll),
+    conn.poll_offset,
     0);
 
-  return bytes_read;  // This is not a real read but just an ack for sender
+  return bytes_read;  // This is not a real read but just an ack for the receiver
 }
 
 }

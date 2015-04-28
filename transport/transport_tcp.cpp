@@ -106,14 +106,14 @@ bool lseb_register(RuConnectionId const& conn) {
   uint8_t poll_byte;
   ssize_t ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
   ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
-  return true;
+  return ret == sizeof(poll_byte);
 }
 
 bool lseb_register(BuConnectionId const& conn) {
   uint8_t poll_byte;
   ssize_t ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
   ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
-  return true;
+  return ret == sizeof(poll_byte);
 }
 
 bool lseb_poll(RuConnectionId const& conn) {
@@ -150,7 +150,7 @@ ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov) {
   return ret - sizeof(length);
 }
 
-ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent) {
+ssize_t lseb_read(BuConnectionId& conn) {
   size_t length = 0;
   // receive the length of data
   ssize_t ret = recv(conn.socket, static_cast<void*>(&length), sizeof(length),
@@ -165,7 +165,6 @@ ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent) {
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   }
-  conn.event_id = pointer_cast<EventHeader>(conn.buffer)->id;
   return ret;
 }
 

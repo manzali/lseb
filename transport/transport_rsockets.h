@@ -13,29 +13,31 @@ namespace lseb {
 
 struct RuConnectionId {
   int socket;
-  uint8_t volatile poll_byte;
-  off_t offset;
+  uint8_t volatile poll;
+  off_t avail_offset;
+  off_t buffer_offset;
   RuConnectionId(int socket)
       :
         socket(socket),
-        poll_byte(READY_TO_WRITE),
-        offset(-1) {
+        poll(READY_TO_WRITE),
+        avail_offset(-1),
+        buffer_offset(-1) {
   }
 };
 
 struct BuConnectionId {
   int socket;
-  off_t offset;
+  size_t volatile avail;
   void volatile* buffer;
   size_t len;
-  uint64_t event_id;
+  off_t poll_offset;
   BuConnectionId(int socket, void* buffer, size_t len)
       :
         socket(socket),
-        offset(-1),
+        avail(0),
         buffer(buffer),
         len(len),
-        event_id(0) {
+        poll_offset(-1) {
   }
 };
 
@@ -49,7 +51,7 @@ bool lseb_register(BuConnectionId& conn);
 bool lseb_poll(RuConnectionId& conn);
 bool lseb_poll(BuConnectionId& conn);
 ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov);
-ssize_t lseb_read(BuConnectionId& conn, size_t events_in_multievent);
+ssize_t lseb_read(BuConnectionId& conn);
 
 }
 

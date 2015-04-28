@@ -6,15 +6,8 @@
 
 namespace lseb {
 
-Receiver::Receiver(
-  int bu_id,
-  size_t total_bu,
-  size_t events_in_multievent,
-  std::vector<BuConnectionId> const& connection_ids)
+Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
     :
-      m_expected_event_id(bu_id * events_in_multievent),
-      m_events_step(total_bu * events_in_multievent),
-      m_events_in_multievent(events_in_multievent),
       m_connection_ids(connection_ids),
       m_bandwith(1.0) {
 
@@ -32,7 +25,7 @@ size_t Receiver::receive() {
   // Create a list of iterators and  wait until all rus have written
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
   for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
-    if(!lseb_poll(*it)){
+    if (!lseb_poll(*it)) {
       conn_iterators.emplace_back(it);
     }
   }
@@ -43,7 +36,7 @@ size_t Receiver::receive() {
     } else {
       ++it;
     }
-    if(it == std::end(conn_iterators)){
+    if (it == std::end(conn_iterators)) {
       it = std::begin(conn_iterators);
     }
   }
@@ -52,21 +45,11 @@ size_t Receiver::receive() {
   size_t read_bytes = 0;
   for (auto& conn : m_connection_ids) {
     m_read_timer.start();
-    ssize_t ret = lseb_read(conn, m_events_in_multievent);
+    ssize_t ret = lseb_read(conn);
     m_read_timer.pause();
     assert(ret != -1);
     read_bytes += ret;
-    /*
-    if(conn.event_id != m_expected_event_id){
-      LOG(WARNING)
-        << "Received "
-        << conn.event_id
-        << " instead of expected "
-        << m_expected_event_id;
-    }
-    */
   }
-  m_expected_event_id += m_events_step;
 
   m_recv_timer.pause();
 

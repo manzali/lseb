@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
       );
     });
 
-  Receiver receiver(bu_id, bu_endpoints.size(), bulk_size, connection_ids);
+  Receiver receiver(connection_ids);
 
   while (true) {
     receiver.receive();
