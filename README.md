@@ -6,7 +6,8 @@ mkdir build
 
 cd build
 
-cmake -DCMAKE\_BUILD\_TYPE=Release ..
+#transport can be TCP,VERBS,RSOCKETS
+cmake -DTRANSPORT=<trasport> -DCMAKE_BUILD_TYPE=Debug ..
 
 From build directory run the ru executable:
 

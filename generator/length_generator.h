@@ -16,8 +16,11 @@ class LengthGenerator {
   size_t m_min;
 
  public:
-  LengthGenerator(size_t mean, size_t stddev = 0, size_t max = 0,
-                  size_t min = 0);
+  LengthGenerator(
+    size_t mean,
+    size_t stddev = 0,
+    size_t max = 0,
+    size_t min = 0);
   size_t generate();
 };
 

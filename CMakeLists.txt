@@ -8,7 +8,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")	
   # using GCC
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pthread")
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
   
@@ -37,7 +37,23 @@ else()
     # exit due to fatal error
 endif()
 
-add_subdirectory(common)
+if(TRANSPORT STREQUAL "TCP")
+
+elseif (TRANSPORT STREQUAL "RSOCKETS")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
+find_package (RDMA REQUIRED)
+
+else()
+    message(FATAL_ERROR "The variable TRANSPORT is not properly set.")
+    # exit due to fatal error
+endif()
+
+# Adding definition of TRANSPORT layer
+add_definitions(-D${TRANSPORT})
+
+add_subdirectory(transport)
 add_subdirectory(generator)
 add_subdirectory(ru)
+add_subdirectory(bu)
 add_subdirectory(test)

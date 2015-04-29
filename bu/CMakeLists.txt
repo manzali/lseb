@@ -4,15 +4,12 @@ include_directories(
 )
 
 add_executable(
-  ru
-  ru.cpp
-  controller.cpp
-  accumulator.cpp
-  sender.cpp
+  bu
+  bu.cpp
+  receiver.cpp
 )
 
 target_link_libraries(
-  ru
-  generator
+  bu
   transport
 )
