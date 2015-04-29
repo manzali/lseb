@@ -151,21 +151,27 @@ ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov) {
 }
 
 ssize_t lseb_read(BuConnectionId& conn) {
-  size_t length = 0;
   // receive the length of data
-  ssize_t ret = recv(conn.socket, static_cast<void*>(&length), sizeof(length),
-  MSG_WAITALL);
+  ssize_t ret = recv(
+    conn.socket,
+    static_cast<void*>(&conn.avail),
+    sizeof(conn.avail),
+    MSG_WAITALL);
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   } else if (ret == 0) {
     // well-known problem (to be investigated)
     throw std::runtime_error("Error on recv: null length received");
   }
-  ret = recv(conn.socket, conn.buffer, length, MSG_WAITALL);
+  ret = recv(conn.socket, conn.buffer, conn.avail, MSG_WAITALL);
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   }
   return ret;
+}
+
+void lseb_release(BuConnectionId& conn) {
+
 }
 
 }

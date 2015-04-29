@@ -22,16 +22,18 @@ size_t Receiver::receive() {
 
   m_recv_timer.start();
 
-  // Create a list of iterators and  wait until all rus have written
+  // Create a list of iterators and  read from all RUs
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
   for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
-    if (!lseb_poll(*it)) {
-      conn_iterators.emplace_back(it);
-    }
+    conn_iterators.push_back(it);
   }
+  size_t bytes_read = 0;
   auto it = std::begin(conn_iterators);
   while (it != std::end(conn_iterators)) {
     if (lseb_poll(**it)) {
+      ssize_t ret = lseb_read(**it);
+      assert(ret != -1);
+      bytes_read += ret;
       it = conn_iterators.erase(it);
     } else {
       ++it;
@@ -41,19 +43,37 @@ size_t Receiver::receive() {
     }
   }
 
-  // Read all data
-  size_t read_bytes = 0;
+  // Check all data
   for (auto& conn : m_connection_ids) {
-    m_read_timer.start();
-    ssize_t ret = lseb_read(conn);
-    m_read_timer.pause();
-    assert(ret != -1);
-    read_bytes += ret;
+    size_t len = conn.avail;
+    size_t bytes_parsed = 0;
+    uint64_t check_event_id =
+      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
+        ->id;
+    while (bytes_parsed < len) {
+      uint64_t current_event_id =
+        static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
+          .buffer + bytes_parsed))->id;
+      assert(check_event_id == current_event_id || current_event_id == 0);
+      check_event_id = current_event_id + 1;
+      bytes_parsed +=
+        static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
+          .buffer + bytes_parsed))->length;
+
+    }
+    if (bytes_parsed > len) {
+      LOG(WARNING) << "Wrong length read";
+    }
+  }
+
+  // Release all data
+  for (auto& conn : m_connection_ids) {
+    lseb_release(conn);
   }
 
   m_recv_timer.pause();
 
-  m_bandwith.add(read_bytes);
+  m_bandwith.add(bytes_read);
   if (m_bandwith.check()) {
     LOG(INFO)
       << "Bandwith: "
@@ -65,7 +85,7 @@ size_t Receiver::receive() {
     m_read_timer.reset();
     m_recv_timer.reset();
   }
-  return read_bytes;
+  return bytes_read;
 }
 
 }

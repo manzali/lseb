@@ -261,24 +261,10 @@ ssize_t lseb_read(BuConnectionId& conn) {
     ;
   }
 
-  uint64_t check_event_id =
-    static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
-      ->id;
+  return conn.avail;
+}
 
-  size_t bytes_read = 0;
-
-  while (bytes_read < conn.avail) {
-    uint64_t current_event_id =
-      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer + bytes_read))
-        ->id;
-    assert(check_event_id == current_event_id || current_event_id == 0);
-    check_event_id = current_event_id + 1;
-    bytes_read +=
-      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer + bytes_read))
-        ->length;
-  }
-
-  assert(bytes_read == conn.avail);
+void lseb_release(BuConnectionId& conn) {
 
   conn.avail = 0;
 
@@ -289,8 +275,6 @@ ssize_t lseb_read(BuConnectionId& conn) {
     sizeof(poll),
     conn.poll_offset,
     0);
-
-  return bytes_read;  // This is not a real read but just an ack for the receiver
 }
 
 }
