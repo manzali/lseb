@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
-  Sender sender(metadata_range, data_range, connection_ids, max_sending_size);
+  Sender sender(connection_ids, max_sending_size);
 
   LengthGenerator payload_size_generator(mean, stddev);
   Generator generator(
@@ -94,7 +94,14 @@ int main(int argc, char* argv[]) {
     MultiEvents multievents = accumulator.add(ready_events);
 
     if (multievents.size()) {
-      size_t written_bytes = sender.send(multievents);
+
+      // Create DataIov
+      std::vector<DataIov> data_iovs;
+      for (auto& multievent : multievents) {
+        data_iovs.push_back(create_iovec(multievent.second, data_range));
+      }
+
+      size_t written_bytes = sender.send(data_iovs);
       bandwith.add(written_bytes);
 
       controller.release(

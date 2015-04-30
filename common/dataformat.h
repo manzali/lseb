@@ -134,6 +134,8 @@ using DataBuffer = Buffer<unsigned char>;
 
 using MultiEvents = std::vector<std::pair<MetaDataRange, DataRange> >;
 
+using DataIov = std::vector<iovec>;
+
 }
 
 #endif

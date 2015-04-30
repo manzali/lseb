@@ -21,13 +21,9 @@ static size_t iovec_length(std::vector<iovec> const& iov) {
 }
 
 Sender::Sender(
-  MetaDataRange const& metadata_range,
-  DataRange const& data_range,
   std::vector<RuConnectionId> const& connection_ids,
   size_t max_sending_size)
     :
-      m_metadata_range(metadata_range),
-      m_data_range(data_range),
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
       m_max_sending_size(max_sending_size) {
@@ -39,14 +35,13 @@ Sender::Sender(
 
 }
 
-size_t Sender::send(MultiEvents multievents) {
-
-  assert(multievents.size() != 0 && "Can't compute the module of zero!");
+size_t Sender::send(std::vector<DataIov> data_iovecs) {
 
   std::list<
-      std::pair<std::vector<RuConnectionId>::iterator, MultiEvents::iterator> > conn_iterators;
+      std::pair<std::vector<RuConnectionId>::iterator,
+          std::vector<DataIov>::iterator> > conn_iterators;
 
-  for (auto it = std::begin(multievents); it != std::end(multievents); ++it) {
+  for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
     conn_iterators.emplace_back(m_next_bu, it);
     if (++m_next_bu == std::end(m_connection_ids)) {
       m_next_bu = std::begin(m_connection_ids);
@@ -66,18 +61,16 @@ size_t Sender::send(MultiEvents multievents) {
     auto& conn_it = it->first;
     if (lseb_poll(*conn_it)) {
 
-      // Sending only data (no metadata)
-      std::vector<iovec> iov = create_iovec(it->second->second, m_data_range);
+      auto& iov = it->second;
+      size_t load = iovec_length(*iov);
 
-      size_t load = iovec_length(iov);
-
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov.size() << " iovec and sending to connection id " << conn_it
+      LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn_it
         ->socket;
 
       assert(
         load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
 
-      ssize_t ret = lseb_write(*conn_it, iov);
+      ssize_t ret = lseb_write(*conn_it, *iov);
 
       assert(ret >= 0 && static_cast<size_t>(ret) == load);
 
