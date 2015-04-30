@@ -47,18 +47,14 @@ size_t Receiver::receive() {
   for (auto& conn : m_connection_ids) {
     size_t len = conn.avail;
     size_t bytes_parsed = 0;
-    uint64_t check_event_id =
-      static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn.buffer))
-        ->id;
+    uint64_t check_event_id = pointer_cast<EventHeader>(conn.buffer)->id;
     while (bytes_parsed < len) {
-      uint64_t current_event_id =
-        static_cast<EventHeader volatile*>(static_cast<void volatile*>(static_cast<char volatile*>(conn
-          .buffer) + bytes_parsed))->id;
+      uint64_t current_event_id = pointer_cast<EventHeader>(
+        static_cast<char*>(conn.buffer) + bytes_parsed)->id;
       assert(check_event_id == current_event_id || current_event_id == 0);
       check_event_id = current_event_id + 1;
-      bytes_parsed +=
-        static_cast<EventHeader volatile*>(static_cast<void volatile*>(static_cast<char volatile*>(conn
-          .buffer) + bytes_parsed))->length;
+      bytes_parsed += pointer_cast<EventHeader>(
+        static_cast<char*>(conn.buffer) + bytes_parsed)->length;
 
     }
     if (bytes_parsed > len) {
