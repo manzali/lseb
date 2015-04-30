@@ -86,6 +86,7 @@ int main(int argc, char* argv[]) {
 
   Controller controller(generator, metadata_range, generator_frequency);
 
+  FrequencyMeter bandwith(1.0);
   FrequencyMeter frequency(1.0);
 
   while (true) {
@@ -93,7 +94,9 @@ int main(int argc, char* argv[]) {
     MultiEvents multievents = accumulator.add(ready_events);
 
     if (multievents.size()) {
-      sender.send(multievents);
+      size_t written_bytes = sender.send(multievents);
+      bandwith.add(written_bytes);
+
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
@@ -106,6 +109,12 @@ int main(int argc, char* argv[]) {
         << "Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
+    }
+    if (bandwith.check()) {
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
     }
   }
 }

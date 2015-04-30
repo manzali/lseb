@@ -30,8 +30,7 @@ Sender::Sender(
       m_data_range(data_range),
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
-      m_max_sending_size(max_sending_size),
-      m_bandwith(1.0) {
+      m_max_sending_size(max_sending_size) {
 
   // Registration
   for (auto& conn : m_connection_ids) {
@@ -41,8 +40,6 @@ Sender::Sender(
 }
 
 size_t Sender::send(MultiEvents multievents) {
-
-  m_send_timer.start();
 
   assert(multievents.size() != 0 && "Can't compute the module of zero!");
 
@@ -59,11 +56,10 @@ size_t Sender::send(MultiEvents multievents) {
   size_t written_bytes = 0;
 
   auto it = std::begin(conn_iterators);
-      /*select_randomly(
-    std::begin(conn_iterators),
-    std::next(std::begin(conn_iterators), m_connection_ids.size()));
-  */
-
+  /*select_randomly(
+   std::begin(conn_iterators),
+   std::next(std::begin(conn_iterators), m_connection_ids.size()));
+   */
 
   while (it != std::end(conn_iterators)) {
 
@@ -81,9 +77,7 @@ size_t Sender::send(MultiEvents multievents) {
       assert(
         load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
 
-      m_write_timer.start();
       ssize_t ret = lseb_write(*conn_it, iov);
-      m_write_timer.pause();
 
       assert(ret >= 0 && static_cast<size_t>(ret) == load);
 
@@ -98,21 +92,6 @@ size_t Sender::send(MultiEvents multievents) {
       it) == m_connection_ids.size()) {
       it = std::begin(conn_iterators);
     }
-  }
-
-  m_send_timer.pause();
-
-  m_bandwith.add(written_bytes);
-  if (m_bandwith.check()) {
-    LOG(INFO)
-      << "Bandwith: "
-      << m_bandwith.frequency() / std::giga::num * 8.
-      << " Gb/s";
-
-    LOG(INFO) << "lseb_write() time: " << m_write_timer.rate() << "%";
-    LOG(INFO) << "Sender::send() time: " << m_send_timer.rate() << "%";
-    m_write_timer.reset();
-    m_send_timer.reset();
   }
 
   return written_bytes;
