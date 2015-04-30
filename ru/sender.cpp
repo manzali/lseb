@@ -35,7 +35,7 @@ Sender::Sender(
 
   // Registration
   for (auto& conn : m_connection_ids) {
-    lseb_register(conn);
+    lseb_sync(conn);
   }
 
 }

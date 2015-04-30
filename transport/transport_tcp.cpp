@@ -102,14 +102,14 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   return BuConnectionId(newsockfd, buffer, len);
 }
 
-bool lseb_register(RuConnectionId const& conn) {
+bool lseb_sync(RuConnectionId const& conn) {
   uint8_t poll_byte;
   ssize_t ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
   ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
   return ret == sizeof(poll_byte);
 }
 
-bool lseb_register(BuConnectionId const& conn) {
+bool lseb_sync(BuConnectionId const& conn) {
   uint8_t poll_byte;
   ssize_t ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
   ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);

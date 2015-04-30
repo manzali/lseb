@@ -13,7 +13,7 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
 
   // Registration
   for (auto& conn : m_connection_ids) {
-    lseb_register(conn);
+    lseb_sync(conn);
   }
 
 }
@@ -52,13 +52,13 @@ size_t Receiver::receive() {
         ->id;
     while (bytes_parsed < len) {
       uint64_t current_event_id =
-        static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
-          .buffer + bytes_parsed))->id;
+        static_cast<EventHeader volatile*>(static_cast<void volatile*>(static_cast<char volatile*>(conn
+          .buffer) + bytes_parsed))->id;
       assert(check_event_id == current_event_id || current_event_id == 0);
       check_event_id = current_event_id + 1;
       bytes_parsed +=
-        static_cast<EventHeader volatile*>(static_cast<void volatile*>(conn
-          .buffer + bytes_parsed))->length;
+        static_cast<EventHeader volatile*>(static_cast<void volatile*>(static_cast<char volatile*>(conn
+          .buffer) + bytes_parsed))->length;
 
     }
     if (bytes_parsed > len) {

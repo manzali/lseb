@@ -133,7 +133,7 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   return BuConnectionId(new_socket, buffer, len);
 }
 
-bool lseb_register(RuConnectionId& conn) {
+bool lseb_sync(RuConnectionId& conn) {
 
   // Receiving offset of avail
   if (rrecv(conn.socket, &conn.avail_offset, sizeof(conn.avail_offset),
@@ -172,7 +172,7 @@ bool lseb_register(RuConnectionId& conn) {
   return true;
 }
 
-bool lseb_register(BuConnectionId& conn) {
+bool lseb_sync(BuConnectionId& conn) {
 
   // Register avail
   off_t offset = riomap(
