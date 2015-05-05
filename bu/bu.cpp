@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<BuConnectionId> connection_ids;
 
+  LOG(INFO) << "Waiting for connections...";
   int endpoint_count = 0;
   std::transform(
     std::begin(ru_endpoints),
@@ -58,6 +59,7 @@ int main(int argc, char* argv[]) {
           data_size
       );
     });
+  LOG(INFO) << "Connections established";
 
   Receiver receiver(connection_ids);
 

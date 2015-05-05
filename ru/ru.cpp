@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
+  LOG(INFO) << "Waiting for connections...";
   std::vector<RuConnectionId> connection_ids;
   std::transform(
     std::begin(bu_endpoints),
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
     [](Endpoint const& endpoint) {
       return lseb_connect(endpoint.hostname(), endpoint.port());
     });
+  LOG(INFO) << "Connections established";
 
   // Allocate memory
 
