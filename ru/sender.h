@@ -2,7 +2,7 @@
 #define RU_SENDER_H
 
 #include "common/dataformat.h"
-
+#include "common/timer.h"
 #include "transport/transport.h"
 
 namespace lseb {
@@ -11,6 +11,7 @@ class Sender {
   std::vector<RuConnectionId> m_connection_ids;
   std::vector<RuConnectionId>::iterator m_next_bu;
   size_t m_max_sending_size;
+  Timer m_send_timer;
 
  public:
   Sender(

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <list>
+#include <chrono>
 
 #include <cstring>
 #include <sys/uio.h>
@@ -90,7 +91,9 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
       assert(
         load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
 
+      m_send_timer.start();
       ssize_t ret = lseb_write(*conn_it, *iov);
+      m_send_timer.pause();
       assert(ret >= 0 && static_cast<size_t>(ret) == load);
       written_bytes += ret;
 
@@ -108,6 +111,11 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
     if (sending_list_it == std::end(sending_list)) {
       sending_list_it = std::begin(sending_list);
     }
+  }
+
+  if(std::chrono::duration<double>(m_send_timer.total_time()).count() > 1.0){
+    LOG(INFO) << "send call: " << m_send_timer.rate() << "%";
+    m_send_timer.reset();
   }
 
   return written_bytes;
