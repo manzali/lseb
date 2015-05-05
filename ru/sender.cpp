@@ -27,12 +27,11 @@ Sender::Sender(
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
       m_max_sending_size(max_sending_size) {
-
-  // Registration
+  LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);
   }
-
+  LOG(INFO) << "Synchronization completed";
 }
 
 size_t Sender::send(std::vector<DataIov> data_iovecs) {

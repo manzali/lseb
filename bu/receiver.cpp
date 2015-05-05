@@ -9,11 +9,11 @@ namespace lseb {
 Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
     :
       m_connection_ids(connection_ids) {
-
-  // Registration
+  LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);
   }
+  LOG(INFO) << "Synchronization completed";
 
 }
 
