@@ -8,8 +8,7 @@ namespace lseb {
 
 Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
     :
-      m_connection_ids(connection_ids),
-      m_bandwith(1.0) {
+      m_connection_ids(connection_ids) {
 
   // Registration
   for (auto& conn : m_connection_ids) {
@@ -20,13 +19,13 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
 
 size_t Receiver::receive() {
 
-  m_recv_timer.start();
-
-  // Create a list of iterators and  read from all RUs
+  // Create a list of iterators
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
   for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
     conn_iterators.push_back(it);
   }
+
+  // Read from all RUs
   size_t bytes_read = 0;
   auto it = std::begin(conn_iterators);
   while (it != std::end(conn_iterators)) {
@@ -52,7 +51,7 @@ size_t Receiver::receive() {
       uint64_t current_event_id = pointer_cast<EventHeader>(
         static_cast<char*>(conn.buffer) + bytes_parsed)->id;
       assert(check_event_id == current_event_id || current_event_id == 0);
-      check_event_id = current_event_id + 1;
+      check_event_id = ++current_event_id;
       bytes_parsed += pointer_cast<EventHeader>(
         static_cast<char*>(conn.buffer) + bytes_parsed)->length;
 
@@ -67,20 +66,6 @@ size_t Receiver::receive() {
     lseb_release(conn);
   }
 
-  m_recv_timer.pause();
-
-  m_bandwith.add(bytes_read);
-  if (m_bandwith.check()) {
-    LOG(INFO)
-      << "Bandwith: "
-      << m_bandwith.frequency() / std::giga::num * 8.
-      << " Gb/s";
-
-    LOG(INFO) << "lseb_read() time: " << m_read_timer.rate() << "%";
-    LOG(INFO) << "Receiver::receive() time: " << m_recv_timer.rate() << "%";
-    m_read_timer.reset();
-    m_recv_timer.reset();
-  }
   return bytes_read;
 }
 

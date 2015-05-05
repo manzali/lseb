@@ -37,31 +37,52 @@ Sender::Sender(
 
 size_t Sender::send(std::vector<DataIov> data_iovecs) {
 
-  std::list<
-      std::pair<std::vector<RuConnectionId>::iterator,
-          std::vector<DataIov>::iterator> > conn_iterators;
+  using DataVectorIter = std::vector<DataIov>::iterator;
 
+  struct SendingStruct {
+    std::vector<RuConnectionId>::iterator ruConnectionIdIter;
+    std::vector<DataVectorIter> dataVector;
+    std::vector<DataVectorIter>::iterator dataVectorIter;
+  };
+
+  size_t list_size =
+      (data_iovecs.size() < m_connection_ids.size()) ?
+        data_iovecs.size() :
+        m_connection_ids.size();
+  std::list<SendingStruct> sending_list(list_size);
+
+  // Filling dataVector
+  auto sending_list_it = std::begin(sending_list);
   for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
-    conn_iterators.emplace_back(m_next_bu, it);
+    sending_list_it->dataVector.emplace_back(it);
+    if (++sending_list_it == std::end(sending_list)) {
+      sending_list_it = std::begin(sending_list);
+    }
+  }
+
+  // Setting ruConnectionIdIter and dataVector
+  for (auto it = std::begin(sending_list); it != std::end(sending_list); ++it) {
+    it->ruConnectionIdIter = m_next_bu;
+    it->dataVectorIter = std::begin(it->dataVector);
     if (++m_next_bu == std::end(m_connection_ids)) {
       m_next_bu = std::begin(m_connection_ids);
     }
   }
 
+  sending_list_it = select_randomly(
+    std::begin(sending_list),
+    std::end(sending_list));
   size_t written_bytes = 0;
 
-  auto it = std::begin(conn_iterators);
-  /*select_randomly(
-   std::begin(conn_iterators),
-   std::next(std::begin(conn_iterators), m_connection_ids.size()));
-   */
+  while (sending_list_it != std::end(sending_list)) {
 
-  while (it != std::end(conn_iterators)) {
+    bool remove_it = false;
+    auto& conn_it = sending_list_it->ruConnectionIdIter;
 
-    auto& conn_it = it->first;
     if (lseb_poll(*conn_it)) {
 
-      auto& iov = it->second;
+      auto& iov_it = sending_list_it->dataVectorIter;
+      auto& iov = *iov_it;
       size_t load = iovec_length(*iov);
 
       LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn_it
@@ -71,19 +92,22 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
         load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
 
       ssize_t ret = lseb_write(*conn_it, *iov);
-
       assert(ret >= 0 && static_cast<size_t>(ret) == load);
-
       written_bytes += ret;
 
-      it = conn_iterators.erase(it);
-    } else {
-      ++it;
+      if (++iov_it == std::end(sending_list_it->dataVector)) {
+        remove_it = true;
+      }
     }
-    if (it == std::end(conn_iterators) || std::distance(
-      std::begin(conn_iterators),
-      it) == m_connection_ids.size()) {
-      it = std::begin(conn_iterators);
+
+    if (remove_it) {
+      sending_list_it = sending_list.erase(sending_list_it);
+    } else {
+      ++sending_list_it;
+    }
+
+    if (sending_list_it == std::end(sending_list)) {
+      sending_list_it = std::begin(sending_list);
     }
   }
 
