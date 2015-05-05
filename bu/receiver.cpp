@@ -27,7 +27,9 @@ size_t Receiver::receive() {
 
   // Read from all RUs
   size_t bytes_read = 0;
-  auto it = std::begin(conn_iterators);
+  auto it = select_randomly(
+    std::begin(conn_iterators),
+    std::end(conn_iterators));
   while (it != std::end(conn_iterators)) {
     if (lseb_poll(**it)) {
       ssize_t ret = lseb_read(**it);

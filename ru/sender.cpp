@@ -113,7 +113,7 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
     }
   }
 
-  if(std::chrono::duration<double>(m_send_timer.total_time()).count() > 1.0){
+  if (std::chrono::duration<double>(m_send_timer.total_time()).count() > 1.0) {
     LOG(INFO) << "send call: " << m_send_timer.rate() << "%";
     m_send_timer.reset();
   }
