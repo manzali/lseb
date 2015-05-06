@@ -71,4 +71,17 @@ size_t Receiver::receive() {
   return bytes_read;
 }
 
+size_t Receiver::receive_and_forget() {
+  size_t bytes_read = 0;
+  for (auto& conn : m_connection_ids) {
+    if(lseb_poll(conn)){
+      ssize_t ret = lseb_read(conn);
+      assert(ret != -1);
+      bytes_read += ret;
+      lseb_release(conn);
+    }
+  }
+  return bytes_read;
+}
+
 }

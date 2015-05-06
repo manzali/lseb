@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
+  bool const dummy_execution = std::stol(parser.top()("BU")["DUMMY"]) != 0;
 
   LOG(INFO) << parser << std::endl;
 
@@ -66,8 +67,11 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    size_t bytes_read = receiver.receive();
-    bandwith.add(bytes_read);
+    if (dummy_execution) {
+      bandwith.add(receiver.receive_and_forget());
+    } else {
+      bandwith.add(receiver.receive());
+    }
     if (bandwith.check()) {
       LOG(INFO)
         << "Bandwith: "

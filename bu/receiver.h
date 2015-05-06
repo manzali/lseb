@@ -15,6 +15,7 @@ class Receiver {
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
   size_t receive();
+  size_t receive_and_forget();
 };
 
 }
