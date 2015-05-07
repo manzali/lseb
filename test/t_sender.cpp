@@ -11,7 +11,7 @@ using namespace lseb;
 int main(int argc, char* argv[]) {
 
   // Check arguments
-  assert(argc == 2 && "sender <ip_address>");
+  assert(argc == 3 && "sender <ip_address> <buffer_size>");
 
   // Connect to the receiver
   RuConnectionId conn = lseb_connect(argv[1], 7123);
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Sync done\n";
 
-  size_t buffer_size = 1024 * 1024;
+  size_t buffer_size = std::stol(argv[2]);
   char* buffer = new char[buffer_size];
   memset(buffer, '0', buffer_size);
 

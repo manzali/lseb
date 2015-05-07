@@ -10,12 +10,12 @@ using namespace lseb;
 int main(int argc, char* argv[]) {
 
   // Check arguments
-  assert(argc == 2 && "sender <ip_address>");
+  assert(argc == 3 && "receiver <ip_address> <buffer_size>");
 
   // Create socket
   BuSocket socket = lseb_listen(argv[1], 7123);
 
-  size_t buffer_size = 1024 * 1024;
+  size_t buffer_size = std::stol(argv[2]);
   char* buffer = new char[buffer_size];
 
   // Accept connection from sender
