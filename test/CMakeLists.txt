@@ -17,3 +17,23 @@ add_executable(
   t_iniparser
   t_iniparser.cpp
 )
+
+add_executable(
+  t_sender
+  t_sender.cpp
+)
+
+target_link_libraries(
+  t_sender
+  transport
+)
+
+add_executable(
+  t_receiver
+  t_receiver.cpp
+)
+
+target_link_libraries(
+  t_receiver
+  transport
+)

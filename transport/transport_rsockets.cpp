@@ -232,7 +232,7 @@ bool lseb_poll(BuConnectionId& conn) {
   return conn.avail != 0;
 }
 
-ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
+ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
 
   while (!lseb_poll(conn)) {
     ;
