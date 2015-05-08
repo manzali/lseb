@@ -23,11 +23,11 @@ static size_t iovec_length(std::vector<iovec> const& iov) {
 
 Sender::Sender(
   std::vector<RuConnectionId> const& connection_ids,
-  size_t max_sending_size)
+  size_t recv_buffer_size)
     :
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
-      m_max_sending_size(max_sending_size) {
+      m_recv_buffer_size(recv_buffer_size) {
   LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);
@@ -89,7 +89,7 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
         ->socket;
 
       assert(
-        load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
+        load <= m_recv_buffer_size && "Trying to send a buffer bigger than the receiver one");
 
       m_send_timer.start();
       ssize_t ret = lseb_write(*conn_it, *iov);

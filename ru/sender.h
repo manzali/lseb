@@ -10,7 +10,7 @@ namespace lseb {
 class Sender {
   std::vector<RuConnectionId> m_connection_ids;
   std::vector<RuConnectionId>::iterator m_next_bu;
-  size_t m_max_sending_size;
+  size_t m_recv_buffer_size;
   Timer m_send_timer;
 
  public:
