@@ -163,6 +163,7 @@ ssize_t lseb_read(BuConnectionId& conn) {
     // well-known problem (to be investigated)
     throw std::runtime_error("Error on recv: null length received");
   }
+  assert(conn.avail <= conn.len && "Too much incoming data");
   ret = recv(conn.socket, conn.buffer, conn.avail, MSG_WAITALL);
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
