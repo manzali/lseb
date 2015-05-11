@@ -183,9 +183,9 @@ DataIov create_iovec(R sub_range, T range) {
     size_t len = distance_in_range(sub_range, range) * size;
     iov.push_back( { std::begin(sub_range), len });
   } else {
-    size_t len = std::distance(std::begin(sub_range), std::end(range)) * size;
-    iov.push_back( { std::begin(sub_range), len });
-    len = std::distance(std::begin(range), std::end(sub_range)) * size;
+    size_t len = std::distance(std::end(sub_range), std::end(range)) * size;
+    iov.push_back( { std::end(sub_range), len });
+    len = std::distance(std::begin(range), std::begin(sub_range)) * size;
     iov.push_back( { std::begin(range), len });
   }
   return iov;
