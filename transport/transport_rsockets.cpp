@@ -273,6 +273,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.buffer_offset + conn.buffer_written + length,
       0);
   }
+  conn.buffer_len += length;
 
   return length;
 }
