@@ -32,9 +32,10 @@ int main(int argc, char* argv[]) {
 
   while (true) {
     if (lseb_poll(conn)) {
-      ssize_t ret = lseb_read(conn);
-      assert(ret != -1);
-      bandwith.add(ret);
+      std::vector<iovec> iov = lseb_read(conn);
+      for (auto& i : iov) {
+        bandwith.add(i.iov_len);
+      }
       lseb_release(conn);
     }
     if (bandwith.check()) {
