@@ -34,10 +34,8 @@ size_t Receiver::receive() {
     if (lseb_poll(**it)) {
       ssize_t ret = lseb_read(**it);
       assert(ret != -1);
-      if(ret != -2){
-        bytes_read += ret;
-        it = conn_iterators.erase(it);
-      }
+      bytes_read += ret;
+      it = conn_iterators.erase(it);
     } else {
       ++it;
     }
@@ -76,7 +74,7 @@ size_t Receiver::receive() {
 size_t Receiver::receive_and_forget() {
   size_t bytes_read = 0;
   for (auto& conn : m_connection_ids) {
-    if(lseb_poll(conn)){
+    if (lseb_poll(conn)) {
       ssize_t ret = lseb_read(conn);
       assert(ret != -1);
       bytes_read += ret;

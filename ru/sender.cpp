@@ -94,11 +94,12 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
       m_send_timer.start();
       ssize_t ret = lseb_write(*conn_it, *iov);
       m_send_timer.pause();
-      assert(ret >= 0 && static_cast<size_t>(ret) == load);
-      written_bytes += ret;
-
-      if (++iov_it == std::end(sending_list_it->dataVector)) {
-        remove_it = true;
+      if(ret != -2){
+        assert(ret >= 0 && static_cast<size_t>(ret) == load);
+        written_bytes += ret;
+        if (++iov_it == std::end(sending_list_it->dataVector)) {
+          remove_it = true;
+        }
       }
     }
 
