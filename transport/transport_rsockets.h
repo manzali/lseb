@@ -17,6 +17,7 @@ struct RuConnectionId {
   off_t avail_offset;
   off_t buffer_offset;
   size_t buffer_len;
+  //bool first_half;
   size_t buffer_written;
   RuConnectionId(int socket)
       :
@@ -25,6 +26,7 @@ struct RuConnectionId {
         avail_offset(-1),
         buffer_offset(-1),
         buffer_len(0),
+        //first_half(true),
         buffer_written(0) {
   }
 };
@@ -33,14 +35,16 @@ struct BuConnectionId {
   int socket;
   size_t volatile avail;
   void* buffer;
-  size_t len;
+  size_t buffer_len;
+  //bool first_half;
   off_t poll_offset;
-  BuConnectionId(int socket, void* buffer, size_t len)
+  BuConnectionId(int socket, void* buffer, size_t buffer_len)
       :
         socket(socket),
         avail(0),
         buffer(buffer),
-        len(len),
+        buffer_len(buffer_len),
+        //first_half(true),
         poll_offset(-1) {
   }
 };
@@ -55,7 +59,7 @@ bool lseb_sync(BuConnectionId& conn);
 bool lseb_poll(RuConnectionId& conn);
 bool lseb_poll(BuConnectionId& conn);
 ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov);
-ssize_t lseb_read(BuConnectionId& conn);
+std::vector<iovec> lseb_read(BuConnectionId& conn);
 void lseb_release(BuConnectionId& conn);
 
 }

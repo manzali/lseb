@@ -150,7 +150,7 @@ ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov) {
   return ret - sizeof(length);
 }
 
-ssize_t lseb_read(BuConnectionId& conn) {
+std::vector<iovec> lseb_read(BuConnectionId& conn) {
   // receive the length of data
   ssize_t ret = recv(
     conn.socket,
@@ -168,7 +168,11 @@ ssize_t lseb_read(BuConnectionId& conn) {
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   }
-  return ret;
+
+  std::vector<iovec> iov;
+  iov.push_back( { conn.buffer, conn.avail });
+
+  return iov;
 }
 
 void lseb_release(BuConnectionId& conn) {

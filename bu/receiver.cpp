@@ -25,6 +25,8 @@ size_t Receiver::receive() {
     conn_iterators.push_back(it);
   }
 
+  std::vector<iovec> total_iov;
+
   // Read from all RUs
   size_t bytes_read = 0;
   auto it = select_randomly(
@@ -32,9 +34,11 @@ size_t Receiver::receive() {
     std::end(conn_iterators));
   while (it != std::end(conn_iterators)) {
     if (lseb_poll(**it)) {
-      ssize_t ret = lseb_read(**it);
-      assert(ret != -1);
-      bytes_read += ret;
+      std::vector<iovec> conn_iov = lseb_read(**it);
+      for (auto& i : conn_iov) {
+        bytes_read += i.iov_len;
+        total_iov.push_back(i);
+      }
       it = conn_iterators.erase(it);
     } else {
       ++it;
@@ -45,20 +49,18 @@ size_t Receiver::receive() {
   }
 
   // Check all data
-  for (auto& conn : m_connection_ids) {
-    size_t len = conn.avail;
+  for (auto& i : total_iov) {
     size_t bytes_parsed = 0;
-    uint64_t check_event_id = pointer_cast<EventHeader>(conn.buffer)->id;
-    while (bytes_parsed < len) {
+    uint64_t check_event_id = pointer_cast<EventHeader>(i.iov_base)->id;
+    while (bytes_parsed < i.iov_len) {
       uint64_t current_event_id = pointer_cast<EventHeader>(
-        static_cast<char*>(conn.buffer) + bytes_parsed)->id;
+        static_cast<char*>(i.iov_base) + bytes_parsed)->id;
       assert(check_event_id == current_event_id || current_event_id == 0);
       check_event_id = ++current_event_id;
       bytes_parsed += pointer_cast<EventHeader>(
-        static_cast<char*>(conn.buffer) + bytes_parsed)->length;
-
+        static_cast<char*>(i.iov_base) + bytes_parsed)->length;
     }
-    if (bytes_parsed > len) {
+    if (bytes_parsed > i.iov_len) {
       LOG(WARNING) << "Wrong length read";
     }
   }
@@ -75,9 +77,10 @@ size_t Receiver::receive_and_forget() {
   size_t bytes_read = 0;
   for (auto& conn : m_connection_ids) {
     if (lseb_poll(conn)) {
-      ssize_t ret = lseb_read(conn);
-      assert(ret != -1);
-      bytes_read += ret;
+      std::vector<iovec> iov = lseb_read(conn);
+      for (auto& i : iov) {
+        bytes_read += i.iov_len;
+      }
       lseb_release(conn);
     }
   }

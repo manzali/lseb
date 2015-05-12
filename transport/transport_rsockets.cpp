@@ -182,7 +182,7 @@ bool lseb_sync(RuConnectionId& conn) {
 bool lseb_sync(BuConnectionId& conn) {
 
   // Sending length of buffer
-  if (rsend(conn.socket, &conn.len, sizeof(conn.len), MSG_WAITALL) == -1) {
+  if (rsend(conn.socket, &conn.buffer_len, sizeof(conn.buffer_len), MSG_WAITALL) == -1) {
     LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
@@ -211,7 +211,7 @@ bool lseb_sync(BuConnectionId& conn) {
   offset = riomap(
     conn.socket,
     (void*) conn.buffer,
-    conn.len,
+    conn.buffer_len,
     PROT_WRITE,
     0,
     -1);
@@ -278,13 +278,16 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
   return length;
 }
 
-ssize_t lseb_read(BuConnectionId& conn) {
+std::vector<iovec> lseb_read(BuConnectionId& conn) {
 
   while (!lseb_poll(conn)) {
     ;
   }
 
-  return conn.avail;
+  std::vector<iovec> iov;
+  iov.push_back( { conn.buffer, conn.avail });
+
+  return iov;
 }
 
 void lseb_release(BuConnectionId& conn) {
