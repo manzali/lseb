@@ -135,6 +135,13 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
 
 bool lseb_sync(RuConnectionId& conn) {
 
+  // Receiving length of buffer
+  if (rrecv(conn.socket, &conn.buffer_len, sizeof(conn.buffer_len),
+  MSG_WAITALL) == -1) {
+    //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
   // Receiving offset of avail
   if (rrecv(conn.socket, &conn.avail_offset, sizeof(conn.avail_offset),
   MSG_WAITALL) == -1) {
@@ -173,6 +180,12 @@ bool lseb_sync(RuConnectionId& conn) {
 }
 
 bool lseb_sync(BuConnectionId& conn) {
+
+  // Sending length of buffer
+  if (rsend(conn.socket, &conn.len, sizeof(conn.len), MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+  }
 
   // Register avail
   off_t offset = riomap(
@@ -234,23 +247,32 @@ bool lseb_poll(BuConnectionId& conn) {
 
 ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
 
-  while (!lseb_poll(conn)) {
-    ;
+  size_t length = 0;
+  for (iovec const& i : iov) {
+    length += i.iov_len;
   }
 
-  conn.poll = READY_TO_READ;
+  if (length > conn.buffer_len - conn.buffer_written) {
+    conn.poll = READY_TO_READ;
+    riowrite(
+      conn.socket,
+      &conn.buffer_written,
+      sizeof(conn.buffer_written),
+      conn.avail_offset,
+      0);
+    conn.buffer_written = 0;
+    return -2;
+  }
 
-  size_t length = 0;
+  length = 0;
   for (iovec const& i : iov) {
     length += riowrite(
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.buffer_offset + length,
+      conn.buffer_offset + conn.buffer_written + length,
       0);
   }
-
-  riowrite(conn.socket, &length, sizeof(length), conn.avail_offset, 0);
 
   return length;
 }

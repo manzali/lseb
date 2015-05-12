@@ -16,12 +16,16 @@ struct RuConnectionId {
   uint8_t volatile poll;
   off_t avail_offset;
   off_t buffer_offset;
+  size_t buffer_len;
+  size_t buffer_written;
   RuConnectionId(int socket)
       :
         socket(socket),
         poll(READY_TO_WRITE),
         avail_offset(-1),
-        buffer_offset(-1) {
+        buffer_offset(-1),
+        buffer_len(0),
+        buffer_written(0) {
   }
 };
 

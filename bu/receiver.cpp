@@ -34,8 +34,10 @@ size_t Receiver::receive() {
     if (lseb_poll(**it)) {
       ssize_t ret = lseb_read(**it);
       assert(ret != -1);
-      bytes_read += ret;
-      it = conn_iterators.erase(it);
+      if(ret != -2){
+        bytes_read += ret;
+        it = conn_iterators.erase(it);
+      }
     } else {
       ++it;
     }
