@@ -238,7 +238,11 @@ bool lseb_sync(BuConnectionId& conn) {
 }
 
 bool lseb_poll(RuConnectionId& conn) {
-  return conn.poll == READY_TO_WRITE;
+
+  return (
+      conn.first_half ?
+        conn.poll != FIRST_HALF_LOCKED :
+        conn.poll != SECOND_HALF_LOCKED);
 }
 
 bool lseb_poll(BuConnectionId& conn) {
@@ -247,19 +251,29 @@ bool lseb_poll(BuConnectionId& conn) {
 
 ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
 
+  while (!lseb_poll(conn)) {
+    ;
+  }
+
   size_t length = 0;
   for (iovec const& i : iov) {
     length += i.iov_len;
   }
 
-  if (length > conn.buffer_len - conn.buffer_written) {
-    conn.poll = READY_TO_READ;
+  if (length > conn.buffer_len / 2 - conn.buffer_written) {
+    if(conn.first_half){
+      conn.poll = FIRST_HALF_LOCKED;
+    }
+    else{
+      conn.poll = SECOND_HALF_LOCKED;
+    }
     riowrite(
       conn.socket,
       &conn.buffer_written,
       sizeof(conn.buffer_written),
       conn.avail_offset,
       0);
+    conn.first_half = !conn.first_half;
     conn.buffer_written = 0;
     return -2;
   }
@@ -270,7 +284,8 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.buffer_offset + conn.buffer_written + length,
+      conn.buffer_offset + (conn.first_half ? 0 : conn.buffer_len / 2) + conn
+        .buffer_written + length,
       0);
   }
   conn.buffer_written += length;
@@ -285,7 +300,9 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   }
 
   std::vector<iovec> iov;
-  iov.push_back( { conn.buffer, conn.avail });
+  iov.push_back( {
+    conn.buffer + (conn.first_half ? 0 : conn.buffer_len / 2),
+    conn.avail });
 
   return iov;
 }
@@ -293,8 +310,8 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 void lseb_release(BuConnectionId& conn) {
 
   conn.avail = 0;
-
-  uint8_t poll = READY_TO_WRITE;
+  conn.first_half = !conn.first_half;
+  uint8_t poll = NO_LOCKS;
   riowrite(
     conn.socket,
     static_cast<void*>(&poll),

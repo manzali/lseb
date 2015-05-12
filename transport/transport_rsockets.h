@@ -6,8 +6,9 @@
 #include <sys/poll.h>
 #include <sys/uio.h>
 
-#define READY_TO_READ 1
-#define READY_TO_WRITE 0
+#define FIRST_HALF_LOCKED 0
+#define SECOND_HALF_LOCKED 1
+#define NO_LOCKS 2
 
 namespace lseb {
 
@@ -17,16 +18,16 @@ struct RuConnectionId {
   off_t avail_offset;
   off_t buffer_offset;
   size_t buffer_len;
-  //bool first_half;
+  bool first_half;
   size_t buffer_written;
   RuConnectionId(int socket)
       :
         socket(socket),
-        poll(READY_TO_WRITE),
+        poll(NO_LOCKS),
         avail_offset(-1),
         buffer_offset(-1),
         buffer_len(0),
-        //first_half(true),
+        first_half(true),
         buffer_written(0) {
   }
 };
@@ -36,7 +37,7 @@ struct BuConnectionId {
   size_t volatile avail;
   void* buffer;
   size_t buffer_len;
-  //bool first_half;
+  bool first_half;
   off_t poll_offset;
   BuConnectionId(int socket, void* buffer, size_t buffer_len)
       :
@@ -44,7 +45,7 @@ struct BuConnectionId {
         avail(0),
         buffer(buffer),
         buffer_len(buffer_len),
-        //first_half(true),
+        first_half(true),
         poll_offset(-1) {
   }
 };
