@@ -180,13 +180,20 @@ DataIov create_iovec(R sub_range, T range) {
   DataIov iov;
   size_t const size = sizeof(typename T::value_type);
   if (std::begin(sub_range) <= std::end(sub_range)) {
-    size_t len = std::distance(std::begin(sub_range), std::end(sub_range)) * size;
-    iov.push_back( { std::begin(sub_range), len });
+    size_t len =
+      std::distance(std::begin(sub_range), std::end(sub_range)) * size;
+    if (len) {
+      iov.push_back( { std::begin(sub_range), len });
+    }
   } else {
     size_t len = std::distance(std::begin(sub_range), std::end(range)) * size;
-    iov.push_back( { std::begin(sub_range), len });
+    if (len) {
+      iov.push_back( { std::begin(sub_range), len });
+    }
     len = std::distance(std::begin(range), std::end(sub_range)) * size;
-    iov.push_back( { std::begin(range), len });
+    if (len) {
+      iov.push_back( { std::begin(range), len });
+    }
   }
   return iov;
 }
