@@ -55,10 +55,30 @@ size_t Receiver::receive() {
     while (bytes_parsed < i.iov_len) {
       uint64_t current_event_id = pointer_cast<EventHeader>(
         static_cast<char*>(i.iov_base) + bytes_parsed)->id;
-      assert(check_event_id == current_event_id || current_event_id == 0);
-      check_event_id = ++current_event_id;
-      bytes_parsed += pointer_cast<EventHeader>(
+      uint64_t current_event_length = pointer_cast<EventHeader>(
         static_cast<char*>(i.iov_base) + bytes_parsed)->length;
+      uint64_t current_event_flags = pointer_cast<EventHeader>(
+        static_cast<char*>(i.iov_base) + bytes_parsed)->flags;
+      if (current_event_length == 0 || (current_event_id && check_event_id != current_event_id)) {
+        LOG(WARNING)
+          << "Error parsing EventHeader:"
+          << std::endl
+          << "expected event id: "
+          << check_event_id
+          << std::endl
+          << "event id: "
+          << current_event_id
+          << std::endl
+          << "event length: "
+          << current_event_length
+          << std::endl
+          << "event flags: "
+          << current_event_flags;
+      }
+      assert(
+        current_event_length && (check_event_id == current_event_id || current_event_id == 0));
+      check_event_id = ++current_event_id;
+      bytes_parsed += current_event_length;
     }
     assert(bytes_parsed == i.iov_len && "Wrong length read");
   }
