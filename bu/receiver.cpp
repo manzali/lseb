@@ -60,9 +60,7 @@ size_t Receiver::receive() {
       bytes_parsed += pointer_cast<EventHeader>(
         static_cast<char*>(i.iov_base) + bytes_parsed)->length;
     }
-    if (bytes_parsed > i.iov_len) {
-      LOG(WARNING) << "Wrong length read";
-    }
+    assert(bytes_parsed == i.iov_len && "Wrong length read");
   }
 
   // Release all data

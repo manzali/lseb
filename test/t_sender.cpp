@@ -36,7 +36,9 @@ int main(int argc, char* argv[]) {
     if (lseb_poll(conn)) {
       ssize_t ret = lseb_write(conn, iov);
       assert(ret != -1);
-      bandwith.add(ret);
+      if (ret != -2) {
+        bandwith.add(ret);
+      }
     }
     if (bandwith.check()) {
       std::cout

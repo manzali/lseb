@@ -239,6 +239,12 @@ bool lseb_sync(BuConnectionId& conn) {
 
 bool lseb_poll(RuConnectionId& conn) {
 
+  if (rrecv(conn.socket, &conn.poll, sizeof(conn.poll),
+  MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
   return (
       conn.first_half ?
         conn.poll != FIRST_HALF_LOCKED :
@@ -246,6 +252,11 @@ bool lseb_poll(RuConnectionId& conn) {
 }
 
 bool lseb_poll(BuConnectionId& conn) {
+  if (rrecv(conn.socket, &conn.avail, sizeof(conn.avail),
+  MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
   return conn.avail != 0;
 }
 
@@ -261,34 +272,32 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
   }
 
   if (length > conn.buffer_len / 2 - conn.buffer_written) {
-    if(conn.first_half){
+    if (conn.first_half) {
       conn.poll = FIRST_HALF_LOCKED;
-    }
-    else{
+    } else {
       conn.poll = SECOND_HALF_LOCKED;
     }
-    riowrite(
-      conn.socket,
-      &conn.buffer_written,
-      sizeof(conn.buffer_written),
-      conn.avail_offset,
-      0);
+
+    if (rsend(conn.socket, &conn.buffer_written, sizeof(conn.buffer_written), 0) == -1) {
+      LOG(WARNING) << "Error on rsend: " << strerror(errno);
+      throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+    }
+
     conn.first_half = !conn.first_half;
     conn.buffer_written = 0;
     return -2;
   }
 
-  length = 0;
   for (iovec const& i : iov) {
-    length += riowrite(
+    size_t ret = riowrite(
       conn.socket,
       i.iov_base,
       i.iov_len,
       conn.buffer_offset + (conn.first_half ? 0 : conn.buffer_len / 2) + conn
-        .buffer_written + length,
+        .buffer_written,
       0);
+    conn.buffer_written += ret;
   }
-  conn.buffer_written += length;
 
   return length;
 }
@@ -300,9 +309,9 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   }
 
   std::vector<iovec> iov;
-  iov.push_back( {
-    conn.buffer + (conn.first_half ? 0 : conn.buffer_len / 2),
-    conn.avail });
+  iov.push_back(
+    { static_cast<char*>(conn.buffer) + (
+        conn.first_half ? 0 : conn.buffer_len / 2), conn.avail });
 
   return iov;
 }
@@ -312,12 +321,11 @@ void lseb_release(BuConnectionId& conn) {
   conn.avail = 0;
   conn.first_half = !conn.first_half;
   uint8_t poll = NO_LOCKS;
-  riowrite(
-    conn.socket,
-    static_cast<void*>(&poll),
-    sizeof(poll),
-    conn.poll_offset,
-    0);
+  // Sending offset of poll
+  if (rsend(conn.socket, &poll, sizeof(poll), 0) == -1) {
+    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+  }
 }
 
 }
