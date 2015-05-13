@@ -272,7 +272,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       sizeof(conn.buffer_written),
       conn.avail_offset,
       0);
-    if(!ret || ret != sizeof(conn.buffer_written)){
+    if(ret != sizeof(conn.buffer_written)){
       LOG(WARNING) << "Error on riowrite: " << strerror(errno);
       throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
     }
@@ -290,7 +290,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.buffer_offset + (conn.first_half ? 0 : conn.buffer_len / 2) + conn
         .buffer_written,
       0);
-    if(!ret || ret != i.iov_len){
+    if(ret != i.iov_len){
       LOG(WARNING) << "Error on riowrite: " << strerror(errno);
       throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
     }
@@ -325,7 +325,7 @@ void lseb_release(BuConnectionId& conn) {
     sizeof(poll),
     conn.poll_offset,
     0);
-  if(!ret || ret != sizeof(poll)){
+  if(ret != sizeof(poll)){
     LOG(WARNING) << "Error on riowrite: " << strerror(errno);
     throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
   }
