@@ -266,12 +266,17 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
     } else {
       conn.poll = SECOND_HALF_LOCKED;
     }
-    riowrite(
+    size_t ret = riowrite(
       conn.socket,
       &conn.buffer_written,
       sizeof(conn.buffer_written),
       conn.avail_offset,
       0);
+    if(!ret || ret != sizeof(conn.buffer_written)){
+      LOG(WARNING) << "Error on riowrite: " << strerror(errno);
+      throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
+    }
+
     conn.first_half = !conn.first_half;
     conn.buffer_written = 0;
     return -2;
@@ -285,6 +290,10 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.buffer_offset + (conn.first_half ? 0 : conn.buffer_len / 2) + conn
         .buffer_written,
       0);
+    if(!ret || ret != i.iov_len){
+      LOG(WARNING) << "Error on riowrite: " << strerror(errno);
+      throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
+    }
     conn.buffer_written += ret;
   }
 
@@ -299,7 +308,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 
   std::vector<iovec> iov;
   iov.push_back(
-    { static_cast<char*>(static_cast<void*>(conn.buffer)) + (
+    { static_cast<char*>((void*)conn.buffer) + (
         conn.first_half ? 0 : conn.buffer_len / 2), conn.avail });
 
   return iov;
@@ -310,12 +319,16 @@ void lseb_release(BuConnectionId& conn) {
   conn.avail = 0;
   conn.first_half = !conn.first_half;
   uint8_t poll = NO_LOCKS;
-  riowrite(
+  size_t ret = riowrite(
     conn.socket,
     static_cast<void*>(&poll),
     sizeof(poll),
     conn.poll_offset,
     0);
+  if(!ret || ret != sizeof(poll)){
+    LOG(WARNING) << "Error on riowrite: " << strerror(errno);
+    throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
+  }
 }
 
 }
