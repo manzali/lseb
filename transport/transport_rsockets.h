@@ -35,7 +35,7 @@ struct RuConnectionId {
 struct BuConnectionId {
   int socket;
   size_t volatile avail;
-  void* buffer;
+  void volatile* buffer;
   size_t buffer_len;
   bool first_half;
   off_t poll_offset;
