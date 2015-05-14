@@ -6,8 +6,8 @@
 #include <sys/poll.h>
 #include <sys/uio.h>
 
-#define FIRST_BUFFER_LOCKED 0
-#define SECOND_BUFFER_LOCKED 1
+#define FIRST_HALF_LOCKED 0
+#define SECOND_HALF_LOCKED 1
 #define NO_LOCKS 2
 
 namespace lseb {
@@ -16,20 +16,18 @@ struct RuConnectionId {
   int socket;
   uint8_t volatile poll;
   off_t avail_offset;
-  off_t buffer_offset_1;
-  off_t buffer_offset_2;
+  off_t buffer_offset;
   size_t buffer_len;
-  bool first_buffer;
+  bool first_half;
   size_t buffer_written;
   RuConnectionId(int socket)
       :
         socket(socket),
         poll(NO_LOCKS),
         avail_offset(-1),
-        buffer_offset_1(-1),
-        buffer_offset_2(-1),
+        buffer_offset(-1),
         buffer_len(0),
-        first_buffer(true),
+        first_half(true),
         buffer_written(0) {
   }
 };
