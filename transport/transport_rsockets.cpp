@@ -150,13 +150,8 @@ bool lseb_sync(RuConnectionId& conn) {
   }
 
   // Register poll
-  off_t offset = riomap(
-    conn.socket,
-    (void*) &conn.poll,
-    sizeof(conn.poll),
-    PROT_WRITE,
-    0,
-    -1);
+  off_t offset = riomap(conn.socket, (void*) &conn.poll, sizeof(conn.poll),
+  PROT_WRITE, 0, -1);
   if (offset == -1) {
     //LOG(WARNING) << "Error on riomap: " << strerror(errno);
     throw std::runtime_error(
@@ -175,13 +170,8 @@ bool lseb_sync(RuConnectionId& conn) {
 bool lseb_sync(BuConnectionId& conn) {
 
   // Register iomap for buffer and avail
-  off_t offset = riomap(
-    conn.socket,
-    (void*) conn.buffer,
-    conn.buffer_len,
-    PROT_WRITE,
-    0,
-    -1);
+  off_t offset = riomap(conn.socket, (void*) conn.buffer, conn.buffer_len,
+  PROT_WRITE, 0, -1);
   if (offset == -1) {
     LOG(WARNING) << "Error on riomap: " << strerror(errno);
     throw std::runtime_error(
@@ -191,7 +181,7 @@ bool lseb_sync(BuConnectionId& conn) {
   // Reserve last sizeof(size_t) bytes for avail
   size_t size = sizeof(size_t);
   conn.buffer_len -= (conn.buffer_len % size) + size;
-  conn.avail = (size_t volatile*)conn.buffer;
+  conn.avail = (size_t volatile*) conn.buffer;
   conn.avail += (conn.buffer_len / size);
 
   // Sending length of buffer
@@ -218,10 +208,7 @@ bool lseb_sync(BuConnectionId& conn) {
 
 bool lseb_poll(RuConnectionId& conn) {
 
-  return (
-      conn.first_half ?
-        conn.poll != FIRST_HALF_LOCKED :
-        conn.poll != SECOND_HALF_LOCKED);
+  return conn.poll == FREE;
 }
 
 bool lseb_poll(BuConnectionId& conn) {
@@ -239,24 +226,19 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
     length += i.iov_len;
   }
 
-  if (length > conn.buffer_len / 2 - conn.buffer_written) {
-    if (conn.first_half) {
-      conn.poll = FIRST_HALF_LOCKED;
-    } else {
-      conn.poll = SECOND_HALF_LOCKED;
-    }
+  if (length > conn.buffer_len - conn.buffer_written) {
+    conn.poll = LOCKED;
     size_t ret = riowrite(
       conn.socket,
       &conn.buffer_written,
       sizeof(conn.buffer_written),
       conn.buffer_offset + conn.buffer_len,
       0);
-    if(ret != sizeof(conn.buffer_written)){
+    if (ret != sizeof(conn.buffer_written)) {
       LOG(WARNING) << "Error on riowrite: " << strerror(errno);
-      throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
+      throw std::runtime_error(
+        "Error on riowrite: " + std::string(strerror(errno)));
     }
-
-    conn.first_half = !conn.first_half;
     conn.buffer_written = 0;
     return -2;
   }
@@ -266,12 +248,12 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.buffer_offset + (conn.first_half ? 0 : conn.buffer_len / 2) + conn
-        .buffer_written,
+      conn.buffer_offset + conn.buffer_written,
       0);
-    if(ret != i.iov_len){
+    if (ret != i.iov_len) {
       LOG(WARNING) << "Error on riowrite: " << strerror(errno);
-      throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
+      throw std::runtime_error(
+        "Error on riowrite: " + std::string(strerror(errno)));
     }
     conn.buffer_written += ret;
   }
@@ -286,9 +268,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   }
 
   std::vector<iovec> iov;
-  iov.push_back(
-    { static_cast<char*>((void*)conn.buffer) + (
-        conn.first_half ? 0 : conn.buffer_len / 2), *(conn.avail) });
+  iov.push_back( { static_cast<char*>((void*) conn.buffer), *(conn.avail) });
 
   return iov;
 }
@@ -296,17 +276,17 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 void lseb_release(BuConnectionId& conn) {
 
   *(conn.avail) = 0;
-  conn.first_half = !conn.first_half;
-  uint8_t poll = NO_LOCKS;
+  uint8_t poll = FREE;
   size_t ret = riowrite(
     conn.socket,
     static_cast<void*>(&poll),
     sizeof(poll),
     conn.poll_offset,
     0);
-  if(ret != sizeof(poll)){
+  if (ret != sizeof(poll)) {
     LOG(WARNING) << "Error on riowrite: " << strerror(errno);
-    throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
+    throw std::runtime_error(
+      "Error on riowrite: " + std::string(strerror(errno)));
   }
 }
 
