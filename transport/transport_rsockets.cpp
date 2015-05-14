@@ -196,9 +196,10 @@ bool lseb_sync(BuConnectionId& conn) {
   }
 
   // Reserve last sizeof(size_t) bytes for avail
-  conn.buffer_len -= sizeof(size_t);
+  size_t size = sizeof(size_t);
+  conn.buffer_len -= (conn.buffer_len % size) - size;
   conn.avail = (size_t volatile*)conn.buffer;
-  conn.avail += (conn.buffer_len / sizeof(size_t));
+  conn.avail += (conn.buffer_len / size);
 
   // Sending length of buffer
   if (rsend(conn.socket, &conn.buffer_len, sizeof(conn.buffer_len), MSG_WAITALL) == -1) {
