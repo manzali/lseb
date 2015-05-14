@@ -63,14 +63,14 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Connections established";
 
   Receiver receiver(connection_ids);
-
   FrequencyMeter bandwith(1.0);
+  double ms_timeout = 100.0;
 
   while (true) {
     if (dummy_execution) {
       bandwith.add(receiver.receiveAndForget());
     } else {
-      bandwith.add(receiver.receive());
+      bandwith.add(receiver.receive(ms_timeout));
     }
     if (bandwith.check()) {
       LOG(INFO)

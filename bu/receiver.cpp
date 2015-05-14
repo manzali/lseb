@@ -69,7 +69,7 @@ bool Receiver::checkData(std::vector<iovec> total_iov) {
   return true;;
 }
 
-size_t Receiver::receive() {
+size_t Receiver::receive(double ms_timeout) {
 
   // Create a list of iterators
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
@@ -87,9 +87,8 @@ size_t Receiver::receive() {
     std::begin(conn_iterators),
     std::end(conn_iterators));
 
-  while (it != std::end(conn_iterators) && std::chrono::duration_cast<
-      std::chrono::milliseconds>(
-    std::chrono::high_resolution_clock::now() - start_time).count() < 100) {
+  while (it != std::end(conn_iterators) && std::chrono::duration<double,
+      std::milli>(std::chrono::high_resolution_clock::now() - start_time).count() < ms_timeout) {
     if (lseb_poll(**it)) {
       std::vector<iovec> conn_iov = lseb_read(**it);
       for (auto& i : conn_iov) {
