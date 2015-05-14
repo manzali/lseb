@@ -190,7 +190,7 @@ bool lseb_sync(BuConnectionId& conn) {
 
   // Reserve last sizeof(size_t) bytes for avail
   size_t size = sizeof(size_t);
-  conn.buffer_len -= (conn.buffer_len % size) - size;
+  conn.buffer_len -= (conn.buffer_len % size) + size;
   conn.avail = (size_t volatile*)conn.buffer;
   conn.avail += (conn.buffer_len / size);
 
