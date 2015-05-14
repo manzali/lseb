@@ -149,8 +149,15 @@ bool lseb_sync(RuConnectionId& conn) {
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
   }
 
-  // Receiving offset of buffer
-  if (rrecv(conn.socket, &conn.buffer_offset, sizeof(conn.buffer_offset),
+  // Receiving offset of buffer 1
+  if (rrecv(conn.socket, &conn.buffer_offset_1, sizeof(conn.buffer_offset_1),
+  MSG_WAITALL) == -1) {
+    //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
+  // Receiving offset of buffer 2
+  if (rrecv(conn.socket, &conn.buffer_offset_2, sizeof(conn.buffer_offset_2),
   MSG_WAITALL) == -1) {
     //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
@@ -182,7 +189,8 @@ bool lseb_sync(RuConnectionId& conn) {
 bool lseb_sync(BuConnectionId& conn) {
 
   // Sending length of buffer
-  if (rsend(conn.socket, &conn.buffer_len, sizeof(conn.buffer_len), MSG_WAITALL) == -1) {
+  size_t half_len = conn.buffer_len / 2;
+  if (rsend(conn.socket, &half_len, sizeof(half_len), MSG_WAITALL) == -1) {
     LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
@@ -207,11 +215,11 @@ bool lseb_sync(BuConnectionId& conn) {
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
-  // Register buffer
+  // Register buffer 1
   offset = riomap(
     conn.socket,
     (void*) conn.buffer,
-    conn.buffer_len,
+    half_len,
     PROT_WRITE,
     0,
     -1);
@@ -221,7 +229,27 @@ bool lseb_sync(BuConnectionId& conn) {
       "Error on riomap: " + std::string(strerror(errno)));
   }
 
-  // Sending offset of buffer
+  // Sending offset of buffer 1
+  if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+  }
+
+  // Register buffer 2
+  offset = riomap(
+    conn.socket,
+    (void*) ((char*)conn.buffer + half_len),
+    half_len,
+    PROT_WRITE,
+    0,
+    -1);
+  if (offset == -1) {
+    LOG(WARNING) << "Error on riomap: " << strerror(errno);
+    throw std::runtime_error(
+      "Error on riomap: " + std::string(strerror(errno)));
+  }
+
+  // Sending offset of buffer 2
   if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
     LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
@@ -240,9 +268,9 @@ bool lseb_sync(BuConnectionId& conn) {
 bool lseb_poll(RuConnectionId& conn) {
 
   return (
-      conn.first_half ?
-        conn.poll != FIRST_HALF_LOCKED :
-        conn.poll != SECOND_HALF_LOCKED);
+      conn.first_buffer ?
+        conn.poll != FIRST_BUFFER_LOCKED :
+        conn.poll != SECOND_BUFFER_LOCKED);
 }
 
 bool lseb_poll(BuConnectionId& conn) {
@@ -261,10 +289,10 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
   }
 
   if (length > conn.buffer_len / 2 - conn.buffer_written) {
-    if (conn.first_half) {
-      conn.poll = FIRST_HALF_LOCKED;
+    if (conn.first_buffer) {
+      conn.poll = FIRST_BUFFER_LOCKED;
     } else {
-      conn.poll = SECOND_HALF_LOCKED;
+      conn.poll = SECOND_BUFFER_LOCKED;
     }
     size_t ret = riowrite(
       conn.socket,
@@ -277,7 +305,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       throw std::runtime_error("Error on riowrite: " + std::string(strerror(errno)));
     }
 
-    conn.first_half = !conn.first_half;
+    conn.first_buffer = !conn.first_buffer;
     conn.buffer_written = 0;
     return -2;
   }
@@ -287,7 +315,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.buffer_offset + (conn.first_half ? 0 : conn.buffer_len / 2) + conn
+      (conn.first_buffer ? conn.buffer_offset_1 : conn.buffer_offset_2) + conn
         .buffer_written,
       0);
     if(ret != i.iov_len){
