@@ -51,7 +51,8 @@ size_t Receiver::receive() {
   // Check all data
   for (auto& i : total_iov) {
     size_t bytes_parsed = 0;
-    uint64_t check_event_id = pointer_cast<EventHeader>(i.iov_base)->id;
+    uint64_t expected_event_id = pointer_cast<EventHeader>(i.iov_base)->id;
+    bool warning = false;
     while (bytes_parsed < i.iov_len) {
       uint64_t current_event_id = pointer_cast<EventHeader>(
         static_cast<char*>(i.iov_base) + bytes_parsed)->id;
@@ -59,28 +60,36 @@ size_t Receiver::receive() {
         static_cast<char*>(i.iov_base) + bytes_parsed)->length;
       uint64_t current_event_flags = pointer_cast<EventHeader>(
         static_cast<char*>(i.iov_base) + bytes_parsed)->flags;
-      if (current_event_length == 0 || (current_event_id && check_event_id != current_event_id)) {
-        LOG(WARNING)
-          << "Error parsing EventHeader:"
-          << std::endl
-          << "expected event id: "
-          << check_event_id
-          << std::endl
-          << "event id: "
-          << current_event_id
-          << std::endl
-          << "event length: "
-          << current_event_length
-          << std::endl
-          << "event flags: "
-          << current_event_flags;
+
+      if (expected_event_id != current_event_id) {
+        if (warning) {
+          // Print event header
+          LOG(WARNING)
+            << "Error parsing EventHeader:"
+            << std::endl
+            << "expected event id: "
+            << expected_event_id
+            << std::endl
+            << "event id: "
+            << current_event_id
+            << std::endl
+            << "event length: "
+            << current_event_length
+            << std::endl
+            << "event flags: "
+            << current_event_flags;
+          // terminate parsing
+          bytes_parsed = i.iov_len;
+        } else {
+          // if the event id is different from the expected one, check the next
+          warning = true;
+        }
+      } else {
+        warning = false;
       }
-      assert(
-        current_event_length && (check_event_id == current_event_id || current_event_id == 0));
-      check_event_id = ++current_event_id;
+      expected_event_id = ++current_event_id;
       bytes_parsed += current_event_length;
     }
-    assert(bytes_parsed == i.iov_len && "Wrong length read");
   }
 
   // Release all data
