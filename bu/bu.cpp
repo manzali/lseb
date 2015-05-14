@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
 
   while (true) {
     if (dummy_execution) {
-      bandwith.add(receiver.receive_and_forget());
+      bandwith.add(receiver.receiveAndForget());
     } else {
       bandwith.add(receiver.receive());
     }

@@ -1,6 +1,7 @@
 #include "bu/receiver.h"
 
 #include <list>
+#include <chrono>
 
 #include "common/log.h"
 
@@ -17,36 +18,7 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
 
 }
 
-size_t Receiver::receive() {
-
-  // Create a list of iterators
-  std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
-  for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
-    conn_iterators.push_back(it);
-  }
-
-  std::vector<iovec> total_iov;
-
-  // Read from all RUs
-  size_t bytes_read = 0;
-  auto it = select_randomly(
-    std::begin(conn_iterators),
-    std::end(conn_iterators));
-  while (it != std::end(conn_iterators)) {
-    if (lseb_poll(**it)) {
-      std::vector<iovec> conn_iov = lseb_read(**it);
-      for (auto& i : conn_iov) {
-        bytes_read += i.iov_len;
-        total_iov.push_back(i);
-      }
-      it = conn_iterators.erase(it);
-    } else {
-      ++it;
-    }
-    if (it == std::end(conn_iterators)) {
-      it = std::begin(conn_iterators);
-    }
-  }
+bool Receiver::checkData(std::vector<iovec> total_iov) {
 
   // Check all data
   for (auto& i : total_iov) {
@@ -78,8 +50,10 @@ size_t Receiver::receive() {
             << std::endl
             << "event flags: "
             << current_event_flags;
+
           // terminate parsing
-          bytes_parsed = i.iov_len;
+          return false;
+
         } else {
           // if the event id is different from the expected one, check the next
           warning = true;
@@ -92,15 +66,65 @@ size_t Receiver::receive() {
     }
   }
 
-  // Release all data
+  return true;;
+}
+
+size_t Receiver::receive() {
+
+  // Create a list of iterators
+  std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
+  for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
+    conn_iterators.push_back(it);
+  }
+
+  std::vector<iovec> total_iov;
+
+  auto start_time = std::chrono::high_resolution_clock::now();
+
+  // Read from all RUs
+  size_t bytes_read = 0;
+  auto it = select_randomly(
+    std::begin(conn_iterators),
+    std::end(conn_iterators));
+
+  while (it != std::end(conn_iterators) && std::chrono::duration_cast<
+      std::chrono::milliseconds>(
+    std::chrono::high_resolution_clock::now() - start_time).count() < 100) {
+    if (lseb_poll(**it)) {
+      std::vector<iovec> conn_iov = lseb_read(**it);
+      for (auto& i : conn_iov) {
+        bytes_read += i.iov_len;
+        total_iov.push_back(i);
+      }
+      it = conn_iterators.erase(it);
+    } else {
+      ++it;
+    }
+    if (it == std::end(conn_iterators)) {
+      it = std::begin(conn_iterators);
+    }
+  }
+
+  // Check data
+  checkData(total_iov);
+
+  // Release data
   for (auto& conn : m_connection_ids) {
     lseb_release(conn);
+  }
+
+  // Warning missing data
+  if (conn_iterators.size()) {
+    LOG(WARNING)
+      << "Missing data from "
+      << conn_iterators.size()
+      << " connections";
   }
 
   return bytes_read;
 }
 
-size_t Receiver::receive_and_forget() {
+size_t Receiver::receiveAndForget() {
   size_t bytes_read = 0;
   for (auto& conn : m_connection_ids) {
     if (lseb_poll(conn)) {
