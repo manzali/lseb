@@ -149,13 +149,6 @@ bool lseb_sync(RuConnectionId& conn) {
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
   }
 
-  // Receiving offset of avail
-  if (rrecv(conn.socket, &conn.avail_offset, sizeof(conn.avail_offset),
-  MSG_WAITALL) == -1) {
-    //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
-    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
-  }
-
   // Register poll
   off_t offset = riomap(
     conn.socket,
@@ -213,13 +206,6 @@ bool lseb_sync(BuConnectionId& conn) {
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
-  // Sending offset of avail
-  offset += conn.buffer_len;
-  if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
-    LOG(WARNING) << "Error on rsend: " << strerror(errno);
-    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
-  }
-
   // Receiving offset of poll
   if (rrecv(conn.socket, &conn.poll_offset, sizeof(conn.poll_offset),
   MSG_WAITALL) == -1) {
@@ -263,7 +249,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.socket,
       &conn.buffer_written,
       sizeof(conn.buffer_written),
-      conn.avail_offset,
+      conn.buffer_offset + conn.buffer_len,
       0);
     if(ret != sizeof(conn.buffer_written)){
       LOG(WARNING) << "Error on riowrite: " << strerror(errno);

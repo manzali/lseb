@@ -15,7 +15,6 @@ namespace lseb {
 struct RuConnectionId {
   int socket;
   uint8_t volatile poll;
-  off_t avail_offset;
   off_t buffer_offset;
   size_t buffer_len;
   bool first_half;
@@ -24,7 +23,6 @@ struct RuConnectionId {
       :
         socket(socket),
         poll(NO_LOCKS),
-        avail_offset(-1),
         buffer_offset(-1),
         buffer_len(0),
         first_half(true),
