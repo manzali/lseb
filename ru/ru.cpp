@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
-  size_t const max_sending_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
+  size_t const recv_buffer_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
+  LOG(INFO) << "Waiting for connections...";
   std::vector<RuConnectionId> connection_ids;
   std::transform(
     std::begin(bu_endpoints),
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
     [](Endpoint const& endpoint) {
       return lseb_connect(endpoint.hostname(), endpoint.port());
     });
+  LOG(INFO) << "Connections established";
 
   // Allocate memory
 
@@ -75,7 +77,7 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
-  Sender sender(metadata_range, data_range, connection_ids, max_sending_size);
+  Sender sender(connection_ids, recv_buffer_size);
 
   LengthGenerator payload_size_generator(mean, stddev);
   Generator generator(
@@ -86,6 +88,7 @@ int main(int argc, char* argv[]) {
 
   Controller controller(generator, metadata_range, generator_frequency);
 
+  FrequencyMeter bandwith(1.0);
   FrequencyMeter frequency(1.0);
 
   while (true) {
@@ -93,7 +96,16 @@ int main(int argc, char* argv[]) {
     MultiEvents multievents = accumulator.add(ready_events);
 
     if (multievents.size()) {
-      sender.send(multievents);
+
+      // Create DataIov
+      std::vector<DataIov> data_iovs;
+      for (auto& multievent : multievents) {
+        data_iovs.push_back(create_iovec(multievent.second, data_range));
+      }
+
+      size_t written_bytes = sender.send(data_iovs);
+      bandwith.add(written_bytes);
+
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
@@ -106,6 +118,12 @@ int main(int argc, char* argv[]) {
         << "Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
+    }
+    if (bandwith.check()) {
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
     }
   }
 }

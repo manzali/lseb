@@ -2,6 +2,7 @@
 #define COMMON_TIMER_H
 
 #include <chrono>
+#include <cassert>
 
 namespace lseb {
 

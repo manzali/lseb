@@ -2,6 +2,7 @@
 #include <string>
 #include <algorithm>
 
+#include "common/frequency_meter.h"
 #include "common/iniparser.hpp"
 #include "common/log.h"
 #include "common/dataformat.h"
@@ -27,6 +28,8 @@ int main(int argc, char* argv[]) {
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
+  bool const dummy_execution = std::stol(parser.top()("BU")["DUMMY"]) != 0;
+  double const ms_timeout = std::stod(parser.top()("BU")["MS_TIMEOUT"]);
 
   LOG(INFO) << parser << std::endl;
 
@@ -45,6 +48,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<BuConnectionId> connection_ids;
 
+  LOG(INFO) << "Waiting for connections...";
   int endpoint_count = 0;
   std::transform(
     std::begin(ru_endpoints),
@@ -57,11 +61,23 @@ int main(int argc, char* argv[]) {
           data_size
       );
     });
+  LOG(INFO) << "Connections established";
 
   Receiver receiver(connection_ids);
+  FrequencyMeter bandwith(1.0);
 
   while (true) {
-    receiver.receive();
+    if (dummy_execution) {
+      bandwith.add(receiver.receiveAndForget());
+    } else {
+      bandwith.add(receiver.receive(ms_timeout));
+    }
+    if (bandwith.check()) {
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
+    }
   }
 
 }

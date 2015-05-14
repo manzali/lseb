@@ -102,14 +102,14 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
   return BuConnectionId(newsockfd, buffer, len);
 }
 
-bool lseb_register(RuConnectionId const& conn) {
+bool lseb_sync(RuConnectionId const& conn) {
   uint8_t poll_byte;
   ssize_t ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
   ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
   return ret == sizeof(poll_byte);
 }
 
-bool lseb_register(BuConnectionId const& conn) {
+bool lseb_sync(BuConnectionId const& conn) {
   uint8_t poll_byte;
   ssize_t ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
   ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
@@ -150,7 +150,7 @@ ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov) {
   return ret - sizeof(length);
 }
 
-ssize_t lseb_read(BuConnectionId& conn) {
+std::vector<iovec> lseb_read(BuConnectionId& conn) {
   // receive the length of data
   ssize_t ret = recv(
     conn.socket,
@@ -163,11 +163,16 @@ ssize_t lseb_read(BuConnectionId& conn) {
     // well-known problem (to be investigated)
     throw std::runtime_error("Error on recv: null length received");
   }
+  assert(conn.avail <= conn.len && "Too much incoming data");
   ret = recv(conn.socket, conn.buffer, conn.avail, MSG_WAITALL);
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   }
-  return ret;
+
+  std::vector<iovec> iov;
+  iov.push_back( { conn.buffer, conn.avail });
+
+  return iov;
 }
 
 void lseb_release(BuConnectionId& conn) {

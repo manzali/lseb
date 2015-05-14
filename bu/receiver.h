@@ -4,8 +4,6 @@
 #include <vector>
 
 #include "common/dataformat.h"
-#include "common/timer.h"
-#include "common/frequency_meter.h"
 
 #include "transport/transport.h"
 
@@ -13,13 +11,14 @@ namespace lseb {
 
 class Receiver {
   std::vector<BuConnectionId> m_connection_ids;
-  Timer m_read_timer;
-  Timer m_recv_timer;
-  FrequencyMeter m_bandwith;
+
+ private:
+  bool checkData(std::vector<iovec> total_iov);
 
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
-  size_t receive();
+  size_t receive(double ms_timeout);
+  size_t receiveAndForget();
 };
 
 }

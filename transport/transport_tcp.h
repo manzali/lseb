@@ -35,12 +35,12 @@ using BuSocket = int;
 RuConnectionId lseb_connect(std::string const& hostname, long port);
 BuSocket lseb_listen(std::string const& hostname, long port);
 BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len);
-bool lseb_register(RuConnectionId const& conn);
-bool lseb_register(BuConnectionId const& conn);
+bool lseb_sync(RuConnectionId const& conn);
+bool lseb_sync(BuConnectionId const& conn);
 bool lseb_poll(RuConnectionId const& conn);
 bool lseb_poll(BuConnectionId const& conn);
 ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov);
-ssize_t lseb_read(BuConnectionId& conn);
+std::vector<iovec> lseb_read(BuConnectionId& conn);
 void lseb_release(BuConnectionId& conn);
 
 }

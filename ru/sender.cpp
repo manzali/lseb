@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <list>
+#include <chrono>
 
 #include <cstring>
 #include <sys/uio.h>
@@ -21,97 +22,100 @@ static size_t iovec_length(std::vector<iovec> const& iov) {
 }
 
 Sender::Sender(
-  MetaDataRange const& metadata_range,
-  DataRange const& data_range,
   std::vector<RuConnectionId> const& connection_ids,
-  size_t max_sending_size)
+  size_t recv_buffer_size)
     :
-      m_metadata_range(metadata_range),
-      m_data_range(data_range),
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
-      m_max_sending_size(max_sending_size),
-      m_bandwith(1.0) {
-
-  // Registration
+      m_recv_buffer_size(recv_buffer_size) {
+  LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
-    lseb_register(conn);
+    lseb_sync(conn);
   }
-
+  LOG(INFO) << "Synchronization completed";
 }
 
-size_t Sender::send(MultiEvents multievents) {
+size_t Sender::send(std::vector<DataIov> data_iovecs) {
 
-  m_send_timer.start();
+  using DataVectorIter = std::vector<DataIov>::iterator;
 
-  assert(multievents.size() != 0 && "Can't compute the module of zero!");
+  struct SendingStruct {
+    std::vector<RuConnectionId>::iterator ruConnectionIdIter;
+    std::vector<DataVectorIter> dataVector;
+    std::vector<DataVectorIter>::iterator dataVectorIter;
+  };
 
-  std::list<
-      std::pair<std::vector<RuConnectionId>::iterator, MultiEvents::iterator> > conn_iterators;
+  size_t list_size =
+      (data_iovecs.size() < m_connection_ids.size()) ?
+        data_iovecs.size() :
+        m_connection_ids.size();
+  std::list<SendingStruct> sending_list(list_size);
 
-  for (auto it = std::begin(multievents); it != std::end(multievents); ++it) {
-    conn_iterators.emplace_back(m_next_bu, it);
+  // Filling dataVector
+  auto sending_list_it = std::begin(sending_list);
+  for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
+    sending_list_it->dataVector.emplace_back(it);
+    if (++sending_list_it == std::end(sending_list)) {
+      sending_list_it = std::begin(sending_list);
+    }
+  }
+
+  // Setting ruConnectionIdIter and dataVector
+  for (auto it = std::begin(sending_list); it != std::end(sending_list); ++it) {
+    it->ruConnectionIdIter = m_next_bu;
+    it->dataVectorIter = std::begin(it->dataVector);
     if (++m_next_bu == std::end(m_connection_ids)) {
       m_next_bu = std::begin(m_connection_ids);
     }
   }
 
+  sending_list_it = select_randomly(
+    std::begin(sending_list),
+    std::end(sending_list));
   size_t written_bytes = 0;
 
-  auto it = std::begin(conn_iterators);
-      /*select_randomly(
-    std::begin(conn_iterators),
-    std::next(std::begin(conn_iterators), m_connection_ids.size()));
-  */
+  while (sending_list_it != std::end(sending_list)) {
 
+    bool remove_it = false;
+    auto& conn_it = sending_list_it->ruConnectionIdIter;
 
-  while (it != std::end(conn_iterators)) {
-
-    auto& conn_it = it->first;
     if (lseb_poll(*conn_it)) {
 
-      // Sending only data (no metadata)
-      std::vector<iovec> iov = create_iovec(it->second->second, m_data_range);
+      auto& iov_it = sending_list_it->dataVectorIter;
+      auto& iov = *iov_it;
+      size_t load = iovec_length(*iov);
 
-      size_t load = iovec_length(iov);
-
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov.size() << " iovec and sending to connection id " << conn_it
+      LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn_it
         ->socket;
 
       assert(
-        load <= m_max_sending_size && "Trying to send a buffer bigger than the receiver one");
+        load <= m_recv_buffer_size && "Trying to send a buffer bigger than the receiver one");
 
-      m_write_timer.start();
-      ssize_t ret = lseb_write(*conn_it, iov);
-      m_write_timer.pause();
-
-      assert(ret >= 0 && static_cast<size_t>(ret) == load);
-
-      written_bytes += ret;
-
-      it = conn_iterators.erase(it);
-    } else {
-      ++it;
+      m_send_timer.start();
+      ssize_t ret = lseb_write(*conn_it, *iov);
+      m_send_timer.pause();
+      if(ret != -2){
+        assert(ret >= 0 && static_cast<size_t>(ret) == load);
+        written_bytes += ret;
+        if (++iov_it == std::end(sending_list_it->dataVector)) {
+          remove_it = true;
+        }
+      }
     }
-    if (it == std::end(conn_iterators) || std::distance(
-      std::begin(conn_iterators),
-      it) == m_connection_ids.size()) {
-      it = std::begin(conn_iterators);
+
+    if (remove_it) {
+      sending_list_it = sending_list.erase(sending_list_it);
+    } else {
+      ++sending_list_it;
+    }
+
+    if (sending_list_it == std::end(sending_list)) {
+      sending_list_it = std::begin(sending_list);
     }
   }
 
-  m_send_timer.pause();
-
-  m_bandwith.add(written_bytes);
-  if (m_bandwith.check()) {
-    LOG(INFO)
-      << "Bandwith: "
-      << m_bandwith.frequency() / std::giga::num * 8.
-      << " Gb/s";
-
-    LOG(INFO) << "lseb_write() time: " << m_write_timer.rate() << "%";
-    LOG(INFO) << "Sender::send() time: " << m_send_timer.rate() << "%";
-    m_write_timer.reset();
+  if (std::chrono::duration<double>(m_send_timer.total_time()).count() > 1.0) {
+    LOG(INFO) << "send call: " << m_send_timer.rate() << "%";
     m_send_timer.reset();
   }
 
