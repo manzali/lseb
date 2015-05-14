@@ -184,7 +184,7 @@ bool lseb_sync(BuConnectionId& conn) {
   // Register iomap for buffer and avail
   off_t offset = riomap(
     conn.socket,
-    (void*) &conn.buffer,
+    (void*) conn.buffer,
     conn.buffer_len,
     PROT_WRITE,
     0,
