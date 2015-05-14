@@ -34,7 +34,7 @@ struct RuConnectionId {
 
 struct BuConnectionId {
   int socket;
-  size_t volatile avail;
+  size_t volatile* avail;
   void volatile* buffer;
   size_t buffer_len;
   bool first_half;
@@ -42,7 +42,7 @@ struct BuConnectionId {
   BuConnectionId(int socket, void* buffer, size_t buffer_len)
       :
         socket(socket),
-        avail(0),
+        avail(nullptr),
         buffer(buffer),
         buffer_len(buffer_len),
         first_half(true),
