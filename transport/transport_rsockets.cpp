@@ -41,7 +41,7 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
       "Error on rsocket creation: " + std::string(strerror(errno)));
   }
 
-  set_rdma_options(socket, 2);
+  set_rdma_options(socket, 1);
 
   if (rconnect(socket, res->ai_addr, res->ai_addrlen)) {
     rclose(socket);
