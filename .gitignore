@@ -4,4 +4,5 @@ build/
 .kdev4/
 .settings/
 lseb.kdev4
+genconfig/config*.ini
 
