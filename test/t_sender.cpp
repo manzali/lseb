@@ -28,7 +28,8 @@ int main(int argc, char* argv[]) {
   memset(buffer, '0', buffer_size);
 
   std::vector<iovec> iov;
-  iov.push_back( { buffer, buffer_size });
+  // sizeof(size_t) is for avail field
+  iov.push_back( { buffer, buffer_size - sizeof(size_t)});
 
   FrequencyMeter bandwith(1.0);
 
