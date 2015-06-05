@@ -160,7 +160,7 @@ bool lseb_sync(RuConnectionId& conn) {
 
   // Sending offset of poll
   if (rsend(conn.socket, &offset, sizeof(offset), 0) == -1) {
-    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    //LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
@@ -173,7 +173,7 @@ bool lseb_sync(BuConnectionId& conn) {
   off_t offset = riomap(conn.socket, (void*) conn.buffer, conn.buffer_len,
   PROT_WRITE, 0, -1);
   if (offset == -1) {
-    LOG(WARNING) << "Error on riomap: " << strerror(errno);
+    //LOG(WARNING) << "Error on riomap: " << strerror(errno);
     throw std::runtime_error(
       "Error on riomap: " + std::string(strerror(errno)));
   }
@@ -186,20 +186,20 @@ bool lseb_sync(BuConnectionId& conn) {
 
   // Sending length of buffer
   if (rsend(conn.socket, &conn.buffer_len, sizeof(conn.buffer_len), MSG_WAITALL) == -1) {
-    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    //LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
   // Sending offset of buffer
   if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
-    LOG(WARNING) << "Error on rsend: " << strerror(errno);
+    //LOG(WARNING) << "Error on rsend: " << strerror(errno);
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
   // Receiving offset of poll
   if (rrecv(conn.socket, &conn.poll_offset, sizeof(conn.poll_offset),
   MSG_WAITALL) == -1) {
-    LOG(WARNING) << "Error on rrecv: " << strerror(errno);
+    //LOG(WARNING) << "Error on rrecv: " << strerror(errno);
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
   }
 
@@ -227,6 +227,10 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
   }
 
   if (length > conn.buffer_len - conn.buffer_written) {
+    if (!conn.buffer_written) {
+      //LOG(WARNING) << "Error on riowrite:  buffer size too small";
+      throw std::runtime_error("Error on riowrite:  buffer size too small");
+    }
     conn.poll = LOCKED;
     size_t ret = riowrite(
       conn.socket,
@@ -235,7 +239,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.buffer_offset + conn.buffer_len,
       0);
     if (ret != sizeof(conn.buffer_written)) {
-      LOG(WARNING) << "Error on riowrite: " << strerror(errno);
+      //LOG(WARNING) << "Error on riowrite: " << strerror(errno);
       throw std::runtime_error(
         "Error on riowrite: " + std::string(strerror(errno)));
     }
@@ -251,7 +255,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.buffer_offset + conn.buffer_written,
       0);
     if (ret != i.iov_len) {
-      LOG(WARNING) << "Error on riowrite: " << strerror(errno);
+      //LOG(WARNING) << "Error on riowrite: " << strerror(errno);
       throw std::runtime_error(
         "Error on riowrite: " + std::string(strerror(errno)));
     }
@@ -284,7 +288,7 @@ void lseb_release(BuConnectionId& conn) {
     conn.poll_offset,
     0);
   if (ret != sizeof(poll)) {
-    LOG(WARNING) << "Error on riowrite: " << strerror(errno);
+    //LOG(WARNING) << "Error on riowrite: " << strerror(errno);
     throw std::runtime_error(
       "Error on riowrite: " + std::string(strerror(errno)));
   }
