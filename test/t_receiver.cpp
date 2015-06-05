@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     if (bandwith.check()) {
       std::cout
         << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
+        << bandwith.frequency() / 134217728.
         << " Gb/s\n"
         << std::flush;
     }
