@@ -180,7 +180,6 @@ bool lseb_sync(BuConnectionId& conn) {
 }
 
 bool lseb_poll(RuConnectionId& conn) {
-
   return conn.poll == FREE;
 }
 
@@ -244,12 +243,13 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   std::vector<iovec> iov;
   iov.push_back( { static_cast<char*>((void*) conn.buffer), *(conn.avail) });
 
+  *(conn.avail) = 0;
+
   return iov;
 }
 
 void lseb_release(BuConnectionId& conn) {
 
-  *(conn.avail) = 0;
   uint8_t poll = FREE;
   size_t ret = riowrite(
     conn.socket,
