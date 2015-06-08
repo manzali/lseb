@@ -17,13 +17,17 @@ struct RuConnectionId {
   off_t buffer_offset;
   size_t buffer_len;
   size_t buffer_written;
+  bool is_first;
+  bool is_full;
   RuConnectionId(int socket)
       :
         socket(socket),
         poll(FREE),
         buffer_offset(-1),
         buffer_len(0),
-        buffer_written(0) {
+        buffer_written(0),
+        is_first(true),
+        is_full(false) {
   }
 };
 
@@ -33,13 +37,15 @@ struct BuConnectionId {
   void volatile* buffer;
   size_t buffer_len;
   off_t poll_offset;
+  bool is_first;
   BuConnectionId(int socket, void* buffer, size_t buffer_len)
       :
         socket(socket),
         avail(nullptr),
         buffer(buffer),
         buffer_len(buffer_len),
-        poll_offset(-1) {
+        poll_offset(-1),
+        is_first(true) {
   }
 };
 

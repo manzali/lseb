@@ -180,7 +180,7 @@ bool lseb_sync(BuConnectionId& conn) {
 }
 
 bool lseb_poll(RuConnectionId& conn) {
-  return conn.poll == FREE;
+  return !conn.is_full || conn.poll != LOCKED;
 }
 
 bool lseb_poll(BuConnectionId& conn) {
@@ -193,27 +193,36 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
     ;
   }
 
-  size_t length = 0;
-  for (iovec const& i : iov) {
-    length += i.iov_len;
-  }
-
-  if (length > conn.buffer_len - conn.buffer_written) {
-    if (!conn.buffer_written) {
-      throw std::runtime_error("Error on riowrite:  buffer size too small");
-    }
-    conn.poll = LOCKED;
-    size_t ret = riowrite(
+  if (conn.is_full) {
+    if (conn.poll != LOCKED) {
+      conn.poll = LOCKED;
+      conn.is_first = !conn.is_first;
+      size_t ret = riowrite(
       conn.socket,
       &conn.buffer_written,
       sizeof(conn.buffer_written),
       conn.buffer_offset + conn.buffer_len,
       0);
-    if (ret != sizeof(conn.buffer_written)) {
-      throw std::runtime_error(
-        "Error on riowrite: " + std::string(strerror(errno)));
+      if (ret != sizeof(conn.buffer_written)) {
+        throw std::runtime_error(
+          "Error on riowrite: " + std::string(strerror(errno)));
+      }
+      conn.buffer_written = 0;
+      conn.is_full = false;
     }
-    conn.buffer_written = 0;
+    return -2;
+  }
+
+  size_t length = 0;
+  for (iovec const& i : iov) {
+    length += i.iov_len;
+  }
+
+  if (length > conn.buffer_len / 2 - conn.buffer_written) {
+    if (!conn.buffer_written) {
+      throw std::runtime_error("Error on riowrite:  buffer size too small");
+    }
+    conn.is_full = true;
     return -2;
   }
 
@@ -222,7 +231,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.buffer_offset + conn.buffer_written,
+      conn.buffer_offset + conn.buffer_written + (conn.is_first ? 0 : conn.buffer_len / 2),
       0);
     if (ret != i.iov_len) {
       throw std::runtime_error(
@@ -241,7 +250,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   }
 
   std::vector<iovec> iov;
-  iov.push_back( { static_cast<char*>((void*) conn.buffer), *(conn.avail) });
+  iov.push_back( { static_cast<char*>((void*) conn.buffer) + (conn.is_first ? 0 : conn.buffer_len / 2), *(conn.avail) });
 
   *(conn.avail) = 0;
 
@@ -257,6 +266,7 @@ void lseb_release(BuConnectionId& conn) {
     sizeof(poll),
     conn.poll_offset,
     0);
+  conn.is_first = !conn.is_first;
   if (ret != sizeof(poll)) {
     throw std::runtime_error(
       "Error on riowrite: " + std::string(strerror(errno)));
