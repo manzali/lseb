@@ -37,7 +37,7 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
       "Error on rsocket creation: " + std::string(strerror(errno)));
   }
 
-  set_rdma_options(socket, 1);
+  set_rdma_options(socket, 2);
 
   if (rconnect(socket, res->ai_addr, res->ai_addrlen)) {
     rclose(socket);
@@ -128,6 +128,12 @@ bool lseb_sync(RuConnectionId& conn) {
     throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
   }
 
+  // Receiving offset of avail
+  if (rrecv(conn.socket, &conn.avail_offset, sizeof(conn.avail_offset),
+  MSG_WAITALL) == -1) {
+    throw std::runtime_error("Error on rrecv: " + std::string(strerror(errno)));
+  }
+
   // Register poll
   off_t offset = riomap(
     conn.socket,
@@ -151,24 +157,36 @@ bool lseb_sync(RuConnectionId& conn) {
 
 bool lseb_sync(BuConnectionId& conn) {
 
-  // Register iomap for buffer and avail
-  off_t offset = riomap(
+  // Register iomap for buffer
+  off_t offset_buffer = riomap(
     conn.socket,
     (void*) conn.buffer,
     conn.buffer_len,
     PROT_WRITE,
     0,
     -1);
-  if (offset == -1) {
+  if (offset_buffer == -1) {
     throw std::runtime_error(
       "Error on riomap: " + std::string(strerror(errno)));
   }
 
-  // Reserve last sizeof(size_t) bytes for avail
-  size_t size = sizeof(size_t);
-  conn.buffer_len -= (conn.buffer_len % size) + size;
-  conn.avail = (size_t volatile*) conn.buffer;
-  conn.avail += (conn.buffer_len / size);
+  // Register iomap for avail
+  // a shared_ptr is needed in order to avoid memory leak
+  conn.avail = new size_t();
+  off_t offset_avail = riomap(
+    conn.socket,
+    (void*) conn.avail,
+    sizeof(size_t),
+    PROT_WRITE,
+    0,
+    -1);
+  if (offset_avail == -1) {
+    throw std::runtime_error(
+      "Error on riomap: " + std::string(strerror(errno)));
+  }
+
+  // Split buffer in two parts
+  conn.buffer_len /= 2;
 
   // Sending length of buffer
   if (rsend(conn.socket, &conn.buffer_len, sizeof(conn.buffer_len), MSG_WAITALL) == -1) {
@@ -176,7 +194,12 @@ bool lseb_sync(BuConnectionId& conn) {
   }
 
   // Sending offset of buffer
-  if (rsend(conn.socket, &offset, sizeof(offset), MSG_WAITALL) == -1) {
+  if (rsend(conn.socket, &offset_buffer, sizeof(offset_buffer), MSG_WAITALL) == -1) {
+    throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
+  }
+
+  // Sending offset of avail
+  if (rsend(conn.socket, &offset_avail, sizeof(offset_avail), MSG_WAITALL) == -1) {
     throw std::runtime_error("Error on rsend: " + std::string(strerror(errno)));
   }
 
@@ -211,7 +234,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
         conn.socket,
         &conn.buffer_written,
         sizeof(conn.buffer_written),
-        conn.buffer_offset + conn.buffer_len,
+        conn.avail_offset,
         0);
       if (ret != sizeof(conn.buffer_written)) {
         throw std::runtime_error(
@@ -228,7 +251,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
     length += i.iov_len;
   }
 
-  if (length > conn.buffer_len / 2 - conn.buffer_written) {
+  if (length > conn.buffer_len - conn.buffer_written) {
     if (!conn.buffer_written) {
       throw std::runtime_error("Error on riowrite:  buffer size too small");
     }
@@ -242,7 +265,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       i.iov_base,
       i.iov_len,
       conn.buffer_offset + conn.buffer_written + (
-          conn.is_first ? 0 : conn.buffer_len / 2),
+          conn.is_first ? 0 : conn.buffer_len),
       0);
     if (ret != i.iov_len) {
       throw std::runtime_error(
@@ -263,7 +286,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   std::vector<iovec> iov;
   iov.push_back(
     { static_cast<char*>((void*) conn.buffer) + (
-        conn.is_first ? 0 : conn.buffer_len / 2), *(conn.avail) });
+        conn.is_first ? 0 : conn.buffer_len), *(conn.avail) });
 
   *(conn.avail) = 0;
   conn.is_done = true;

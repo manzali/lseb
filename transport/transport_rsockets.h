@@ -15,6 +15,7 @@ struct RuConnectionId {
   int socket;
   uint8_t volatile poll;
   off_t buffer_offset;
+  off_t avail_offset;
   size_t buffer_len;
   size_t buffer_written;
   bool is_first;
@@ -24,6 +25,7 @@ struct RuConnectionId {
         socket(socket),
         poll(FREE),
         buffer_offset(-1),
+        avail_offset(-1),
         buffer_len(0),
         buffer_written(0),
         is_first(true),
