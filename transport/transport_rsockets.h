@@ -38,6 +38,7 @@ struct BuConnectionId {
   size_t buffer_len;
   off_t poll_offset;
   bool is_first;
+  bool is_done;
   BuConnectionId(int socket, void* buffer, size_t buffer_len)
       :
         socket(socket),
@@ -45,7 +46,8 @@ struct BuConnectionId {
         buffer(buffer),
         buffer_len(buffer_len),
         poll_offset(-1),
-        is_first(true) {
+        is_first(true),
+        is_done(false) {
   }
 };
 

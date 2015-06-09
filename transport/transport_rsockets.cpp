@@ -129,8 +129,13 @@ bool lseb_sync(RuConnectionId& conn) {
   }
 
   // Register poll
-  off_t offset = riomap(conn.socket, (void*) &conn.poll, sizeof(conn.poll),
-  PROT_WRITE, 0, -1);
+  off_t offset = riomap(
+    conn.socket,
+    (void*) &conn.poll,
+    sizeof(conn.poll),
+    PROT_WRITE,
+    0,
+    -1);
   if (offset == -1) {
     throw std::runtime_error(
       "Error on riomap: " + std::string(strerror(errno)));
@@ -147,8 +152,13 @@ bool lseb_sync(RuConnectionId& conn) {
 bool lseb_sync(BuConnectionId& conn) {
 
   // Register iomap for buffer and avail
-  off_t offset = riomap(conn.socket, (void*) conn.buffer, conn.buffer_len,
-  PROT_WRITE, 0, -1);
+  off_t offset = riomap(
+    conn.socket,
+    (void*) conn.buffer,
+    conn.buffer_len,
+    PROT_WRITE,
+    0,
+    -1);
   if (offset == -1) {
     throw std::runtime_error(
       "Error on riomap: " + std::string(strerror(errno)));
@@ -198,11 +208,11 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.poll = LOCKED;
       conn.is_first = !conn.is_first;
       size_t ret = riowrite(
-      conn.socket,
-      &conn.buffer_written,
-      sizeof(conn.buffer_written),
-      conn.buffer_offset + conn.buffer_len,
-      0);
+        conn.socket,
+        &conn.buffer_written,
+        sizeof(conn.buffer_written),
+        conn.buffer_offset + conn.buffer_len,
+        0);
       if (ret != sizeof(conn.buffer_written)) {
         throw std::runtime_error(
           "Error on riowrite: " + std::string(strerror(errno)));
@@ -231,7 +241,8 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.socket,
       i.iov_base,
       i.iov_len,
-      conn.buffer_offset + conn.buffer_written + (conn.is_first ? 0 : conn.buffer_len / 2),
+      conn.buffer_offset + conn.buffer_written + (
+          conn.is_first ? 0 : conn.buffer_len / 2),
       0);
     if (ret != i.iov_len) {
       throw std::runtime_error(
@@ -250,26 +261,31 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   }
 
   std::vector<iovec> iov;
-  iov.push_back( { static_cast<char*>((void*) conn.buffer) + (conn.is_first ? 0 : conn.buffer_len / 2), *(conn.avail) });
+  iov.push_back(
+    { static_cast<char*>((void*) conn.buffer) + (
+        conn.is_first ? 0 : conn.buffer_len / 2), *(conn.avail) });
 
   *(conn.avail) = 0;
-
+  conn.is_done = true;
   return iov;
 }
 
 void lseb_release(BuConnectionId& conn) {
 
-  uint8_t poll = FREE;
-  size_t ret = riowrite(
-    conn.socket,
-    static_cast<void*>(&poll),
-    sizeof(poll),
-    conn.poll_offset,
-    0);
-  conn.is_first = !conn.is_first;
-  if (ret != sizeof(poll)) {
-    throw std::runtime_error(
-      "Error on riowrite: " + std::string(strerror(errno)));
+  if (conn.is_done) {
+    conn.is_done = false;
+    uint8_t poll = FREE;
+    size_t ret = riowrite(
+      conn.socket,
+      static_cast<void*>(&poll),
+      sizeof(poll),
+      conn.poll_offset,
+      0);
+    conn.is_first = !conn.is_first;
+    if (ret != sizeof(poll)) {
+      throw std::runtime_error(
+        "Error on riowrite: " + std::string(strerror(errno)));
+    }
   }
 }
 
