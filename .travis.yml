@@ -1,0 +1,20 @@
+language: cpp
+
+compiler:
+  - gcc
+  - clang
+
+install:
+  - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-4.8; fi
+
+before_script:
+  - sudo apt-get update -qq
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script: make -j 4
+
+branches:
+  only:
+    - master
