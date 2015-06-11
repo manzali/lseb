@@ -10,8 +10,8 @@ before_install:
 
 install:
   - sudo apt-get update -qq
-  - if [ "$CXX" == "g++" ]; then sudo ./gcc_update.sh --version 4.9; fi
-  - if [ "$CXX" == "clang++" ]; then sudo ./clang_update.sh --version 3.4; fi
+  - if [ "$CXX" == "g++" ]; then sudo bash ./gcc_update.sh --version 4.9; fi
+  - if [ "$CXX" == "clang++" ]; then sudo bash ./clang_update.sh --version 3.4; fi
 
 before_script:
   - mkdir build
