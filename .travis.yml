@@ -11,7 +11,7 @@ before_script:
   - sudo apt-get update -qq
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake -DTRANSPORT="TCP" ..
 
 script: make -j 4
 
