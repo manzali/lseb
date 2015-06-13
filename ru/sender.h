@@ -1,6 +1,8 @@
 #ifndef RU_SENDER_H
 #define RU_SENDER_H
 
+#include <vector>
+
 #include "common/dataformat.h"
 #include "common/timer.h"
 #include "transport/transport.h"
