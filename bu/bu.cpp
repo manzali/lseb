@@ -4,7 +4,7 @@
 
 #include "common/frequency_meter.h"
 #include "common/iniparser.hpp"
-#include "common/log.h"
+#include "common/log.hpp"
 #include "common/dataformat.h"
 #include "transport/endpoints.h"
 #include "transport/transport.h"

@@ -1,11 +1,11 @@
-#ifndef COMMON_LOG_H
-#define COMMON_LOG_H
+#ifndef COMMON_LOG_HPP
+#define COMMON_LOG_HPP
 
-#include <chrono>
-#include <mutex>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
+#include <iomanip>
 
 #include <ctime>
 #include <cassert>
@@ -18,21 +18,20 @@
 
 namespace lseb {
 
-namespace detail{
-
-int const BUFSIZE = 200;
+namespace detail {
 
 inline std::string Now() {
-  auto now = std::chrono::system_clock::now();
-  auto in_time_t = std::chrono::system_clock::to_time_t(now);
-  char tmdescr[BUFSIZE] = { 0 };
-  const char fmt[] = "%F - %T";
-  std::strftime(tmdescr, sizeof(tmdescr) - 1, fmt, std::localtime(&in_time_t));
-  return std::string(tmdescr);
+  std::ostringstream oss;
+  std::time_t t = std::time(nullptr);
+  oss << std::put_time(std::localtime(&t), "%Y-%m-%d %X");
+  return oss.str();
 }
 
-inline void log_to_syslog(std::istream& input_stream, std::mutex& mx, int level,
-                          std::string const& level_str) {
+inline void log_to_syslog(
+  std::istream& input_stream,
+  std::mutex& mx,
+  int level,
+  std::string const& level_str) {
   std::unique_lock<std::mutex> l(mx);
   bool continuation = false;
   for (std::string s; getline(input_stream, s);) {
@@ -43,16 +42,19 @@ inline void log_to_syslog(std::istream& input_stream, std::mutex& mx, int level,
   }
 }
 
-inline void log_to_stream(std::ostream& output_stream,
-                          std::istream& input_stream, std::mutex& mx,
-                          std::string const& ident, std::string const& level) {
+inline void log_to_stream(
+  std::ostream& output_stream,
+  std::istream& input_stream,
+  std::mutex& mx,
+  std::string const& ident,
+  std::string const& level) {
   std::ostringstream os;
   std::string const now = Now();
   bool continuation = false;
   for (std::string s; getline(input_stream, s);) {
     if (continuation)
       os << '\n';
-    os << now << " - " << ident << " - ";
+    os << now << ' ' << ident << ": ";
     os << level << (continuation ? "+ " : ": ") << s;
     continuation = true;
   }
@@ -65,32 +67,38 @@ inline void log_to_stream(std::ostream& output_stream,
 class Log {
  public:
   enum Level {
-    ERROR,
-    WARNING,
-    INFO,
-    DEBUG
+    ERROR, WARNING, INFO, DEBUG
   };
 
  public:
   Log(Level level = INFO)
-      : m_level(level) {
+      :
+        m_level(level) {
   }
   ~Log() {
     StaticMembers& sm(static_members());
     assert(!sm.ident.empty() && "Did you forget to call Log::Init()?");
     if (sm.use_syslog) {
-     detail::log_to_syslog(m_tmp_stream, sm.mx, ToSyslog(m_level), ToString(m_level));
+      detail::log_to_syslog(
+        m_tmp_stream,
+        sm.mx,
+        ToSyslog(m_level),
+        ToString(m_level));
     } else {
-      detail::log_to_stream(*sm.log_stream, m_tmp_stream, sm.mx, sm.ident,
-                    ToString(m_level));
+      detail::log_to_stream(
+        *sm.log_stream,
+        m_tmp_stream,
+        sm.mx,
+        sm.ident,
+        ToString(m_level));
     }
   }
+  Log(const Log&) = delete;
+  void operator=(const Log&) = delete;
   std::ostream& tmp_stream() {
     return m_tmp_stream;
   }
   ;
-  Log(const Log&) = delete;            // disable copying
-  Log& operator=(const Log&) = delete;  // disable assignment
 
  private:
   Level m_level;
@@ -103,12 +111,13 @@ class Log {
     std::ostream* log_stream;
     Level base_level;
     StaticMembers()
-        : use_syslog(false),
+        :
+          use_syslog(false),
           log_stream(&std::clog),
           base_level(INFO) {
     }
-    StaticMembers(const StaticMembers&) = delete;            // disable copying
-    StaticMembers& operator=(const StaticMembers&) = delete;  // disable assignment
+    StaticMembers(const StaticMembers&) = delete;
+    void operator=(const StaticMembers&) = delete;
   };
 
   static StaticMembers& static_members() {
@@ -118,11 +127,13 @@ class Log {
 
  public:
 
-  static void init(std::string const& ident, Level base_level = INFO,
-                   std::ostream& log_stream = std::clog) {
+  static void init(
+    std::string const& ident,
+    Level base_level = INFO,
+    std::ostream& log_stream = std::clog) {
     assert(!ident.empty() && "The ident string must be non empty");
     assert(
-        base_level >= ERROR && base_level <= DEBUG && "Invalid logging level");
+      base_level >= ERROR && base_level <= DEBUG && "Invalid logging level");
     assert(log_stream.good() && "The log stream is not in a good state");
     StaticMembers& sm(static_members());
     sm.ident = ident;

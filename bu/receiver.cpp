@@ -3,7 +3,7 @@
 #include <list>
 #include <chrono>
 
-#include "common/log.h"
+#include "common/log.hpp"
 
 namespace lseb {
 

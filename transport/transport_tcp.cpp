@@ -10,7 +10,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "common/log.h"
+#include "common/log.hpp"
 #include "common/utility.h"
 #include "common/dataformat.h"
 

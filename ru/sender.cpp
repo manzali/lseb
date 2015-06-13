@@ -5,7 +5,7 @@
 #include <cstring>
 #include <sys/uio.h>
 
-#include "common/log.h"
+#include "common/log.hpp"
 #include "common/utility.h"
 
 #include "ru/sender.h"

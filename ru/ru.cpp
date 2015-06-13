@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include "common/dataformat.h"
-#include "common/log.h"
+#include "common/log.hpp"
 #include "common/utility.h"
 #include "common/iniparser.hpp"
 #include "common/frequency_meter.h"

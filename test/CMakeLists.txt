@@ -44,3 +44,8 @@ target_link_libraries(
   t_receiver
   transport
 )
+
+add_executable(
+  t_log
+  t_log.cpp
+)
