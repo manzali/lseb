@@ -77,24 +77,24 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
   while (sending_list_it != std::end(sending_list)) {
 
     bool remove_it = false;
-    auto& conn_it = sending_list_it->ruConnectionIdIter;
+    auto& conn = *(sending_list_it->ruConnectionIdIter);
 
-    if (lseb_poll(*conn_it)) {
+    if (lseb_poll(conn)) {
 
       auto& iov_it = sending_list_it->dataVectorIter;
       auto& iov = *iov_it;
       size_t load = iovec_length(*iov);
 
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn_it
-        ->socket;
+      LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn
+        .socket;
 
       assert(
         load <= m_recv_buffer_size && "Trying to send a buffer bigger than the receiver one");
 
       m_send_timer.start();
-      ssize_t ret = lseb_write(*conn_it, *iov);
+      ssize_t ret = lseb_write(conn, *iov);
       m_send_timer.pause();
-      if(ret != -2){
+      if (ret != -2) {
         assert(ret >= 0 && static_cast<size_t>(ret) == load);
         written_bytes += ret;
         if (++iov_it == std::end(sending_list_it->dataVector)) {
