@@ -3,7 +3,8 @@
 
 #include <cassert>
 
-#include "common/boost_lightweight_test.hpp"
+#include <boost/detail/lightweight_test.hpp>
+
 #include "common/iniparser.hpp"
 
 int main(int argc, char* argv[]) {

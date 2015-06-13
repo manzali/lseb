@@ -52,6 +52,9 @@ endif()
 # Adding definition of TRANSPORT layer
 add_definitions(-D${TRANSPORT})
 
+# searching for boost 1.57 or newer
+find_package( Boost 1.57)
+
 add_subdirectory(transport)
 add_subdirectory(generator)
 add_subdirectory(ru)
