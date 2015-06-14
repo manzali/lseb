@@ -1,0 +1,19 @@
+{
+	"key1": {
+		"key1.1": "123",
+		"key1.2": "456",
+		"key1.3": "789"
+	},
+	"key2": [
+		{
+			"array1": "value"
+		},
+		{
+			"array2": "value"
+		},
+		{
+			"array3": "value"
+		}
+	],
+	"key3": "abc"
+}

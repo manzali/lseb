@@ -49,3 +49,13 @@ add_executable(
   t_log
   t_log.cpp
 )
+
+add_executable(
+  t_configuration
+  t_configuration.cpp
+)
+
+target_link_libraries(
+  t_configuration
+  ${Boost_LIBRARIES}
+)
