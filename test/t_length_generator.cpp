@@ -41,6 +41,6 @@ int main() {
     BOOST_TEST(payload <= max);
   }
 
-  boost::report_errors();
+  return boost::report_errors();
 }
 

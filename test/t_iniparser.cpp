@@ -23,7 +23,5 @@ int main(int argc, char* argv[]) {
 
   std::cout << out.str() << std::endl;
 
-  boost::report_errors();
-
-  return 0;
+  return boost::report_errors();
 }

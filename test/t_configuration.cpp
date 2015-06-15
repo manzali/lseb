@@ -41,5 +41,5 @@ int main(int argc, char* argv[]) {
   // missing key
   BOOST_TEST_THROWS(configuration.get<std::string>("key4"), Configuration_error);
 
-  boost::report_errors();
+  return boost::report_errors();
 }
