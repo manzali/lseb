@@ -24,18 +24,22 @@ int main(int argc, char* argv[]) {
 
   std::cout << "*** Configuration dump ***\n\n" << configuration << '\n';
 
-  {
-    std::string const key("key1");
-    int const expected = 123;
-    BOOST_TEST_EQ(configuration.get<int>(key), expected);
+  // key1
+  BOOST_TEST_EQ(configuration.get<int>("key1.integer"), 123);
+  BOOST_TEST_EQ(configuration.get<double>("key1.double"), 4.56);
+  BOOST_TEST_EQ(configuration.get<bool>("key1.bool"), true);
+
+  // key2
+  Configuration const& child = configuration.get_child("key2");
+  for(auto& item : child){
+    BOOST_TEST_EQ(item.second.get<std::string>("array"), "value");
   }
 
-/*
-  {  // missing section
-    std::string const key("NPMTFLOOR");
-    BOOST_TEST_THROWS(configuration.get<int>(key), Configuration_error);
-  }
-  */
+  // key3
+  BOOST_TEST_EQ(configuration.get<std::string>("key3"), "abc");
 
-boost::report_errors();
+  // missing key
+  BOOST_TEST_THROWS(configuration.get<std::string>("key4"), Configuration_error);
+
+  boost::report_errors();
 }
