@@ -4,14 +4,35 @@ compiler:
   - gcc
   - clang
 
+# Problem with clang
+# http://stackoverflow.com/questions/15747223/why-does-this-basic-thread-program-fail-with-clang-but-pass-in-g
+
 before_install:
-  - wget https://raw.githubusercontent.com/biicode/misc/master/travis/cpp/gcc_update.sh
-  - if [ "$CXX" == "clang++" ]; then wget https://raw.githubusercontent.com/biicode/misc/master/travis/cpp/clang_update.sh; fi
+# g++4.9
+  - if [ "$CXX" == "g++" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
+# clang3.4
+  - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
+  - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository -y ppa:h-rayflood/llvm; fi
+# boost 1.58
+  - wget http://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2/download
+  - tar xfj download
+  - rm download
 
 install:
   - sudo apt-get update -qq
-  - bash ./gcc_update.sh --version 4.9
-  - if [ "$CXX" == "clang++" ]; then bash ./clang_update.sh --version 3.4; fi
+# g++4.9
+  - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-4.9; fi
+  - if [ "$CXX" == "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
+# clang3.4
+  - if [ "$CXX" == "clang++" ]; then sudo apt-get install -qq libstdc++-4.8-dev; fi
+  - if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi
+# boost 1.58
+  - cd boost_1_58_0
+  - ./bootstrap.sh --with-libraries=system
+  - ./b2
+  - sudo ./b2 install &>/dev/null
+  - cd ..
+  - rm -rf boost_1_58_0
 
 before_script:
   - mkdir build
@@ -21,7 +42,3 @@ before_script:
 script:
   - make -j 4
   - make check
-
-branches:
-  only:
-    - master
