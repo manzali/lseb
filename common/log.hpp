@@ -4,8 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <thread>
-#include <iomanip>
+#include <mutex>
 
 #include <ctime>
 #include <cassert>
@@ -20,11 +19,15 @@ namespace lseb {
 
 namespace detail {
 
+int const BUFSIZE = 200;
+
 inline std::string Now() {
-  std::ostringstream oss;
-  std::time_t t = std::time(nullptr);
-  oss << std::put_time(std::localtime(&t), "%Y-%m-%d %X");
-  return oss.str();
+  auto now = std::chrono::system_clock::now();
+  auto in_time_t = std::chrono::system_clock::to_time_t(now);
+  char tmdescr[BUFSIZE] = { 0 };
+  const char fmt[] = "%F - %T";
+  std::strftime(tmdescr, sizeof(tmdescr) - 1, fmt, std::localtime(&in_time_t));
+  return std::string(tmdescr);
 }
 
 inline void log_to_syslog(
