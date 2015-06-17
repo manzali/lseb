@@ -226,7 +226,16 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
     ;
   }
 
-  if (conn.is_full) {
+  size_t length = 0;
+  for (iovec const& i : iov) {
+    length += i.iov_len;
+  }
+
+  if (length > conn.buffer_len - conn.buffer_written) {
+    if (!conn.buffer_written) {
+      throw std::runtime_error("Error on riowrite:  buffer size too small");
+    }
+
     if (conn.poll != LOCKED) {
       conn.poll = LOCKED;
       conn.is_first = !conn.is_first;
@@ -242,25 +251,10 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
       }
       conn.buffer_written = 0;
       conn.is_full = false;
+    } else {
+      conn.is_full = true;
+      return -2;
     }
-
-    // Wait until the buffer is free
-    while (!lseb_poll(conn)) {
-      ;
-    }
-  }
-
-  size_t length = 0;
-  for (iovec const& i : iov) {
-    length += i.iov_len;
-  }
-
-  if (length > conn.buffer_len - conn.buffer_written) {
-    if (!conn.buffer_written) {
-      throw std::runtime_error("Error on riowrite:  buffer size too small");
-    }
-    conn.is_full = true;
-    return -2;
   }
 
   for (iovec const& i : iov) {

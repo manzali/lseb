@@ -24,8 +24,14 @@ void handle_single_conn(
   DataIov const& fragment) {
   if (lseb_poll(conn)) {
     ssize_t ret = lseb_write(conn, fragment);
-    size_t load = iovec_length(fragment);
-    assert(ret >= 0 && static_cast<size_t>(ret) == load);
+    if (ret == -2) {
+      executor->post(
+        conn.socket,
+        std::bind(handle_single_conn, executor, conn, fragment));
+    } else {
+      ssize_t load = iovec_length(fragment);
+      assert(ret == load);
+    }
   } else {
     executor->post(
       conn.socket,
