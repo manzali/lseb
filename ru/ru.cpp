@@ -38,7 +38,6 @@ int main(int argc, char* argv[]) {
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
-  size_t const recv_buffer_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
@@ -77,7 +76,7 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
-  Sender sender(connection_ids, recv_buffer_size);
+  Sender sender(connection_ids);
 
   LengthGenerator payload_size_generator(mean, stddev);
   Generator generator(

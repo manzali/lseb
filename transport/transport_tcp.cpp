@@ -134,19 +134,19 @@ bool lseb_poll(BuConnectionId const& conn) {
   return ret != 0;
 }
 
-ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec>& iov) {
+ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov) {
   size_t length = 0;
   for (iovec const& i : iov) {
     length += i.iov_len;
   }
   // Add as first iovect the length of data
-  iov.insert(iov.begin(), { &length, sizeof(length) });
-  ssize_t ret = writev(conn.socket, iov.data(), iov.size());
+  std::vector<iovec> new_iov(1, {&length, sizeof(length) });
+  new_iov.insert(new_iov.end(), iov.begin(), iov.end());
+  ssize_t ret = writev(conn.socket, new_iov.data(), new_iov.size());
   if (ret == -1) {
     throw std::runtime_error(
       "Error on writev: " + std::string(strerror(errno)));
   }
-  iov.erase(iov.begin());
   return ret - sizeof(length);
 }
 

@@ -220,7 +220,7 @@ bool lseb_poll(BuConnectionId& conn) {
   return *(conn.avail) != 0;
 }
 
-ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
+ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
 
   while (!lseb_poll(conn)) {
     ;
@@ -243,7 +243,11 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec>& iov) {
       conn.buffer_written = 0;
       conn.is_full = false;
     }
-    return -2;
+
+    // Wait until the buffer is free
+    while (!lseb_poll(conn)) {
+      ;
+    }
   }
 
   size_t length = 0;
