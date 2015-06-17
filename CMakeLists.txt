@@ -56,7 +56,7 @@ endif()
 add_definitions(-D${TRANSPORT})
 
 # searching for boost 1.57 or newer
-find_package(Boost 1.57)
+find_package(Boost 1.57 REQUIRED COMPONENTS system)
 
 add_subdirectory(transport)
 add_subdirectory(generator)

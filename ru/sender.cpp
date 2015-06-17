@@ -10,6 +10,8 @@
 
 #include "ru/sender.h"
 
+#include "handler_executor.hpp"
+
 namespace lseb {
 
 static size_t iovec_length(std::vector<iovec> const& iov) {
@@ -74,6 +76,8 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
     std::end(sending_list));
   size_t written_bytes = 0;
 
+  HandlerExecutor executor(2); // 2 threads
+
   while (sending_list_it != std::end(sending_list)) {
 
     bool remove_it = false;
@@ -91,16 +95,21 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
       assert(
         load <= m_recv_buffer_size && "Trying to send a buffer bigger than the receiver one");
 
-      m_send_timer.start();
-      ssize_t ret = lseb_write(conn, *iov);
-      m_send_timer.pause();
-      if (ret != -2) {
-        assert(ret >= 0 && static_cast<size_t>(ret) == load);
-        written_bytes += ret;
-        if (++iov_it == std::end(sending_list_it->dataVector)) {
-          remove_it = true;
+      executor.post(conn.socket, [=, &conn]() {
+        ssize_t ret = lseb_write(conn, *iov);
+        if(ret == -2) {
+          lseb_write(conn, *iov);
         }
+        else {
+          assert(ret >= 0 && static_cast<size_t>(ret) == load);
+        }
+      });
+
+      written_bytes += load;
+      if (++iov_it == std::end(sending_list_it->dataVector)) {
+        remove_it = true;
       }
+
     }
 
     if (remove_it) {
@@ -114,10 +123,7 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
     }
   }
 
-  if (std::chrono::duration<double>(m_send_timer.total_time()).count() > 1.0) {
-    LOG(INFO) << "send call: " << m_send_timer.rate() << "%";
-    m_send_timer.reset();
-  }
+  executor.stop();
 
   return written_bytes;
 }
