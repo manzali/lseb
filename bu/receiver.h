@@ -12,9 +12,6 @@ namespace lseb {
 class Receiver {
   std::vector<BuConnectionId> m_connection_ids;
 
- private:
-  bool checkData(std::vector<iovec> total_iov);
-
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
   size_t receive(double ms_timeout);

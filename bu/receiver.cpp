@@ -4,8 +4,54 @@
 #include <chrono>
 
 #include "common/log.hpp"
+#include "common/handler_executor.hpp"
 
 namespace lseb {
+
+void checkData(iovec const& iov) {
+  size_t bytes_parsed = 0;
+  uint64_t expected_event_id = pointer_cast<EventHeader>(iov.iov_base)->id;
+  bool warning = false;
+  while (bytes_parsed < iov.iov_len) {
+    uint64_t current_event_id = pointer_cast<EventHeader>(
+      static_cast<char*>(iov.iov_base) + bytes_parsed)->id;
+    uint64_t current_event_length = pointer_cast<EventHeader>(
+      static_cast<char*>(iov.iov_base) + bytes_parsed)->length;
+    uint64_t current_event_flags = pointer_cast<EventHeader>(
+      static_cast<char*>(iov.iov_base) + bytes_parsed)->flags;
+
+    if (expected_event_id != current_event_id) {
+      if (warning) {
+        // Print event header
+        LOG(WARNING)
+          << "Error parsing EventHeader:"
+          << std::endl
+          << "expected event id: "
+          << expected_event_id
+          << std::endl
+          << "event id: "
+          << current_event_id
+          << std::endl
+          << "event length: "
+          << current_event_length
+          << std::endl
+          << "event flags: "
+          << current_event_flags;
+
+        // terminate parsing
+        return;
+
+      } else {
+        // if the event id is different from the expected one, check the next
+        warning = true;
+      }
+    } else {
+      warning = false;
+    }
+    expected_event_id = ++current_event_id;
+    bytes_parsed += current_event_length;
+  }
+}
 
 Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
     :
@@ -15,58 +61,6 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
     lseb_sync(conn);
   }
   LOG(INFO) << "Synchronization completed";
-
-}
-
-bool Receiver::checkData(std::vector<iovec> total_iov) {
-
-  // Check all data
-  for (auto& i : total_iov) {
-    size_t bytes_parsed = 0;
-    uint64_t expected_event_id = pointer_cast<EventHeader>(i.iov_base)->id;
-    bool warning = false;
-    while (bytes_parsed < i.iov_len) {
-      uint64_t current_event_id = pointer_cast<EventHeader>(
-        static_cast<char*>(i.iov_base) + bytes_parsed)->id;
-      uint64_t current_event_length = pointer_cast<EventHeader>(
-        static_cast<char*>(i.iov_base) + bytes_parsed)->length;
-      uint64_t current_event_flags = pointer_cast<EventHeader>(
-        static_cast<char*>(i.iov_base) + bytes_parsed)->flags;
-
-      if (expected_event_id != current_event_id) {
-        if (warning) {
-          // Print event header
-          LOG(WARNING)
-            << "Error parsing EventHeader:"
-            << std::endl
-            << "expected event id: "
-            << expected_event_id
-            << std::endl
-            << "event id: "
-            << current_event_id
-            << std::endl
-            << "event length: "
-            << current_event_length
-            << std::endl
-            << "event flags: "
-            << current_event_flags;
-
-          // terminate parsing
-          return false;
-
-        } else {
-          // if the event id is different from the expected one, check the next
-          warning = true;
-        }
-      } else {
-        warning = false;
-      }
-      expected_event_id = ++current_event_id;
-      bytes_parsed += current_event_length;
-    }
-  }
-
-  return true;;
 }
 
 size_t Receiver::receive(double ms_timeout) {
@@ -104,12 +98,23 @@ size_t Receiver::receive(double ms_timeout) {
     }
   }
 
-  // Check data
-  checkData(total_iov);
+  {
+    // Check data
+    HandlerExecutor executor(2);
+    for (auto& iov : total_iov) {
+      executor.post(std::bind(checkData, iov));
+    }
+    executor.stop();
+  }
 
-  // Release data
-  for (auto& conn : m_connection_ids) {
-    lseb_release(conn);
+  {
+    // Release data
+    HandlerExecutor executor(2);
+    for (auto& conn : m_connection_ids) {
+      lseb_release(conn);
+      executor.post(std::bind(lseb_release, conn));
+    }
+    executor.stop();
   }
 
   // Warning missing data
