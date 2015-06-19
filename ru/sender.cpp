@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <list>
+#include <chrono>
+
 #include <cstring>
 #include <sys/uio.h>
 
@@ -9,6 +13,14 @@
 
 namespace lseb {
 
+using DataVectorIter = std::vector<DataIov>::iterator;
+
+struct SendingStruct {
+  std::vector<RuConnectionId>::iterator ruConnectionIdIter;
+  std::vector<DataVectorIter> dataVector;
+  std::vector<DataVectorIter>::iterator dataVectorIter;
+};
+
 static size_t iovec_length(std::vector<iovec> const& iov) {
   return std::accumulate(
     std::begin(iov),
@@ -18,25 +30,30 @@ static size_t iovec_length(std::vector<iovec> const& iov) {
       return partial + v.iov_len;});
 }
 
-void handle_single_conn(
-  std::shared_ptr<HandlerExecutor> const& executor,
-  RuConnectionId& conn,
-  DataIov const& fragment) {
+void poll_and_send(
+  std::shared_ptr<HandlerExecutor> executor,
+  std::vector<SendingStruct>::iterator sending_vector_it) {
+  auto& conn = *(sending_vector_it->ruConnectionIdIter);
   if (lseb_poll(conn)) {
+    auto& iov_it = sending_vector_it->dataVectorIter;
+    auto& fragment = **iov_it;
     ssize_t ret = lseb_write(conn, fragment);
-    if (ret == -2) {
-      executor->post(
-        conn.socket,
-        std::bind(handle_single_conn, executor, conn, fragment));
-    } else {
-      ssize_t load = iovec_length(fragment);
-      assert(ret == load);
+    if (ret != -2) {
+      size_t load = iovec_length(fragment);
+      assert(static_cast<size_t>(ret) == load);
+      LOG(DEBUG)
+        << "Written "
+        << load
+        << " bytes in "
+        << fragment.size()
+        << " iovec and sending to connection id "
+        << conn.socket;
+      if (++iov_it == std::end(sending_vector_it->dataVector)) {
+        return;
+      }
     }
-  } else {
-    executor->post(
-      conn.socket,
-      std::bind(handle_single_conn, executor, conn, fragment));
   }
+  executor->post(std::bind(poll_and_send, executor, sending_vector_it));
 }
 
 Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
@@ -52,18 +69,32 @@ Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
 
 size_t Sender::send(std::vector<DataIov> data_iovecs) {
 
-  auto executor = std::make_shared<HandlerExecutor>(2);
+  std::vector<SendingStruct> sending_vector(
+    (data_iovecs.size() < m_connection_ids.size()) ?
+      data_iovecs.size() :
+      m_connection_ids.size());
+
   size_t written_bytes = 0;
 
-  for (auto& fragment : data_iovecs) {
-    auto& conn = *m_next_bu;
-    executor->post(
-      conn.socket,
-      std::bind(handle_single_conn, executor, conn, fragment));
-    written_bytes += iovec_length(fragment);
+  auto sending_list_it = std::begin(sending_vector);
+  for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
+    sending_list_it->dataVector.emplace_back(it);
+    if (++sending_list_it == std::end(sending_vector)) {
+      sending_list_it = std::begin(sending_vector);
+    }
+    written_bytes += iovec_length(*it);
+  }
+
+  auto executor = std::make_shared<HandlerExecutor>(2);
+
+  for (auto it = std::begin(sending_vector); it != std::end(sending_vector);
+      ++it) {
+    it->ruConnectionIdIter = m_next_bu;
+    it->dataVectorIter = std::begin(it->dataVector);
     if (++m_next_bu == std::end(m_connection_ids)) {
       m_next_bu = std::begin(m_connection_ids);
     }
+    executor->post(std::bind(poll_and_send, executor, it));
   }
 
   executor->stop();

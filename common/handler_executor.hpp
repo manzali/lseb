@@ -1,5 +1,5 @@
-#ifndef HANDLEREXECUTOR_HPP
-#define HANDLEREXECUTOR_HPP
+#ifndef COMMON_HANDLEREXECUTOR_HPP
+#define COMMON_HANDLEREXECUTOR_HPP
 
 #include <thread>
 #include <memory>
