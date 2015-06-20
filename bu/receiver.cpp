@@ -4,7 +4,6 @@
 #include <chrono>
 
 #include "common/log.hpp"
-#include "common/handler_executor.hpp"
 
 namespace lseb {
 
@@ -55,7 +54,8 @@ void checkData(iovec const& iov) {
 
 Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
     :
-      m_connection_ids(connection_ids) {
+      m_connection_ids(connection_ids),
+      m_executor(2) {
   LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);
@@ -98,24 +98,18 @@ size_t Receiver::receive(double ms_timeout) {
     }
   }
 
-  {
-    // Check data
-    HandlerExecutor executor(2);
-    for (auto& iov : total_iov) {
-      executor.post(std::bind(checkData, iov));
-    }
-    executor.stop();
+  // Check data
+  for (auto& iov : total_iov) {
+    m_executor.post(std::bind(checkData, iov));
   }
+  m_executor.wait();
 
-  {
-    // Release data
-    HandlerExecutor executor(2);
-    for (auto& conn : m_connection_ids) {
-      lseb_release(conn);
-      executor.post(std::bind(lseb_release, conn));
-    }
-    executor.stop();
+  // Release data
+  for (auto& conn : m_connection_ids) {
+    lseb_release(conn);
+    m_executor.post(std::bind(lseb_release, conn));
   }
+  m_executor.wait();
 
   // Warning missing data
   if (conn_iterators.size()) {

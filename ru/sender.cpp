@@ -31,7 +31,7 @@ static size_t iovec_length(std::vector<iovec> const& iov) {
 }
 
 void poll_and_send(
-  std::shared_ptr<HandlerExecutor> executor,
+  HandlerExecutor* executor,
   std::vector<SendingStruct>::iterator sending_vector_it) {
   auto& conn = *(sending_vector_it->ruConnectionIdIter);
   if (lseb_poll(conn)) {
@@ -59,7 +59,8 @@ void poll_and_send(
 Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
     :
       m_connection_ids(connection_ids),
-      m_next_bu(std::begin(m_connection_ids)) {
+      m_next_bu(std::begin(m_connection_ids)),
+      m_executor(2) {
   LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);
@@ -85,8 +86,6 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
     written_bytes += iovec_length(*it);
   }
 
-  auto executor = std::make_shared<HandlerExecutor>(2);
-
   for (auto it = std::begin(sending_vector); it != std::end(sending_vector);
       ++it) {
     it->ruConnectionIdIter = m_next_bu;
@@ -94,10 +93,10 @@ size_t Sender::send(std::vector<DataIov> data_iovecs) {
     if (++m_next_bu == std::end(m_connection_ids)) {
       m_next_bu = std::begin(m_connection_ids);
     }
-    executor->post(std::bind(poll_and_send, executor, it));
+    m_executor.post(std::bind(poll_and_send, &m_executor, it));
   }
 
-  executor->stop();
+  m_executor.wait();
 
   return written_bytes;
 }

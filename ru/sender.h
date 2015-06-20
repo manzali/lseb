@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "common/dataformat.h"
+#include "common/handler_executor.hpp"
+
 #include "transport/transport.h"
 
 namespace lseb {
@@ -11,6 +13,7 @@ namespace lseb {
 class Sender {
   std::vector<RuConnectionId> m_connection_ids;
   std::vector<RuConnectionId>::iterator m_next_bu;
+  HandlerExecutor m_executor;
 
  public:
   Sender(std::vector<RuConnectionId> const& connection_ids);
