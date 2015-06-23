@@ -10,7 +10,7 @@ using namespace lseb;
 int main(int argc, char* argv[]) {
 
   // Check arguments
-  assert(argc == 3 && "receiver <ip_address> <port> <buffer_size>");
+  assert(argc == 4 && "receiver <ip_address> <port> <buffer_size>");
 
   long port = std::stol(argv[2]);
 

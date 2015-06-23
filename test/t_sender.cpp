@@ -11,7 +11,7 @@ using namespace lseb;
 int main(int argc, char* argv[]) {
 
   // Check arguments
-  assert(argc == 3 && "sender <ip_address> <port> <transfer_size>");
+  assert(argc == 4 && "sender <ip_address> <port> <transfer_size>");
 
   long port = std::stol(argv[2]);
 
