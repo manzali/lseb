@@ -55,8 +55,8 @@ endif()
 # Adding definition of TRANSPORT layer
 add_definitions(-D${TRANSPORT})
 
-# searching for boost 1.57 or newer
-find_package(Boost 1.57 REQUIRED COMPONENTS system)
+# searching for boost 1.56 or newer
+find_package(Boost 1.56 REQUIRED COMPONENTS system)
 
 add_subdirectory(transport)
 add_subdirectory(generator)
