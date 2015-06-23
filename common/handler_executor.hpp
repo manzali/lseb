@@ -2,11 +2,10 @@
 #define HANDLEREXECUTOR_HPP
 
 #include <thread>
-#include <condition_variable>
-#include <mutex>
 #include <memory>
 #include <vector>
 #include <map>
+#include <atomic>
 
 #include <cassert>
 
@@ -16,7 +15,8 @@ class HandlerExecutor {
  public:
   HandlerExecutor(size_t n_threads)
       :
-        work_(new boost::asio::io_service::work(io_service_)) {
+        work_(new boost::asio::io_service::work(io_service_)),
+        tokens_(0) {
     for (size_t i = 0; i < n_threads; ++i) {
       threads_.emplace_back([&]() {io_service_.run();});
     }
@@ -26,16 +26,22 @@ class HandlerExecutor {
     assert(!work_.get() && "Call wait before destructor!");
   }
 
-  template<typename HandlerType>
-  void post(HandlerType handler) {
-    io_service_.post(handler);
+  void post(std::function<void()> handler) {
+    ++tokens_;
+    io_service_.post([&, handler]() {
+      handler();
+      --tokens_;
+    });
   }
 
-  template<typename HandlerType>
-  void post(int sequence_id, HandlerType handler) {
+  void post(int sequence_id, std::function<void()> handler) {
+    ++tokens_;
     auto seq_it = sequences_.insert(
       std::make_pair(sequence_id, std::move(boost::asio::strand(io_service_))));
-    seq_it.first->second.post(handler);
+    seq_it.first->second.post([&, handler]() {
+      handler();
+      --tokens_;
+    });
   }
 
   void wait() {
@@ -59,6 +65,7 @@ class HandlerExecutor {
   std::unique_ptr<boost::asio::io_service::work> work_;
   std::map<int, boost::asio::strand> sequences_;
   std::vector<std::thread> threads_;
+  std::atomic<int> tokens_;
 };
 
 #endif
