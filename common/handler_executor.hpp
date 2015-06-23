@@ -2,6 +2,8 @@
 #define HANDLEREXECUTOR_HPP
 
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 #include <memory>
 #include <vector>
 #include <map>
