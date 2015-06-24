@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
   bool const dummy_execution = std::stol(parser.top()("BU")["DUMMY"]) != 0;
-  double const ms_timeout = std::stod(parser.top()("BU")["MS_TIMEOUT"]);
+  int const ms_timeout = std::stol(parser.top()("BU")["MS_TIMEOUT"]);
 
   LOG(INFO) << parser << std::endl;
 

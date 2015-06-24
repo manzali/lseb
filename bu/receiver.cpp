@@ -63,7 +63,7 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
   LOG(INFO) << "Synchronization completed";
 }
 
-size_t Receiver::receive(double ms_timeout) {
+size_t Receiver::receive(int ms_timeout) {
 
   // Create a list of iterators
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
@@ -81,8 +81,11 @@ size_t Receiver::receive(double ms_timeout) {
     std::begin(conn_iterators),
     std::end(conn_iterators));
 
-  while (it != std::end(conn_iterators) && std::chrono::duration<double,
-      std::milli>(std::chrono::high_resolution_clock::now() - start_time).count() < ms_timeout) {
+  std::chrono::high_resolution_clock::time_point end_time =
+    std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(
+      ms_timeout);
+
+  while (it != std::end(conn_iterators) && std::chrono::high_resolution_clock::now() < end_time) {
     if (lseb_poll(**it)) {
       std::vector<iovec> conn_iov = lseb_read(**it);
       for (auto& i : conn_iov) {
