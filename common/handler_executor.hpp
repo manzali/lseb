@@ -35,6 +35,7 @@ class HandlerExecutor {
     std::this_thread::sleep_until(end_time);
     stop_ = true;
     wait();
+    stop_ = false;
   }
 
   void wait() {
