@@ -63,22 +63,22 @@ size_t Sender::send(
   std::vector<DataIov> data_iovecs,
   std::chrono::milliseconds ms_timeout) {
 
+  // Create sending vector
   std::vector<SendingStruct> sending_vector(
     (data_iovecs.size() < m_connection_ids.size()) ?
       data_iovecs.size() :
       m_connection_ids.size());
 
-  size_t written_bytes = 0;
-
+  // Fill sending vector with multievents
   auto sending_list_it = std::begin(sending_vector);
   for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
     sending_list_it->dataVector.emplace_back(it);
     if (++sending_list_it == std::end(sending_vector)) {
       sending_list_it = std::begin(sending_vector);
     }
-    written_bytes += iovec_length(*it);
   }
 
+  // Fill sending vector with connection ids and post the task
   for (auto it = std::begin(sending_vector); it != std::end(sending_vector);
       ++it) {
     it->ruConnectionIdIter = m_next_bu;
@@ -88,10 +88,21 @@ size_t Sender::send(
     }
     m_executor.post(std::bind(poll_and_send, &m_executor, it));
   }
+  m_executor.wait(std::chrono::high_resolution_clock::now() + ms_timeout);
 
-  m_executor.wait();
-
-  return written_bytes;
+  size_t sent_bytes = 0;
+  for (auto& sending_struct : sending_vector) {
+    for (auto iov_it = std::begin(sending_struct.dataVector);
+        iov_it != sending_struct.dataVectorIter; ++iov_it) {
+      sent_bytes += iovec_length(**iov_it);
+    }
+    if (sending_struct.dataVectorIter != std::end(sending_struct.dataVector)) {
+      LOG(WARNING)
+        << "Incompleted data send to connection "
+        << sending_struct.ruConnectionIdIter->socket;
+    }
+  }
+  return sent_bytes;
 }
 
 }
