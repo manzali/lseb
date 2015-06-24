@@ -4,8 +4,6 @@
 #include <thread>
 #include <memory>
 #include <vector>
-#include <map>
-#include <atomic>
 
 #include <cassert>
 
@@ -15,8 +13,7 @@ class HandlerExecutor {
  public:
   HandlerExecutor(size_t n_threads)
       :
-        work_(new boost::asio::io_service::work(io_service_)),
-        tokens_(0) {
+        work_(new boost::asio::io_service::work(io_service_)) {
     for (size_t i = 0; i < n_threads; ++i) {
       threads_.emplace_back([&]() {io_service_.run();});
     }
@@ -27,21 +24,7 @@ class HandlerExecutor {
   }
 
   void post(std::function<void()> handler) {
-    ++tokens_;
-    io_service_.post([&, handler]() {
-      handler();
-      --tokens_;
-    });
-  }
-
-  void post(int sequence_id, std::function<void()> handler) {
-    ++tokens_;
-    auto seq_it = sequences_.insert(
-      std::make_pair(sequence_id, std::move(boost::asio::strand(io_service_))));
-    seq_it.first->second.post([&, handler]() {
-      handler();
-      --tokens_;
-    });
+    io_service_.post(handler);
   }
 
   void wait() {
@@ -53,7 +36,6 @@ class HandlerExecutor {
     io_service_.reset();
     size_t n_threads = threads_.size();
     threads_.clear();
-    sequences_.clear();
     work_.reset(new boost::asio::io_service::work(io_service_));
     for (size_t i = 0; i < n_threads; ++i) {
       threads_.emplace_back([&]() {io_service_.run();});
@@ -63,9 +45,7 @@ class HandlerExecutor {
  private:
   boost::asio::io_service io_service_;
   std::unique_ptr<boost::asio::io_service::work> work_;
-  std::map<int, boost::asio::strand> sequences_;
   std::vector<std::thread> threads_;
-  std::atomic<int> tokens_;
 };
 
 #endif
