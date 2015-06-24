@@ -102,9 +102,9 @@ int main(int argc, char* argv[]) {
         data_iovs.push_back(create_iovec(multievent.second, data_range));
       }
 
-      size_t written_bytes = sender.send(data_iovs, ms_timeout);
+      size_t sent_bytes = sender.send(data_iovs, ms_timeout);
 
-      bandwith.add(written_bytes);
+      bandwith.add(sent_bytes);
 
       controller.release(
         MetaDataRange(

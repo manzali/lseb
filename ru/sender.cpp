@@ -21,15 +21,6 @@ struct SendingStruct {
   std::vector<DataVectorIter>::iterator dataVectorIter;
 };
 
-static size_t iovec_length(std::vector<iovec> const& iov) {
-  return std::accumulate(
-    std::begin(iov),
-    std::end(iov),
-    0,
-    [](size_t partial, iovec const& v) {
-      return partial + v.iov_len;});
-}
-
 void poll_and_send(
   HandlerExecutor* executor,
   std::vector<SendingStruct>::iterator sending_vector_it) {

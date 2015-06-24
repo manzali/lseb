@@ -10,6 +10,7 @@
 #include "transport/transport.h"
 
 #include "bu/receiver.h"
+#include "bu/builder.h"
 
 using namespace lseb;
 
@@ -63,10 +64,20 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Connections established";
 
   Receiver receiver(connection_ids);
+  Builder builder;
+
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    bandwith.add(receiver.receive(ms_timeout));
+
+    std::vector<iovec> total_iov = receiver.receive(ms_timeout);
+
+    bandwith.add(iovec_length(total_iov));
+
+    builder.build(total_iov);
+
+    receiver.release();
+
     if (bandwith.check()) {
       LOG(INFO)
         << "Bandwith: "
