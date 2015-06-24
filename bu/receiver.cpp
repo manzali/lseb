@@ -1,7 +1,6 @@
 #include "bu/receiver.h"
 
 #include <list>
-#include <chrono>
 
 #include "common/log.hpp"
 #include "common/utility.h"
