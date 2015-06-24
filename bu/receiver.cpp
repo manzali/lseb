@@ -63,7 +63,7 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
   LOG(INFO) << "Synchronization completed";
 }
 
-size_t Receiver::receive(int ms_timeout) {
+size_t Receiver::receive(std::chrono::milliseconds ms_timeout) {
 
   // Create a list of iterators
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
@@ -73,8 +73,6 @@ size_t Receiver::receive(int ms_timeout) {
 
   std::vector<iovec> total_iov;
 
-  auto start_time = std::chrono::high_resolution_clock::now();
-
   // Read from all RUs
   size_t bytes_read = 0;
   auto it = select_randomly(
@@ -82,8 +80,7 @@ size_t Receiver::receive(int ms_timeout) {
     std::end(conn_iterators));
 
   std::chrono::high_resolution_clock::time_point end_time =
-    std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(
-      ms_timeout);
+    std::chrono::high_resolution_clock::now() + ms_timeout;
 
   while (it != std::end(conn_iterators) && std::chrono::high_resolution_clock::now() < end_time) {
     if (lseb_poll(**it)) {
@@ -122,20 +119,6 @@ size_t Receiver::receive(int ms_timeout) {
       << " connections";
   }
 
-  return bytes_read;
-}
-
-size_t Receiver::receiveAndForget() {
-  size_t bytes_read = 0;
-  for (auto& conn : m_connection_ids) {
-    if (lseb_poll(conn)) {
-      std::vector<iovec> iov = lseb_read(conn);
-      for (auto& i : iov) {
-        bytes_read += i.iov_len;
-      }
-      lseb_release(conn);
-    }
-  }
   return bytes_read;
 }
 

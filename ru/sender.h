@@ -17,7 +17,9 @@ class Sender {
 
  public:
   Sender(std::vector<RuConnectionId> const& connection_ids);
-  size_t send(std::vector<DataIov> data_iovecs);
+  size_t send(
+    std::vector<DataIov> data_iovecs,
+    std::chrono::milliseconds ms_timeout);
 };
 
 }

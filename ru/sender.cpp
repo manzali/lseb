@@ -68,7 +68,9 @@ Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
   LOG(INFO) << "Synchronization completed";
 }
 
-size_t Sender::send(std::vector<DataIov> data_iovecs) {
+size_t Sender::send(
+  std::vector<DataIov> data_iovecs,
+  std::chrono::milliseconds ms_timeout) {
 
   std::vector<SendingStruct> sending_vector(
     (data_iovecs.size() < m_connection_ids.size()) ?

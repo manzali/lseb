@@ -24,12 +24,11 @@ int main(int argc, char* argv[]) {
 
   Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
 
-  size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
-  bool const dummy_execution = std::stol(parser.top()("BU")["DUMMY"]) != 0;
-  int const ms_timeout = std::stol(parser.top()("BU")["MS_TIMEOUT"]);
+  std::chrono::milliseconds ms_timeout(
+    std::stol(parser.top()("BU")["MS_TIMEOUT"]));
 
   LOG(INFO) << parser << std::endl;
 
@@ -67,11 +66,7 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    if (dummy_execution) {
-      bandwith.add(receiver.receiveAndForget());
-    } else {
-      bandwith.add(receiver.receive(ms_timeout));
-    }
+    bandwith.add(receiver.receive(ms_timeout));
     if (bandwith.check()) {
       LOG(INFO)
         << "Bandwith: "

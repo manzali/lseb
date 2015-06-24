@@ -16,8 +16,7 @@ class Receiver {
 
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
-  size_t receive(int ms_timeout);
-  size_t receiveAndForget();
+  size_t receive(std::chrono::milliseconds ms_timeout);
 };
 
 }

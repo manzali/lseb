@@ -40,6 +40,8 @@ int main(int argc, char* argv[]) {
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+  std::chrono::milliseconds ms_timeout(
+    std::stol(parser.top()("RU")["MS_TIMEOUT"]));
 
   LOG(INFO) << parser << std::endl;
 
@@ -84,15 +86,13 @@ int main(int argc, char* argv[]) {
     metadata_buffer,
     data_buffer,
     ru_id);
-
   Controller controller(generator, metadata_range, generator_frequency);
 
   FrequencyMeter bandwith(1.0);
   FrequencyMeter frequency(1.0);
 
   while (true) {
-    MetaDataRange ready_events = controller.read();
-    MultiEvents multievents = accumulator.add(ready_events);
+    MultiEvents multievents = accumulator.add(controller.read());
 
     if (multievents.size()) {
 
@@ -102,13 +102,15 @@ int main(int argc, char* argv[]) {
         data_iovs.push_back(create_iovec(multievent.second, data_range));
       }
 
-      size_t written_bytes = sender.send(data_iovs);
+      size_t written_bytes = sender.send(data_iovs, ms_timeout);
+
       bandwith.add(written_bytes);
 
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
           std::end(multievents.back().first)));
+
       frequency.add(multievents.size() * bulk_size);
     }
 
