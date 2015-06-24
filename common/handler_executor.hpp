@@ -9,6 +9,7 @@
 #include <cassert>
 
 #include <boost/asio.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 class HandlerExecutor {
  public:
@@ -32,8 +33,9 @@ class HandlerExecutor {
   }
 
   void wait(std::chrono::high_resolution_clock::time_point end_time) {
-    std::this_thread::sleep_until(end_time);
-    stop_ = true;
+    boost::asio::steady_timer timer(io_service_);
+    timer.expires_at(end_time);
+    timer.async_wait([&](const boost::system::error_code&) {stop_ = true;});
     wait();
     stop_ = false;
   }
@@ -57,6 +59,7 @@ class HandlerExecutor {
   boost::asio::io_service io_service_;
   std::unique_ptr<boost::asio::io_service::work> work_;
   std::vector<std::thread> threads_;
+
   bool stop_;
 };
 
