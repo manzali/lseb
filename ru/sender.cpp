@@ -88,7 +88,7 @@ size_t Sender::send(
     }
     m_executor.post(std::bind(poll_and_send, &m_executor, it));
   }
-  m_executor.wait(std::chrono::high_resolution_clock::now() + ms_timeout);
+  m_executor.wait();
 
   size_t sent_bytes = 0;
   for (auto& sending_struct : sending_vector) {

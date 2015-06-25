@@ -9,14 +9,12 @@
 #include <cassert>
 
 #include <boost/asio.hpp>
-#include <boost/asio/high_resolution_timer.hpp>
 
 class HandlerExecutor {
  public:
   HandlerExecutor(size_t n_threads)
       :
-        work_(new boost::asio::io_service::work(io_service_)),
-        stop_(false) {
+        work_(new boost::asio::io_service::work(io_service_)) {
     for (size_t i = 0; i < n_threads; ++i) {
       threads_.emplace_back([&]() {io_service_.run();});
     }
@@ -27,19 +25,7 @@ class HandlerExecutor {
   }
 
   void post(std::function<void()> handler) {
-    if (!stop_) {
-      io_service_.post(handler);
-    }
-  }
-
-  void wait(std::chrono::high_resolution_clock::time_point end_time) {
-    boost::asio::io_service ios;
-    boost::asio::high_resolution_timer timer(ios);
-    timer.expires_at(end_time);
-    ios.run();
-    timer.async_wait([&](const boost::system::error_code&) {stop_ = true;});
-    wait();
-    stop_ = false;
+    io_service_.post(handler);
   }
 
   void wait() {
@@ -61,8 +47,6 @@ class HandlerExecutor {
   boost::asio::io_service io_service_;
   std::unique_ptr<boost::asio::io_service::work> work_;
   std::vector<std::thread> threads_;
-
-  bool stop_;
 };
 
 #endif
