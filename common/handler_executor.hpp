@@ -33,8 +33,10 @@ class HandlerExecutor {
   }
 
   void wait(std::chrono::high_resolution_clock::time_point end_time) {
-    boost::asio::high_resolution_timer timer(io_service_);
+    boost::asio::io_service ios;
+    boost::asio::high_resolution_timer timer(ios);
     timer.expires_at(end_time);
+    ios.run();
     timer.async_wait([&](const boost::system::error_code&) {stop_ = true;});
     wait();
     stop_ = false;
