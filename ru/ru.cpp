@@ -9,6 +9,7 @@
 #include "common/utility.h"
 #include "common/iniparser.hpp"
 #include "common/frequency_meter.h"
+#include "common/timer.h"
 
 #include "generator/generator.h"
 #include "generator/length_generator.h"
@@ -89,10 +90,13 @@ int main(int argc, char* argv[]) {
   Controller controller(generator, metadata_range, generator_frequency);
 
   FrequencyMeter bandwith(1.0);
-  FrequencyMeter frequency(1.0);
+  Timer t_send;
+  Timer t_accu;
 
   while (true) {
+    t_accu.start();
     MultiEvents multievents = accumulator.add(controller.read());
+    t_accu.pause();
 
     if (multievents.size()) {
 
@@ -102,29 +106,31 @@ int main(int argc, char* argv[]) {
         data_iovs.push_back(create_iovec(multievent.second, data_range));
       }
 
+      t_send.start();
       size_t sent_bytes = sender.send(data_iovs, ms_timeout);
+      t_send.pause();
 
       bandwith.add(sent_bytes);
 
+      t_accu.start();
       controller.release(
         MetaDataRange(
           std::begin(multievents.front().first),
           std::end(multievents.back().first)));
-
-      frequency.add(multievents.size() * bulk_size);
+      t_accu.pause();
     }
 
-    if (frequency.check()) {
-      LOG(INFO)
-        << "Frequency: "
-        << frequency.frequency() / std::mega::num
-        << " MHz";
-    }
     if (bandwith.check()) {
       LOG(INFO)
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
+
+      LOG(INFO) << "Times:\n"
+        << "\tt_send: " << t_send.rate() << "%\n"
+        << "\tt_accu: " << t_accu.rate() << "%";
+      t_send.reset();
+      t_accu.reset();
     }
   }
 }

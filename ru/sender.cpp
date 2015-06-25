@@ -51,7 +51,7 @@ Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
     :
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
-      m_executor(2) {
+      m_executor(1) {
   LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);

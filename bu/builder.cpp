@@ -51,7 +51,7 @@ void checkData(iovec const& iov) {
 
 Builder::Builder()
     :
-      m_executor(2) {
+      m_executor(1) {
 }
 
 void Builder::build(std::vector<iovec> total_iov) {

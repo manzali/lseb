@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "common/frequency_meter.h"
+#include "common/timer.h"
 #include "common/iniparser.hpp"
 #include "common/log.hpp"
 #include "common/dataformat.h"
@@ -67,14 +68,20 @@ int main(int argc, char* argv[]) {
   Builder builder;
 
   FrequencyMeter bandwith(1.0);
+  Timer t_recv;
+  Timer t_build;
 
   while (true) {
 
+    t_recv.start();
     std::vector<iovec> total_iov = receiver.receive(ms_timeout);
+    t_recv.pause();
 
     bandwith.add(iovec_length(total_iov));
 
+    t_build.start();
     builder.build(total_iov);
+    t_build.pause();
 
     receiver.release();
 
@@ -83,6 +90,12 @@ int main(int argc, char* argv[]) {
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
+
+      LOG(INFO) << "Times:\n"
+        << "\tt_recv: " << t_recv.rate() << "%\n"
+        << "\tt_build: " << t_build.rate() << "%";
+      t_recv.reset();
+      t_build.reset();
     }
   }
 
