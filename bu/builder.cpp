@@ -49,9 +49,9 @@ void checkData(iovec const& iov) {
   }
 }
 
-Builder::Builder()
+Builder::Builder(int n_threads)
     :
-      m_executor(1) {
+      m_executor(n_threads) {
 }
 
 void Builder::build(std::vector<iovec> total_iov) {

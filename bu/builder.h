@@ -12,7 +12,7 @@ class Builder {
   HandlerExecutor m_executor;
 
  public:
-  Builder();
+  Builder(int n_threads);
   void build(std::vector<iovec> total_iov);
 };
 

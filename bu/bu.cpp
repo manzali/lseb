@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
+  int const n_threads = std::stol(parser.top()("GENERAL")["LEVEL_PARALLELISM"]);
   std::chrono::milliseconds ms_timeout(
     std::stol(parser.top()("BU")["MS_TIMEOUT"]));
 
@@ -65,7 +66,7 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Connections established";
 
   Receiver receiver(connection_ids);
-  Builder builder;
+  Builder builder(n_threads);
 
   FrequencyMeter bandwith(1.0);
   Timer t_recv;

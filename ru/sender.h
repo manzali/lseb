@@ -16,7 +16,7 @@ class Sender {
   HandlerExecutor m_executor;
 
  public:
-  Sender(std::vector<RuConnectionId> const& connection_ids);
+  Sender(std::vector<RuConnectionId> const& connection_ids, int n_threads);
   size_t send(
     std::vector<DataIov> data_iovecs,
     std::chrono::milliseconds ms_timeout);

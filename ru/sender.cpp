@@ -47,11 +47,11 @@ void poll_and_send(
   executor->post(std::bind(poll_and_send, executor, sending_vector_it));
 }
 
-Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
+Sender::Sender(std::vector<RuConnectionId> const& connection_ids, int n_threads)
     :
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)),
-      m_executor(1) {
+      m_executor(n_threads) {
   LOG(INFO) << "Waiting for synchronization...";
   for (auto& conn : m_connection_ids) {
     lseb_sync(conn);
