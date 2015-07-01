@@ -11,6 +11,9 @@ add_library(
 
 elseif (TRANSPORT STREQUAL "RSOCKETS")
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
+find_package (RDMA REQUIRED)
+
 include_directories(
   ${LSEB_SOURCE_DIR}
   ${RDMA_INCLUDE_DIRS}
@@ -19,6 +22,26 @@ include_directories(
 add_library(
   transport
   transport_rsockets.cpp
+)
+
+target_link_libraries(
+  transport
+  ${RDMA_LIBRARIES}
+)
+
+elseif (TRANSPORT STREQUAL "VERBS")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
+find_package (RDMA REQUIRED)
+
+include_directories(
+  ${LSEB_SOURCE_DIR}
+  ${RDMA_INCLUDE_DIRS}
+)
+
+add_library(
+  transport
+  transport_verbs.cpp
 )
 
 target_link_libraries(
