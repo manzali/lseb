@@ -19,6 +19,9 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
 
 std::vector<iovec> Receiver::receive(std::chrono::milliseconds ms_timeout) {
 
+  std::chrono::high_resolution_clock::time_point end_time =
+    std::chrono::high_resolution_clock::now() + ms_timeout;
+
   // Create a list of iterators
   std::list<std::vector<BuConnectionId>::iterator> conn_iterators;
   for (auto it = m_connection_ids.begin(); it != m_connection_ids.end(); ++it) {
@@ -31,9 +34,6 @@ std::vector<iovec> Receiver::receive(std::chrono::milliseconds ms_timeout) {
   auto it = select_randomly(
     std::begin(conn_iterators),
     std::end(conn_iterators));
-
-  std::chrono::high_resolution_clock::time_point end_time =
-    std::chrono::high_resolution_clock::now() + ms_timeout;
 
   while (it != std::end(conn_iterators) && std::chrono::high_resolution_clock::now() < end_time) {
     if (lseb_poll(**it)) {

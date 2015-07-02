@@ -24,7 +24,10 @@ Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
 
 size_t Sender::send(
   std::vector<DataIov> data_iovecs,
-  std::chrono::milliseconds) {
+  std::chrono::milliseconds ms_timeout) {
+
+  std::chrono::high_resolution_clock::time_point end_time =
+    std::chrono::high_resolution_clock::now() + ms_timeout;
 
   using DataVectorIter = std::vector<DataIov>::iterator;
 
@@ -63,7 +66,7 @@ size_t Sender::send(
     std::end(sending_list));
   size_t written_bytes = 0;
 
-  while (sending_list_it != std::end(sending_list)) {
+  while (sending_list_it != std::end(sending_list) && std::chrono::high_resolution_clock::now() < end_time) {
 
     bool remove_it = false;
     auto& conn = *(sending_list_it->ruConnectionIdIter);
@@ -96,6 +99,15 @@ size_t Sender::send(
 
     if (sending_list_it == std::end(sending_list)) {
       sending_list_it = std::begin(sending_list);
+    }
+  }
+
+  // Check uncompleted sends
+  for (auto& sending_struct : sending_list) {
+    if (sending_struct.dataVectorIter != std::end(sending_struct.dataVector)) {
+      LOG(WARNING)
+        << "Incompleted data send to connection "
+        << sending_struct.ruConnectionIdIter->socket;
     }
   }
 
