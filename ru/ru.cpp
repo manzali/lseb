@@ -42,10 +42,12 @@ int main(int argc, char* argv[]) {
 
   size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
-  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
-  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   std::chrono::milliseconds ms_timeout(
     std::stol(parser.top()("RU")["MS_TIMEOUT"]));
+
+  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
+  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+
 
   LOG(INFO) << parser << std::endl;
 

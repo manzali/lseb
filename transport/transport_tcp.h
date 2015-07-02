@@ -32,8 +32,10 @@ struct BuConnectionId {
 
 using BuSocket = int;
 
-RuConnectionId lseb_connect(std::string const& hostname, long port);
-BuSocket lseb_listen(std::string const& hostname, long port);
+RuConnectionId lseb_connect(
+  std::string const& hostname,
+  std::string const& port);
+BuSocket lseb_listen(std::string const& hostname, std::string const& port);
 BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len);
 bool lseb_sync(RuConnectionId const& conn);
 bool lseb_sync(BuConnectionId const& conn);
