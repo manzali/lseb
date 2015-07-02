@@ -22,10 +22,12 @@ void set_rdma_options(int socket, int iomap_val) {
 
 namespace lseb {
 
-RuConnectionId lseb_connect(std::string const& hostname, long port) {
+RuConnectionId lseb_connect(
+  std::string const& hostname,
+  std::string const& port) {
 
   addrinfo *res;
-  if (getaddrinfo(hostname.c_str(), std::to_string(port).c_str(), NULL, &res)) {
+  if (getaddrinfo(hostname.c_str(), port.c_str(), NULL, &res)) {
     throw std::runtime_error(
       "Error on getaddrinfo: " + std::string(strerror(errno)));
   }
@@ -50,7 +52,7 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
   return RuConnectionId(socket);
 }
 
-BuSocket lseb_listen(std::string const& hostname, long port) {
+BuSocket lseb_listen(std::string const& hostname, std::string const& port) {
   addrinfo hints, *res;
   std::fill(
     reinterpret_cast<char*>(&hints),
@@ -58,7 +60,7 @@ BuSocket lseb_listen(std::string const& hostname, long port) {
     0);
 
   hints.ai_flags = AI_PASSIVE;
-  if (getaddrinfo(NULL, std::to_string(port).c_str(), &hints, &res)) {
+  if (getaddrinfo(NULL, port.c_str(), &hints, &res)) {
     throw std::runtime_error(
       "Error on getaddrinfo: " + std::string(strerror(errno)));
   }
@@ -135,13 +137,8 @@ bool lseb_sync(RuConnectionId& conn) {
   }
 
   // Register poll
-  off_t offset = riomap(
-    conn.socket,
-    (void*) &conn.poll,
-    sizeof(conn.poll),
-    PROT_WRITE,
-    0,
-    -1);
+  off_t offset = riomap(conn.socket, (void*) &conn.poll, sizeof(conn.poll),
+  PROT_WRITE, 0, -1);
   if (offset == -1) {
     throw std::runtime_error(
       "Error on riomap: " + std::string(strerror(errno)));
@@ -173,13 +170,8 @@ bool lseb_sync(BuConnectionId& conn) {
   // Register iomap for avail
   // a shared_ptr is needed in order to avoid memory leak
   conn.avail = new size_t();
-  off_t offset_avail = riomap(
-    conn.socket,
-    (void*) conn.avail,
-    sizeof(size_t),
-    PROT_WRITE,
-    0,
-    -1);
+  off_t offset_avail = riomap(conn.socket, (void*) conn.avail, sizeof(size_t),
+  PROT_WRITE, 0, -1);
   if (offset_avail == -1) {
     throw std::runtime_error(
       "Error on riomap: " + std::string(strerror(errno)));

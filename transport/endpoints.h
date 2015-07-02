@@ -12,19 +12,18 @@ namespace lseb {
 
 class Endpoint {
   std::string m_hostname;
-  int m_port;
+  std::string m_port;
 
  public:
-  Endpoint(std::string const& hostname, int port)
+  Endpoint(std::string const& hostname, std::string const& port)
       :
         m_hostname(hostname),
         m_port(port) {
-    assert(m_port > 0 && "Invalid port number");
   }
   std::string hostname() const {
     return m_hostname;
   }
-  int port() const {
+  std::string port() const {
     return m_port;
   }
   friend std::ostream& operator<<(std::ostream& os, Endpoint const& endpoint) {
@@ -42,7 +41,7 @@ inline Endpoints get_endpoints(std::string const& str) {
   while (std::getline(ss, token, ':')) {
     std::string hostname = token;
     std::getline(ss, token, ' ');
-    endpoints.emplace_back(std::move(hostname), std::move(std::stol(token)));
+    endpoints.emplace_back(std::move(hostname), std::move(token));
   }
   return endpoints;
 }

@@ -36,14 +36,18 @@ int main(int argc, char* argv[]) {
     parser.top()("GENERATOR")["FREQUENCY"]);
   size_t const mean = std::stol(parser.top()("GENERATOR")["MEAN"]);
   size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
+
+  int const max_fragment_size = std::stol(parser.top()("GENERAL")["MAX_FRAGMENT_SIZE"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
+
   size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
-  int const n_threads = std::stol(parser.top()("GENERAL")["LEVEL_PARALLELISM"]);
-  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
-  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
   std::chrono::milliseconds ms_timeout(
     std::stol(parser.top()("RU")["MS_TIMEOUT"]));
+
+  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
+  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+
 
   LOG(INFO) << parser << std::endl;
 
@@ -80,9 +84,9 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
-  Sender sender(connection_ids, n_threads);
+  Sender sender(connection_ids);
 
-  LengthGenerator payload_size_generator(mean, stddev);
+  LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
   Generator generator(
     payload_size_generator,
     metadata_buffer,

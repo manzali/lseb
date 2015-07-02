@@ -16,7 +16,9 @@
 
 namespace lseb {
 
-RuConnectionId lseb_connect(std::string const& hostname, long port) {
+RuConnectionId lseb_connect(
+  std::string const& hostname,
+  std::string const& port) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
     throw std::runtime_error(
@@ -29,7 +31,7 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
     reinterpret_cast<char*>(&serv_addr) + sizeof(serv_addr),
     0);
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(port);
+  serv_addr.sin_port = htons(std::stol(port));
 
   hostent const& server = *(gethostbyname(hostname.c_str()));
   std::copy(server.h_addr,
@@ -50,7 +52,7 @@ RuConnectionId lseb_connect(std::string const& hostname, long port) {
   return RuConnectionId(sockfd);
 }
 
-BuSocket lseb_listen(std::string const& hostname, long port) {
+BuSocket lseb_listen(std::string const& hostname, std::string const& port) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
     throw std::runtime_error(
@@ -63,7 +65,7 @@ BuSocket lseb_listen(std::string const& hostname, long port) {
     reinterpret_cast<char*>(&serv_addr) + sizeof(serv_addr),
     0);
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(port);
+  serv_addr.sin_port = htons(std::stol(port));
 
   hostent const& server = *(gethostbyname(hostname.c_str()));
   std::copy(server.h_addr,
@@ -140,7 +142,7 @@ ssize_t lseb_write(RuConnectionId const& conn, std::vector<iovec> const& iov) {
     length += i.iov_len;
   }
   // Add as first iovect the length of data
-  std::vector<iovec> new_iov(1, {&length, sizeof(length) });
+  std::vector<iovec> new_iov(1, { &length, sizeof(length) });
   new_iov.insert(new_iov.end(), iov.begin(), iov.end());
   ssize_t ret = writev(conn.socket, new_iov.data(), new_iov.size());
   if (ret == -1) {

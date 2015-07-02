@@ -12,10 +12,8 @@ int main(int argc, char* argv[]) {
   // Check arguments
   assert(argc == 4 && "receiver <ip_address> <port> <buffer_size>");
 
-  long port = std::stol(argv[2]);
-
   // Create socket
-  BuSocket socket = lseb_listen(argv[1], port);
+  BuSocket socket = lseb_listen(argv[1], argv[2]);
 
   size_t buffer_size = std::stol(argv[3]);
   char* buffer = new char[buffer_size];

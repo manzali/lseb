@@ -13,10 +13,8 @@ int main(int argc, char* argv[]) {
   // Check arguments
   assert(argc == 4 && "sender <ip_address> <port> <transfer_size>");
 
-  long port = std::stol(argv[2]);
-
   // Connect to the receiver
-  RuConnectionId conn = lseb_connect(argv[1], port);
+  RuConnectionId conn = lseb_connect(argv[1], argv[2]);
 
   std::cout << "Connection established\n";
 
