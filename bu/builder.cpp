@@ -49,17 +49,14 @@ void checkData(iovec const& iov) {
   }
 }
 
-Builder::Builder(int n_threads)
-    :
-      m_executor(n_threads) {
+Builder::Builder() {
 }
 
 void Builder::build(std::vector<iovec> total_iov) {
   // Check data
   for (auto& iov : total_iov) {
-    m_executor.post(std::bind(checkData, iov));
+    checkData(iov);
   }
-  m_executor.wait();
 }
 
 }
