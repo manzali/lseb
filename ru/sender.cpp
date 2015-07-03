@@ -73,19 +73,19 @@ size_t Sender::send(
 
     if (lseb_poll(conn)) {
 
-      auto& iov_it = sending_list_it->dataVectorIter;
-      auto& iov = *iov_it;
-      size_t load = iovec_length(*iov);
+      auto& datavect_it = sending_list_it->dataVectorIter;
+      auto& iov_it = *datavect_it;
+      size_t load = iovec_length(*iov_it);
 
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn
+      LOG(DEBUG) << "Written " << load << " bytes in " << iov_it->size() << " iovec and sending to connection id " << conn
         .socket;
 
-      ssize_t ret = lseb_write(conn, *iov);
+      ssize_t ret = lseb_write(conn, *iov_it);
 
       if (ret != -2) {
         assert(ret >= 0 && static_cast<size_t>(ret) == load);
         written_bytes += ret;
-        if (++iov_it == std::end(sending_list_it->dataVector)) {
+        if (++datavect_it == std::end(sending_list_it->dataVector)) {
           remove_it = true;
         }
       }
