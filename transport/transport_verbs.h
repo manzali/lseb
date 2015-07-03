@@ -9,6 +9,7 @@ struct RuConnectionId {
   rdma_cm_id* id;
   ibv_mr* mr;
   int tokens;
+  std::map<int, iovec> wr_map;
 };
 
 struct BuConnectionId {
@@ -37,6 +38,12 @@ BuConnectionId lseb_accept(BuSocket const& socket);
 
 void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
+
+bool lseb_poll(RuConnectionId& conn);
+bool lseb_poll(BuConnectionId& conn);
+
+size_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov);
+size_t lseb_read();
 
 }
 

@@ -159,4 +159,23 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   }
 }
 
+bool lseb_poll(RuConnectionId& conn){
+
+}
+
+bool lseb_poll(BuConnectionId& conn){
+
+}
+
+size_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
+
+  while(!lseb_poll(conn)){
+    ;
+  }
+
+  for(auto& i : iov){
+
+  }
+}
+
 }
