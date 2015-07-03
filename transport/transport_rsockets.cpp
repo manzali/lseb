@@ -12,8 +12,6 @@
 
 #include <rdma/rsocket.h>
 
-#include "common/utility.h"
-
 void set_rdma_options(int socket, int iomap_val) {
   rsetsockopt(socket, SOL_RDMA, RDMA_IOMAPSIZE, &iomap_val, sizeof iomap_val);
   int val = 0;
@@ -212,14 +210,14 @@ bool lseb_poll(BuConnectionId& conn) {
   return *(conn.avail) != 0;
 }
 
-ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
+ssize_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
 
   while (!lseb_poll(conn)) {
     ;
   }
 
   size_t length = 0;
-  for (iovec const& i : iov) {
+  for (auto const& i : iov) {
     length += i.iov_len;
   }
 
@@ -249,7 +247,7 @@ ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
     }
   }
 
-  for (iovec const& i : iov) {
+  for (auto const& i : iov) {
     size_t ret = riowrite(
       conn.socket,
       i.iov_base,
