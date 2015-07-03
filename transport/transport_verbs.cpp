@@ -2,9 +2,19 @@
 
 #include <cassert>
 
+#include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
 
 #define MAX_BACKLOG 128
+
+int find_lowest_avail_key(std::map<int, void*> const& wr_map) {
+  int key = 0;
+  for (auto it = std::begin(wr_map); it != std::end(wr_map) && it->first == key;
+      ++it) {
+    ++key;
+  }
+  return key;
+}
 
 namespace lseb {
 
@@ -26,7 +36,6 @@ RuConnectionId lseb_connect(
     &hints,
     &res);
   if (ret) {
-    rdma_freeaddrinfo(res);
     throw std::runtime_error(
       "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
   }
@@ -49,8 +58,6 @@ RuConnectionId lseb_connect(
   }
 
   if (rdma_connect(conn.id, NULL)) {
-    rdma_dereg_mr(conn.mr);
-    rdma_destroy_ep(conn.id);
     throw std::runtime_error(
       "Error on rdma_connect: " + std::string(strerror(errno)));
   }
@@ -76,7 +83,6 @@ BuSocket lseb_listen(
     (char*) port.c_str(),
     &hints,
     &res)) {
-    rdma_freeaddrinfo(res);
     throw std::runtime_error(
       "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
   }
@@ -100,7 +106,6 @@ BuSocket lseb_listen(
   }
 
   if (rdma_listen(socket.id, MAX_BACKLOG)) {
-    rdma_destroy_ep(socket.id);
     throw std::runtime_error(
       "Error on rdma_listen: " + std::string(strerror(errno)));
   }
@@ -112,7 +117,6 @@ BuConnectionId lseb_accept(BuSocket const& socket) {
   BuConnectionId conn;
   conn.tokens = socket.tokens;
   if (rdma_get_request(socket.id, &conn.id)) {
-    rdma_destroy_ep(socket.id);
     throw std::runtime_error(
       "Error on rdma_get_request: " + std::string(strerror(errno)));
   }
@@ -122,7 +126,6 @@ BuConnectionId lseb_accept(BuSocket const& socket) {
 void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
   conn.mr = rdma_reg_msgs(conn.id, buffer, len);
   if (!conn.mr) {
-    rdma_destroy_ep(conn.id);
     throw std::runtime_error(
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
   }
@@ -138,43 +141,103 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
 
   assert(
     len % conn.tokens == 0 && "length of buffer not divisible by number of wr");
-  size_t const chunk = len / conn.tokens;
-  assert(chunk != 0 && "Too much tokens");
+  conn.wr_len = len / conn.tokens;
+  assert(conn.wr_len != 0 && "Too much tokens");
   for (int i = 0; i < conn.tokens; ++i) {
     auto it = conn.wr_map.find(i);
     assert(it == std::end(conn.wr_map));
-    iovec iov = { buffer + chunk * i, chunk };
-    it = conn.wr_map.insert(it, std::make_pair(i, iov));
-    rdma_post_recv(conn.id, (void*) it->first,  // this is the wr_id
-      it->second.iov_base,
-      it->second.iov_len,
+    it = conn.wr_map.insert(it, std::make_pair(i, buffer + conn.wr_len * i));
+    rdma_post_recv(
+      conn.id,
+      (void*) it->first,
+      it->second,
+      conn.wr_len,
       conn.mr);
   }
 
   if (rdma_accept(conn.id, NULL)) {
-    rdma_dereg_mr(conn.mr);
-    rdma_destroy_ep(conn.id);
     throw std::runtime_error(
       "Error on rdma_accept: " + std::string(strerror(errno)));
   }
 }
 
-bool lseb_poll(RuConnectionId& conn){
-
+bool lseb_poll(RuConnectionId& conn) {
+  std::vector<ibv_wc> wcs(conn.tokens);
+  int ret = ibv_poll_cq(conn.id->send_cq, wcs.size(), &wcs.front());
+  if (ret < 0) {
+    throw std::runtime_error(
+      "Error on ibv_poll_cq: " + std::string(strerror(ret)));
+  }
+  conn.wr_count -= ret;
+  if (conn.wr_count != conn.tokens) {
+    return true;
+  }
+  return false;
 }
 
-bool lseb_poll(BuConnectionId& conn){
+size_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
 
-}
-
-size_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov) {
-
-  while(!lseb_poll(conn)){
-    ;
+  if (conn.wr_count == conn.tokens) {
+    while (!lseb_poll(conn)) {
+      ;
+    }
   }
 
-  for(auto& i : iov){
+  // create scatter gather elements (max 2 elements!)
+  assert(iov.size <= 2 && "Size of DataIov can be only 1 or 2");
 
+  size_t bytes_sent = 0;
+  std::vector<ibv_sge> sges;
+  for (auto& i : iov) {
+    ibv_sge sge;
+    sge.addr = (uint64_t) (uintptr_t) i.iov_base;
+    sge.length = (uint32_t) i.iov_len;
+    sge.lkey = conn.mr ? conn.mr->lkey : 0;
+    sges.push_back(sge);
+    bytes_sent += i.iov_len;
+  }
+
+  if (rdma_post_sendv(conn.id, nullptr, &sges.front(), sges.size(), 0)) {
+    throw std::runtime_error(
+      "Error on rdma_post_sendv: " + std::string(strerror(errno)));
+  }
+
+  ++conn.wr_count;
+  return bytes_sent;
+}
+
+std::vector<iovec> lseb_read(BuConnectionId& conn) {
+
+  std::vector<ibv_wc> wcs(conn.tokens);
+  int ret = ibv_poll_cq(conn.id->recv_cq, wcs.size(), &wcs.front());
+  if (ret < 0) {
+    throw std::runtime_error(
+      "Error on ibv_poll_cq: " + std::string(strerror(ret)));
+  }
+
+  std::vector<iovec> iov;
+  for (int i = 0; i < ret; ++i) {
+    auto it = conn.wr_map.find(wcs[i].wr_id);
+    assert(it != std::end(wr_map));
+    iov.push_back( { it->second.iov_base, wcs[i].byte_len });
+    conn.wr_map.erase(it);
+  }
+
+  return iov;
+}
+
+void lseb_release(BuConnectionId& conn, std::vector<iovec> const& iov) {
+  for (auto& i : iov) {
+    int key = find_lowest_avail_key(conn.wr_map);
+    auto it = conn.wr_map.find(key);
+    assert(it == std::end(conn.wr_map));
+    it = conn.wr_map.insert(it, std::make_pair(key, i.iov_base));
+    rdma_post_recv(
+      conn.id,
+      (void*) it->first,
+      it->second.iov_base,
+      conn.wr_len,
+      conn.mr);
   }
 }
 

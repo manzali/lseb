@@ -3,20 +3,23 @@
 
 #include <rdma/rdma_cma.h>
 
+#include "common/utility.h"
+
 namespace lseb {
 
 struct RuConnectionId {
   rdma_cm_id* id;
   ibv_mr* mr;
   int tokens;
-  std::map<int, iovec> wr_map;
+  int wr_count;
 };
 
 struct BuConnectionId {
   rdma_cm_id* id;
   ibv_mr* mr;
   int tokens;
-  std::map<int, iovec> wr_map;
+  size_t wr_len;
+  std::map<int, void*> wr_map;
 };
 
 struct BuSocket {
@@ -40,10 +43,10 @@ void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
 
 bool lseb_poll(RuConnectionId& conn);
-bool lseb_poll(BuConnectionId& conn);
+size_t lseb_write(RuConnectionId& conn, DataIov const& iov);
 
-size_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov);
-size_t lseb_read();
+std::vector<iovec> lseb_read(BuConnectionId& conn);
+void lseb_release(BuConnectionId& conn, std::vector<iovec> const& iov);
 
 }
 
