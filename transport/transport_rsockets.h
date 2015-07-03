@@ -6,6 +6,8 @@
 #include <sys/poll.h>
 #include <sys/uio.h>
 
+#include "common/utility.h"
+
 #define FREE 0
 #define LOCKED 1
 
@@ -62,7 +64,7 @@ bool lseb_sync(RuConnectionId& conn);
 bool lseb_sync(BuConnectionId& conn);
 bool lseb_poll(RuConnectionId& conn);
 bool lseb_poll(BuConnectionId& conn);
-ssize_t lseb_write(RuConnectionId& conn, std::vector<iovec> const& iov);
+ssize_t lseb_write(RuConnectionId& conn, DataIov const& iov);
 std::vector<iovec> lseb_read(BuConnectionId& conn);
 void lseb_release(BuConnectionId& conn);
 
