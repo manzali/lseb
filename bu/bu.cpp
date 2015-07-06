@@ -90,6 +90,10 @@ int main(int argc, char* argv[]) {
 
       bandwith.add(iovec_length(conn_iov));
 
+       t_build.start();
+       builder.build(conn_iov);
+       t_build.pause();
+
       std::vector<void*> wr_vect;
       for (auto i : conn_iov) {
         wr_vect.push_back(i.iov_base);
@@ -98,12 +102,6 @@ int main(int argc, char* argv[]) {
       lseb_release(conn, wr_vect);
 
     }
-
-    /*
-     t_build.start();
-     builder.build(total_iov);
-     t_build.pause();
-     */
 
     if (bandwith.check()) {
       LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
