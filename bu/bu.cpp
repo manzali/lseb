@@ -99,8 +99,9 @@ int main(int argc, char* argv[]) {
         wr_vect.push_back(i.iov_base);
       }
 
+      t_recv.start();
       lseb_release(conn, wr_vect);
-
+      t_recv.pause();
     }
 
     if (bandwith.check()) {
