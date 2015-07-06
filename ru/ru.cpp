@@ -100,6 +100,7 @@ int main(int argc, char* argv[]) {
     ru_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
+  FrequencyMeter frequency(1.0);
   FrequencyMeter bandwith(1.0);
   Timer t_send;
   Timer t_accu;
@@ -129,6 +130,12 @@ int main(int argc, char* argv[]) {
           std::begin(multievents.front().first),
           std::end(multievents.back().first)));
       t_accu.pause();
+
+      frequency.add(multievents.size() * bulk_size);
+    }
+
+    if (frequency.check()) {
+      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num << " MHz";
     }
 
     if (bandwith.check()) {

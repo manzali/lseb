@@ -14,6 +14,11 @@ struct RuConnectionId {
   ibv_mr* mr;
   int tokens;
   int wr_count;
+  RuConnectionId()
+      :
+        wr_count(0) {
+
+  }
 };
 
 struct BuConnectionId {
