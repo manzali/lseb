@@ -37,8 +37,10 @@ int main(int argc, char* argv[]) {
   size_t const mean = std::stol(parser.top()("GENERATOR")["MEAN"]);
   size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
 
-  int const max_fragment_size = std::stol(parser.top()("GENERAL")["MAX_FRAGMENT_SIZE"]);
+  int const max_fragment_size = std::stol(
+    parser.top()("GENERAL")["MAX_FRAGMENT_SIZE"]);
   size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
+  int const tokens = std::stol(parser.top()("GENERAL")["TOKENS"]);
 
   size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
   size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
@@ -47,7 +49,6 @@ int main(int argc, char* argv[]) {
 
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
-
 
   LOG(INFO) << parser << std::endl;
 
@@ -62,8 +63,8 @@ int main(int argc, char* argv[]) {
     std::begin(bu_endpoints),
     std::end(bu_endpoints),
     std::back_inserter(connection_ids),
-    [](Endpoint const& endpoint) {
-      return lseb_connect(endpoint.hostname(), endpoint.port());
+    [tokens](Endpoint const& endpoint) {
+      return lseb_connect(endpoint.hostname(), endpoint.port(), tokens);
     });
   LOG(INFO) << "Connections established";
 
@@ -84,6 +85,11 @@ int main(int argc, char* argv[]) {
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
+
+  for (auto& conn : connection_ids) {
+    lseb_register(conn, data_ptr.get(), data_size);
+  }
+
   Sender sender(connection_ids);
 
   LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
@@ -126,14 +132,16 @@ int main(int argc, char* argv[]) {
     }
 
     if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
+      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
 
-      LOG(INFO) << "Times:\n"
-        << "\tt_send: " << t_send.rate() << "%\n"
-        << "\tt_accu: " << t_accu.rate() << "%";
+      LOG(INFO)
+        << "Times:\n"
+        << "\tt_send: "
+        << t_send.rate()
+        << "%\n"
+        << "\tt_accu: "
+        << t_accu.rate()
+        << "%";
       t_send.reset();
       t_accu.reset();
     }

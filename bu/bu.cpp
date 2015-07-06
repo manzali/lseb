@@ -10,7 +10,6 @@
 #include "transport/endpoints.h"
 #include "transport/transport.h"
 
-#include "bu/receiver.h"
 #include "bu/builder.h"
 
 using namespace lseb;
@@ -26,8 +25,11 @@ int main(int argc, char* argv[]) {
 
   Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
 
+  int const tokens = std::stol(parser.top()("GENERAL")["TOKENS"]);
+
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+
   size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
 
   std::chrono::milliseconds ms_timeout(
@@ -46,7 +48,8 @@ int main(int argc, char* argv[]) {
 
   BuSocket socket = lseb_listen(
     bu_endpoints[bu_id].hostname(),
-    bu_endpoints[bu_id].port());
+    bu_endpoints[bu_id].port(),
+    tokens);
 
   std::vector<BuConnectionId> connection_ids;
 
@@ -57,15 +60,12 @@ int main(int argc, char* argv[]) {
     std::end(ru_endpoints),
     std::back_inserter(connection_ids),
     [&](Endpoint const& endpoint) {
-      return lseb_accept(
-          socket,
-          data_ptr.get() + endpoint_count++ * data_size,
-          data_size
-      );
+      BuConnectionId conn = lseb_accept(socket);
+      lseb_register(conn, data_ptr.get() + endpoint_count++ * data_size,data_size);
+      return conn;
     });
   LOG(INFO) << "Connections established";
 
-  Receiver receiver(connection_ids);
   Builder builder;
 
   FrequencyMeter bandwith(1.0);
@@ -74,27 +74,40 @@ int main(int argc, char* argv[]) {
 
   while (true) {
 
-    t_recv.start();
-    std::vector<iovec> total_iov = receiver.receive(ms_timeout);
-    t_recv.pause();
+    for (auto& conn : connection_ids) {
 
-    bandwith.add(iovec_length(total_iov));
+      t_recv.start();
+      std::vector<iovec> conn_iov = lseb_read(conn);
+      t_recv.pause();
 
-    t_build.start();
-    builder.build(total_iov);
-    t_build.pause();
+      bandwith.add(iovec_length(conn_iov));
 
-    receiver.release();
+      std::vector<void*> wr_vect;
+      for (auto i : conn_iov) {
+        wr_vect.push_back(i.iov_base);
+      }
+
+      lseb_release(conn, wr_vect);
+
+    }
+
+    /*
+     t_build.start();
+     builder.build(total_iov);
+     t_build.pause();
+     */
 
     if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
+      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
 
-      LOG(INFO) << "Times:\n"
-        << "\tt_recv: " << t_recv.rate() << "%\n"
-        << "\tt_build: " << t_build.rate() << "%";
+      LOG(INFO)
+        << "Times:\n"
+        << "\tt_recv: "
+        << t_recv.rate()
+        << "%\n"
+        << "\tt_build: "
+        << t_build.rate()
+        << "%";
       t_recv.reset();
       t_build.reset();
     }

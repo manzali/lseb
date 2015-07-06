@@ -32,26 +32,6 @@ target_link_libraries(
 add_test(t_iniparser t_iniparser ${LSEB_SOURCE_DIR}/test/test.ini)
 
 add_executable(
-  t_sender
-  t_sender.cpp
-)
-
-target_link_libraries(
-  t_sender
-  transport
-)
-
-add_executable(
-  t_receiver
-  t_receiver.cpp
-)
-
-target_link_libraries(
-  t_receiver
-  transport
-)
-
-add_executable(
   t_log
   t_log.cpp
 )

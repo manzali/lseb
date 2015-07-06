@@ -7,12 +7,12 @@ include_directories(
 add_executable(
   bu
   bu.cpp
-  receiver.cpp
   builder.cpp
 )
 
 target_link_libraries(
   bu
   transport
+  -libverbs
   ${Boost_LIBRARIES}
 )

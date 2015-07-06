@@ -1,6 +1,8 @@
 #ifndef TRANSPORT_TRANSPORT_VERBS_H
 #define TRANSPORT_TRANSPORT_VERBS_H
 
+#include <map>
+
 #include <rdma/rdma_cma.h>
 
 #include "common/utility.h"
@@ -46,7 +48,7 @@ bool lseb_poll(RuConnectionId& conn);
 size_t lseb_write(RuConnectionId& conn, DataIov const& iov);
 
 std::vector<iovec> lseb_read(BuConnectionId& conn);
-void lseb_release(BuConnectionId& conn, std::vector<iovec> const& iov);
+void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs);
 
 }
 

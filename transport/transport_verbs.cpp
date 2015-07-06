@@ -1,6 +1,7 @@
 #include "transport/transport_verbs.h"
 
 #include <cassert>
+#include <cstring>
 
 #include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
@@ -184,7 +185,7 @@ size_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
   }
 
   // create scatter gather elements (max 2 elements!)
-  assert(iov.size <= 2 && "Size of DataIov can be only 1 or 2");
+  assert(iov.size() <= 2 && "Size of DataIov can be only 1 or 2");
 
   size_t bytes_sent = 0;
   std::vector<ibv_sge> sges;
@@ -218,24 +219,24 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   std::vector<iovec> iov;
   for (int i = 0; i < ret; ++i) {
     auto it = conn.wr_map.find(wcs[i].wr_id);
-    assert(it != std::end(wr_map));
-    iov.push_back( { it->second.iov_base, wcs[i].byte_len });
+    assert(it != std::end(conn.wr_map));
+    iov.push_back( { it->second, wcs[i].byte_len });
     conn.wr_map.erase(it);
   }
 
   return iov;
 }
 
-void lseb_release(BuConnectionId& conn, std::vector<iovec> const& iov) {
-  for (auto& i : iov) {
+void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
+  for (auto& wr : wrs) {
     int key = find_lowest_avail_key(conn.wr_map);
     auto it = conn.wr_map.find(key);
     assert(it == std::end(conn.wr_map));
-    it = conn.wr_map.insert(it, std::make_pair(key, i.iov_base));
+    it = conn.wr_map.insert(it, std::make_pair(key, wr));
     rdma_post_recv(
       conn.id,
       (void*) it->first,
-      it->second.iov_base,
+      it->second,
       conn.wr_len,
       conn.mr);
   }

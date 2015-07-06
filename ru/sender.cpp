@@ -15,11 +15,6 @@ Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
     :
       m_connection_ids(connection_ids),
       m_next_bu(std::begin(m_connection_ids)) {
-  LOG(INFO) << "Waiting for synchronization...";
-  for (auto& conn : m_connection_ids) {
-    lseb_sync(conn);
-  }
-  LOG(INFO) << "Synchronization completed";
 }
 
 size_t Sender::send(
@@ -66,7 +61,8 @@ size_t Sender::send(
     std::end(sending_list));
   size_t written_bytes = 0;
 
-  while (sending_list_it != std::end(sending_list) && std::chrono::high_resolution_clock::now() < end_time) {
+  //  && std::chrono::high_resolution_clock::now() < end_time
+  while (sending_list_it != std::end(sending_list)) {
 
     bool remove_it = false;
     auto& conn = *(sending_list_it->ruConnectionIdIter);
@@ -77,17 +73,14 @@ size_t Sender::send(
       auto& iov_it = *datavect_it;
       size_t load = iovec_length(*iov_it);
 
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov_it->size() << " iovec and sending to connection id " << conn
-        .socket;
+      LOG(DEBUG) << "Written " << load << " bytes in " << iov_it->size() << " iovec";
 
-      ssize_t ret = lseb_write(conn, *iov_it);
+      size_t ret = lseb_write(conn, *iov_it);
+      assert(static_cast<size_t>(ret) == load);
+      written_bytes += ret;
 
-      if (ret != -2) {
-        assert(ret >= 0 && static_cast<size_t>(ret) == load);
-        written_bytes += ret;
-        if (++datavect_it == std::end(sending_list_it->dataVector)) {
-          remove_it = true;
-        }
+      if (++datavect_it == std::end(sending_list_it->dataVector)) {
+        remove_it = true;
       }
     }
 
@@ -101,7 +94,7 @@ size_t Sender::send(
       sending_list_it = std::begin(sending_list);
     }
   }
-
+/*
   // Check uncompleted sends
   for (auto& sending_struct : sending_list) {
     if (sending_struct.dataVectorIter != std::end(sending_struct.dataVector)) {
@@ -110,7 +103,7 @@ size_t Sender::send(
         << sending_struct.ruConnectionIdIter->socket;
     }
   }
-
+*/
   return written_bytes;
 }
 
