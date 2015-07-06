@@ -135,7 +135,6 @@ void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.mr = rdma_reg_msgs(conn.id, buffer, len);
   if (!conn.mr) {
-    rdma_destroy_ep(conn.id);
     throw std::runtime_error(
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
   }
@@ -148,12 +147,16 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
     auto it = conn.wr_map.find(i);
     assert(it == std::end(conn.wr_map));
     it = conn.wr_map.insert(it, std::make_pair(i, buffer + conn.wr_len * i));
-    rdma_post_recv(
+    int ret = rdma_post_recv(
       conn.id,
       (void*) it->first,
       it->second,
       conn.wr_len,
       conn.mr);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on rdma_post_recv: " + std::string(strerror(errno)));
+    }
   }
 
   if (rdma_accept(conn.id, NULL)) {
@@ -198,9 +201,10 @@ size_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
     bytes_sent += i.iov_len;
   }
 
-  if (rdma_post_sendv(conn.id, nullptr, &sges.front(), sges.size(), 0)) {
+  int ret = rdma_post_sendv(conn.id, nullptr, &sges.front(), sges.size(), 0);
+  if (ret) {
     throw std::runtime_error(
-      "Error on rdma_post_sendv: " + std::string(strerror(errno)));
+      "Error on rdma_post_sendv: " + std::string(strerror(ret)));
   }
 
   ++conn.wr_count;
