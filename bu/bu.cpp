@@ -25,12 +25,15 @@ int main(int argc, char* argv[]) {
 
   Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
 
+  int const max_fragment_size = std::stol(
+    parser.top()("GENERAL")["MAX_FRAGMENT_SIZE"]);
+  size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
   int const tokens = std::stol(parser.top()("GENERAL")["TOKENS"]);
 
   Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
   Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
 
-  size_t const data_size = std::stol(parser.top()("BU")["RECV_BUFFER"]);
+  size_t const data_size = max_fragment_size * bulk_size * tokens;
 
   std::chrono::milliseconds ms_timeout(
     std::stol(parser.top()("BU")["MS_TIMEOUT"]));
@@ -43,6 +46,11 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<unsigned char[]> const data_ptr(
     new unsigned char[data_size * ru_endpoints.size()]);
+
+  LOG(INFO)
+    << "Allocated "
+    << data_size * ru_endpoints.size()
+    << " bytes of memory";
 
   // Connections
 
