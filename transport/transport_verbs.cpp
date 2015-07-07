@@ -225,8 +225,8 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
   for (auto& wr : wrs) {
     int key = 0;
-    auto it = std::begin(wr_map);
-    for (; it != std::end(wr_map) && it->first == key; ++it) {
+    auto it = std::begin(conn.wr_map);
+    for (; it != std::end(conn.wr_map) && it->first == key; ++it) {
       ++key;
     }
     wr_map.emplace_hint(it, key, wr);
