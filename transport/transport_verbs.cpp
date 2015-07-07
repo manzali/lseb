@@ -229,7 +229,7 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
     for (; it != std::end(conn.wr_map) && it->first == key; ++it) {
       ++key;
     }
-    wr_map.emplace_hint(it, key, wr);
+    conn.wr_map.emplace_hint(it, key, wr);
     rdma_post_recv(conn.id, (void*) key, wr, conn.wr_len, conn.mr);
   }
 }
