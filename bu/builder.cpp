@@ -52,9 +52,9 @@ void checkData(iovec const& iov) {
 Builder::Builder() {
 }
 
-void Builder::build(std::vector<iovec> total_iov) {
+void Builder::build(std::vector<iovec> const& total_iov) {
   // Check data
-  for (auto& iov : total_iov) {
+  for (auto const& iov : total_iov) {
     checkData(iov);
   }
 }

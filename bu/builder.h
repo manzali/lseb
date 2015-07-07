@@ -11,7 +11,7 @@ class Builder {
 
  public:
   Builder();
-  void build(std::vector<iovec> total_iov);
+  void build(std::vector<iovec> const& total_iov);
 };
 
 }
