@@ -26,7 +26,7 @@ std::map<int, std::vector<iovec> > Receiver::receive(
 
 void Receiver::release(std::map<int, std::vector<void*> > const& wrs_map) {
   for (auto const& m : wrs_map) {
-    lseb_relase(m_connection_ids[m.first], m.second);
+    lseb_release(m_connection_ids[m.first], m.second);
   }
 }
 
