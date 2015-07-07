@@ -10,6 +10,7 @@
 #include "transport/endpoints.h"
 #include "transport/transport.h"
 
+#include "bu/receiver.h"
 #include "bu/builder.h"
 
 using namespace lseb;
@@ -75,6 +76,7 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Connections established";
 
   Builder builder;
+  Receiver receiver(connection_ids);
 
   FrequencyMeter bandwith(1.0);
   Timer t_recv;
@@ -82,31 +84,36 @@ int main(int argc, char* argv[]) {
 
   while (true) {
 
-    for (auto& conn : connection_ids) {
+    t_recv.start();
+    std::map<int, std::vector<iovec> > iov_map = receiver.receive(ms_timeout);
+    t_recv.pause();
 
-      t_recv.start();
-      std::vector<iovec> conn_iov = lseb_read(conn);
-      t_recv.pause();
-
-      bandwith.add(iovec_length(conn_iov));
-/*
-       t_build.start();
-       builder.build(conn_iov);
-       t_build.pause();
-*/
-      std::vector<void*> wr_vect;
-      for (auto i : conn_iov) {
-        wr_vect.push_back(i.iov_base);
-      }
-
-      // This must be called not for every iovec!!!!
-      t_recv.start();
-      lseb_release(conn, wr_vect);
-      t_recv.pause();
+    for (auto const& m : iov_map) {
+      bandwith.add(iovec_length(m.second));
     }
 
+    /*
+     t_build.start();
+     builder.build(conn_iov);
+     t_build.pause();
+     */
+
+    std::map<int, std::vector<void*> > wrs_map;
+    for (auto const& m : iov_map) {
+      for (auto const& i : m.second) {
+        wrs_map[m.first].push_back(i.iov_base);
+      }
+    }
+
+    t_recv.start();
+    receiver.release(wrs_map);
+    t_recv.pause();
+
     if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"

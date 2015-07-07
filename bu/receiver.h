@@ -2,6 +2,7 @@
 #define BU_RECEIVER_H
 
 #include <vector>
+#include <map>
 #include <chrono>
 
 #include "transport/transport.h"
@@ -9,7 +10,14 @@
 namespace lseb {
 
 class Receiver {
+  std::vector<BuConnectionId> m_connection_ids;
 
+ public:
+  Receiver(std::vector<BuConnectionId> const& connection_ids);
+  std::map<int, std::vector<iovec> > receive(
+    std::chrono::milliseconds ms_timeout);
+  void release(std::map<int, std::vector<void*> > const& wrs_map);
+};
 }
 
 #endif
