@@ -100,9 +100,10 @@ int main(int argc, char* argv[]) {
 
     std::map<int, std::vector<void*> > wrs_map;
     for (auto const& m : iov_map) {
-      auto& it = wrs_map.insert(std::make_pair(m.first, std::vector<void*>()));
+      wrs_map[m.first];
+      auto& it = wrs_map.find(m.first);
       for (auto const& i : m.second) {
-        it.first->second.push_back(i.iov_base);
+        it->second.push_back(i.iov_base);
       }
     }
 
