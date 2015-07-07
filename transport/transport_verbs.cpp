@@ -8,15 +8,6 @@
 
 #define MAX_BACKLOG 128
 
-int find_lowest_avail_key(std::map<int, void*> const& wr_map) {
-  int key = 0;
-  for (auto it = std::begin(wr_map); it != std::end(wr_map) && it->first == key;
-      ++it) {
-    ++key;
-  }
-  return key;
-}
-
 namespace lseb {
 
 RuConnectionId lseb_connect(
@@ -233,16 +224,13 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 
 void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
   for (auto& wr : wrs) {
-    int key = find_lowest_avail_key(conn.wr_map);
-    auto it = conn.wr_map.find(key);
-    assert(it == std::end(conn.wr_map));
-    it = conn.wr_map.insert(it, std::make_pair(key, wr));
-    rdma_post_recv(
-      conn.id,
-      (void*) it->first,
-      it->second,
-      conn.wr_len,
-      conn.mr);
+    int key = 0;
+    auto it = std::begin(wr_map);
+    for (; it != std::end(wr_map) && it->first == key; ++it) {
+      ++key;
+    }
+    wr_map.emplace_hint(it, key, wr);
+    rdma_post_recv(conn.id, (void*) key, wr, conn.wr_len, conn.mr);
   }
 }
 
