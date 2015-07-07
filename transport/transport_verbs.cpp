@@ -232,17 +232,29 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 }
 
 void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
+  std::vector<ibv_sge> sges;
   for (auto& wr : wrs) {
+    // create entry in map
     int key = find_lowest_avail_key(conn.wr_map);
     auto it = conn.wr_map.find(key);
     assert(it == std::end(conn.wr_map));
     it = conn.wr_map.insert(it, std::make_pair(key, wr));
-    rdma_post_recv(
-      conn.id,
-      (void*) it->first,
-      it->second,
-      conn.wr_len,
-      conn.mr);
+    // create scatter gather element
+    ibv_sge sge;
+    sge.addr = (uint64_t) (uintptr_t) wr;
+    sge.length = (uint32_t) conn.wr_len;
+    sge.lkey = conn.mr ? conn.mr->lkey : 0;
+    sges.push_back(sge);
+  }
+  // post scatter gather elements for recv
+  int ret = rdma_post_recvv(
+    conn.id,
+    (void*) it->first,
+    &sges.front(),
+    sges.size());
+  if (ret) {
+    throw std::runtime_error(
+      "Error on rdma_post_recvv: " + std::string(strerror(ret)));
   }
 }
 
