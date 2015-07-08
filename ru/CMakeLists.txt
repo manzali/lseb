@@ -10,6 +10,7 @@ add_executable(
   controller.cpp
   accumulator.cpp
   sender.cpp
+  splitter.cpp
 )
 
 target_link_libraries(

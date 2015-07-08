@@ -17,6 +17,7 @@
 #include "ru/controller.h"
 #include "ru/accumulator.h"
 #include "ru/sender.h"
+#include "ru/splitter.h"
 
 #include "transport/transport.h"
 #include "transport/endpoints.h"
@@ -100,10 +101,13 @@ int main(int argc, char* argv[]) {
     ru_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
+  Splitter splitter(connection_ids, data_range);
+
   FrequencyMeter frequency(1.0);
   FrequencyMeter bandwith(1.0);
   Timer t_send;
   Timer t_accu;
+  Timer t_spli;
 
   while (true) {
     t_accu.start();
@@ -112,17 +116,17 @@ int main(int argc, char* argv[]) {
 
     if (multievents.size()) {
 
-      // Create DataIov
-      std::vector<DataIov> data_iovs;
-      for (auto& multievent : multievents) {
-        data_iovs.push_back(create_iovec(multievent.second, data_range));
+      t_spli.start();
+      std::map<int, std::vector<DataIov> > iov_map = splitter.split(
+        multievents);
+      t_spli.pause();
+
+      for (auto const& m : iov_map) {
+        t_send.start();
+        size_t sent_bytes = sender.send(m.first, m.second);
+        t_send.pause();
+        bandwith.add(sent_bytes);
       }
-
-      t_send.start();
-      size_t sent_bytes = sender.send(data_iovs, ms_timeout);
-      t_send.pause();
-
-      bandwith.add(sent_bytes);
 
       t_accu.start();
       controller.release(
@@ -148,9 +152,13 @@ int main(int argc, char* argv[]) {
         << "%\n"
         << "\tt_accu: "
         << t_accu.rate()
+        << "%\n"
+        << "\tt_spli: "
+        << t_spli.rate()
         << "%";
       t_send.reset();
       t_accu.reset();
+      t_spli.reset();
     }
   }
 }

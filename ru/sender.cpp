@@ -1,8 +1,3 @@
-#include <algorithm>
-#include <list>
-
-#include <cstring>
-#include <sys/uio.h>
 
 #include "common/log.hpp"
 #include "common/utility.h"
@@ -17,94 +12,23 @@ Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
       m_next_bu(std::begin(m_connection_ids)) {
 }
 
-size_t Sender::send(
-  std::vector<DataIov> data_iovecs,
-  std::chrono::milliseconds ms_timeout) {
+size_t Sender::send(int conn_id, std::vector<DataIov> const& data_iovecs) {
+  size_t bytes_sent = 0;
+  for (auto const& data_iov : data_iovecs) {
+    size_t load = iovec_length(data_iov);
 
-  std::chrono::high_resolution_clock::time_point end_time =
-    std::chrono::high_resolution_clock::now() + ms_timeout;
+    LOG(DEBUG)
+      << "Written "
+      << load
+      << " bytes in "
+      << data_iov.size()
+      << " iovec";
 
-  using DataVectorIter = std::vector<DataIov>::iterator;
-
-  struct SendingStruct {
-    std::vector<RuConnectionId>::iterator ruConnectionIdIter;
-    std::vector<DataVectorIter> dataVector;
-    std::vector<DataVectorIter>::iterator dataVectorIter;
-  };
-
-  size_t list_size =
-      (data_iovecs.size() < m_connection_ids.size()) ?
-        data_iovecs.size() :
-        m_connection_ids.size();
-  std::list<SendingStruct> sending_list(list_size);
-
-  // Filling dataVector
-  auto sending_list_it = std::begin(sending_list);
-  for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
-    sending_list_it->dataVector.emplace_back(it);
-    if (++sending_list_it == std::end(sending_list)) {
-      sending_list_it = std::begin(sending_list);
-    }
+    size_t ret = lseb_write(m_connection_ids[conn_id], data_iov);
+    assert(static_cast<size_t>(ret) == load);
+    bytes_sent += ret;
   }
-
-  // Setting ruConnectionIdIter and dataVector
-  for (auto it = std::begin(sending_list); it != std::end(sending_list); ++it) {
-    it->ruConnectionIdIter = m_next_bu;
-    it->dataVectorIter = std::begin(it->dataVector);
-    if (++m_next_bu == std::end(m_connection_ids)) {
-      m_next_bu = std::begin(m_connection_ids);
-    }
-  }
-
-  sending_list_it = select_randomly(
-    std::begin(sending_list),
-    std::end(sending_list));
-  size_t written_bytes = 0;
-
-  //  && std::chrono::high_resolution_clock::now() < end_time
-  while (sending_list_it != std::end(sending_list)) {
-
-    bool remove_it = false;
-    auto& conn = *(sending_list_it->ruConnectionIdIter);
-
-    if (lseb_poll(conn)) {
-
-      auto& datavect_it = sending_list_it->dataVectorIter;
-      auto& iov_it = *datavect_it;
-      size_t load = iovec_length(*iov_it);
-
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov_it->size() << " iovec";
-
-      size_t ret = lseb_write(conn, *iov_it);
-      assert(static_cast<size_t>(ret) == load);
-      written_bytes += ret;
-
-      if (++datavect_it == std::end(sending_list_it->dataVector)) {
-        remove_it = true;
-      }
-    }
-
-    if (remove_it) {
-      sending_list_it = sending_list.erase(sending_list_it);
-    } else {
-      ++sending_list_it;
-    }
-
-    if (sending_list_it == std::end(sending_list)) {
-      sending_list_it = std::begin(sending_list);
-    }
-  }
-/*
-  // Check uncompleted sends
-  for (auto& sending_struct : sending_list) {
-    if (sending_struct.dataVectorIter != std::end(sending_struct.dataVector)) {
-      LOG(WARNING)
-        << "Incompleted data send to connection "
-        << sending_struct.ruConnectionIdIter->socket;
-    }
-  }
-*/
-  return written_bytes;
+  return bytes_sent;
 }
 
 }
