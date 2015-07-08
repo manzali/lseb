@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    if (lseb_poll(conn)) {
-      std::vector<iovec> iov = lseb_read(conn);
+    std::vector<iovec> iov = lseb_read(conn);
+    if (iov.size()) {
       std::vector<void*> wrs;
       for (auto& i : iov) {
         bandwith.add(i.iov_len);
