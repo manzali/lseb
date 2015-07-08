@@ -19,3 +19,4 @@ while True:
 
 	print "Xmit: {} Gb/s".format(gb_xmit)
 	print "Rcv: {} Gb/s".format(gb_rcv)
+	print "Tot: {} Gb/s".format(gb_xmit + gb_rcv)
