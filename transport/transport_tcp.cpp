@@ -18,7 +18,8 @@ namespace lseb {
 
 RuConnectionId lseb_connect(
   std::string const& hostname,
-  std::string const& port) {
+  std::string const& port,
+  int tokens) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
     throw std::runtime_error(
@@ -52,7 +53,10 @@ RuConnectionId lseb_connect(
   return RuConnectionId(sockfd);
 }
 
-BuSocket lseb_listen(std::string const& hostname, std::string const& port) {
+BuSocket lseb_listen(
+  std::string const& hostname,
+  std::string const& port,
+  int tokens) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
     throw std::runtime_error(
@@ -86,7 +90,7 @@ BuSocket lseb_listen(std::string const& hostname, std::string const& port) {
   return sockfd;
 }
 
-BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
+BuConnectionId lseb_accept(BuSocket const& socket) {
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
   int newsockfd = accept(socket, (sockaddr*) &cli_addr, &clilen);
@@ -101,21 +105,15 @@ BuConnectionId lseb_accept(BuSocket const& socket, void* buffer, size_t len) {
     << " connected on port "
     << ntohs(cli_addr.sin_port);
 
-  return BuConnectionId(newsockfd, buffer, len);
+  return BuConnectionId(newsockfd);
 }
 
-bool lseb_sync(RuConnectionId const& conn) {
-  uint8_t poll_byte;
-  ssize_t ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
-  ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
-  return ret == sizeof(poll_byte);
+void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
+  // Useless
 }
-
-bool lseb_sync(BuConnectionId const& conn) {
-  uint8_t poll_byte;
-  ssize_t ret = recv(conn.socket, &poll_byte, sizeof(poll_byte), MSG_WAITALL);
-  ret = send(conn.socket, &poll_byte, sizeof(poll_byte), 0);
-  return ret == sizeof(poll_byte);
+void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
+  conn.buffer = buffer;
+  conn.len = len;
 }
 
 bool lseb_poll(RuConnectionId const& conn) {
@@ -153,31 +151,32 @@ ssize_t lseb_write(RuConnectionId const& conn, DataIov const& iov) {
 }
 
 std::vector<iovec> lseb_read(BuConnectionId& conn) {
+  std::vector<iovec> iov;
+  if (!lseb_poll(conn)) {
+    return iov;
+  }
   // receive the length of data
-  ssize_t ret = recv(
-    conn.socket,
-    static_cast<void*>(&conn.avail),
-    sizeof(conn.avail),
-    MSG_WAITALL);
+  size_t avail = 0;
+  ssize_t ret = recv(conn.socket, static_cast<void*>(&avail), sizeof(avail),
+  MSG_WAITALL);
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   } else if (ret == 0) {
     // well-known problem (to be investigated)
     throw std::runtime_error("Error on recv: null length received");
   }
-  assert(conn.avail <= conn.len && "Too much incoming data");
-  ret = recv(conn.socket, conn.buffer, conn.avail, MSG_WAITALL);
+  assert(avail <= conn.len && "Too much incoming data");
+  ret = recv(conn.socket, conn.buffer, avail, MSG_WAITALL);
   if (ret == -1) {
     throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
   }
 
-  std::vector<iovec> iov;
-  iov.push_back( { conn.buffer, conn.avail });
+  iov.push_back( { conn.buffer, avail });
 
   return iov;
 }
 
-void lseb_release(BuConnectionId& conn) {
+void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
 
 }
 
