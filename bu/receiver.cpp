@@ -18,6 +18,11 @@ std::map<int, std::vector<iovec> > Receiver::receive() {
   return iov_map;
 }
 
+std::vector<iovec> Receiver::receive(int conn) {
+  std::vector<iovec> conn_iov = lseb_read(m_connection_ids[conn]);
+  return conn_iov;
+}
+
 void Receiver::release(std::map<int, std::vector<void*> > const& wrs_map) {
   for (auto const& m : wrs_map) {
     lseb_release(m_connection_ids[m.first], m.second);
