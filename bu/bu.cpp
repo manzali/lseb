@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
   while (true) {
 
     t_recv.start();
-    std::map<int, std::vector<iovec> > iov_map = receiver.receive(ms_timeout);
+    std::map<int, std::vector<iovec> > iov_map = receiver.receive();
     t_recv.pause();
 
     for (auto const& m : iov_map) {

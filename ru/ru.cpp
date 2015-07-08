@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     ru_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
-  Splitter splitter(connection_ids, data_range);
+  Splitter splitter(connection_ids.size(), data_range);
 
   FrequencyMeter frequency(1.0);
   FrequencyMeter bandwith(1.0);

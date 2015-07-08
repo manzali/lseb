@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <map>
-#include <chrono>
 
 #include "transport/transport.h"
 
@@ -14,8 +13,7 @@ class Receiver {
 
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
-  std::map<int, std::vector<iovec> > receive(
-    std::chrono::milliseconds ms_timeout);
+  std::map<int, std::vector<iovec> > receive();
   void release(std::map<int, std::vector<void*> > const& wrs_map);
 };
 }
