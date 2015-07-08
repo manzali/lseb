@@ -28,7 +28,9 @@ struct BuConnectionId {
   }
 };
 
-using BuSocket = int;
+struct BuSocket {
+  int socket;
+};
 
 RuConnectionId lseb_connect(
   std::string const& hostname,

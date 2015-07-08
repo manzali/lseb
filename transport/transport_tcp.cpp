@@ -87,13 +87,15 @@ BuSocket lseb_listen(
     << inet_ntoa(serv_addr.sin_addr)
     << " is listening on port "
     << port;
-  return sockfd;
+  BuSocket socket;
+  socket.socket = sockfd;
+  return socket;
 }
 
 BuConnectionId lseb_accept(BuSocket const& socket) {
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
-  int newsockfd = accept(socket, (sockaddr*) &cli_addr, &clilen);
+  int newsockfd = accept(socket.socket, (sockaddr*) &cli_addr, &clilen);
   if (newsockfd == -1) {
     throw std::runtime_error(
       "Error on accept: " + std::string(strerror(errno)));

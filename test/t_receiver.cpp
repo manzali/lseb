@@ -10,33 +10,32 @@ using namespace lseb;
 int main(int argc, char* argv[]) {
 
   // Check arguments
-  assert(argc == 4 && "receiver <ip_address> <port> <buffer_size>");
+  assert(argc == 5 && "receiver <ip_address> <port> <buffer_size> <tokens>");
 
   // Create socket
-  BuSocket socket = lseb_listen(argv[1], argv[2]);
+  BuSocket socket = lseb_listen(argv[1], argv[2], std::stol(argv[4]));
 
   size_t buffer_size = std::stol(argv[3]);
   char* buffer = new char[buffer_size];
 
   // Accept connection from sender
-  BuConnectionId conn = lseb_accept(socket, buffer, buffer_size);
+  BuConnectionId conn = lseb_accept(socket);
 
   std::cout << "Connection established\n";
 
-  // Sync with the sender
-  lseb_sync(conn);
-
-  std::cout << "Sync done\n";
+  lseb_register(conn, buffer, buffer_size);
 
   FrequencyMeter bandwith(1.0);
 
   while (true) {
     if (lseb_poll(conn)) {
       std::vector<iovec> iov = lseb_read(conn);
+      std::vector<void*> wrs;
       for (auto& i : iov) {
         bandwith.add(i.iov_len);
+        wrs.push_back(i.iov_base);
       }
-      lseb_release(conn);
+      lseb_release(conn, wrs);
     }
     if (bandwith.check()) {
       std::cout

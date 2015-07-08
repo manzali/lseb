@@ -4,7 +4,7 @@
 
 namespace lseb {
 
-void checkData(iovec const& iov) {
+void checkData(int conn, iovec const& iov) {
   size_t bytes_parsed = 0;
   uint64_t expected_event_id = pointer_cast<EventHeader>(iov.iov_base)->id;
   bool warning = false;
@@ -15,9 +15,8 @@ void checkData(iovec const& iov) {
       static_cast<char*>(iov.iov_base) + bytes_parsed)->length;
     uint64_t current_event_flags = pointer_cast<EventHeader>(
       static_cast<char*>(iov.iov_base) + bytes_parsed)->flags;
-
-    if (expected_event_id != current_event_id) {
-      if (warning) {
+    if (conn != current_event_flags || expected_event_id != current_event_id) {
+      if (conn != current_event_flags || warning) {
         // Print event header
         LOG(WARNING)
           << "Error parsing EventHeader:"
@@ -33,14 +32,10 @@ void checkData(iovec const& iov) {
           << std::endl
           << "event flags: "
           << current_event_flags;
-
         // terminate parsing
         return;
-
-      } else {
-        // if the event id is different from the expected one, check the next
-        warning = true;
       }
+      warning = true;
     } else {
       warning = false;
     }
@@ -52,10 +47,10 @@ void checkData(iovec const& iov) {
 Builder::Builder() {
 }
 
-void Builder::build(std::vector<iovec> const& total_iov) {
+void Builder::build(int conn, std::vector<iovec> const& conn_iov) {
   // Check data
-  for (auto const& iov : total_iov) {
-    checkData(iov);
+  for (auto const& iov : conn_iov) {
+    checkData(conn, iov);
   }
 }
 

@@ -17,6 +17,5 @@ target_link_libraries(
   ru
   generator
   transport
-  -libverbs
   ${Boost_LIBRARIES}
 )

@@ -14,6 +14,5 @@ add_executable(
 target_link_libraries(
   bu
   transport
-  -libverbs
   ${Boost_LIBRARIES}
 )

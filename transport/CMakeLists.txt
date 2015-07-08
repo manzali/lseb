@@ -27,6 +27,7 @@ add_library(
 
 target_link_libraries(
   transport
+  -libverbs
   ${RDMA_LIBRARIES}
 )
 

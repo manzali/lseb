@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
       if (conn_iov.size()) {
         /*
          t_build.start();
-         builder.build(conn_iov);
+         builder.build(conn, conn_iov);
          t_build.pause();
          */
 
