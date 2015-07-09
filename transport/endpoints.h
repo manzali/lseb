@@ -32,16 +32,13 @@ class Endpoint {
   }
 };
 
-using Endpoints = std::vector<Endpoint>;
-
-inline Endpoints get_endpoints(std::string const& str) {
-  Endpoints endpoints;
-  std::stringstream ss(str);
-  std::string token;
-  while (std::getline(ss, token, ':')) {
-    std::string hostname = token;
-    std::getline(ss, token, ' ');
-    endpoints.emplace_back(std::move(hostname), std::move(token));
+inline std::vector<Endpoint> get_endpoints(Configuration const& configuration) {
+  std::vector<Endpoint> endpoints;
+  for (Configuration::const_iterator it = std::begin(configuration), e =
+    std::end(configuration); it != e; ++it) {
+    endpoints.emplace_back(
+      it->second.get < std::string > ("HOST"),
+      it->second.get < std::string > ("PORT"));
   }
   return endpoints;
 }

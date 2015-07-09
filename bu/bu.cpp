@@ -4,7 +4,7 @@
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
-#include "common/iniparser.hpp"
+#include "common/configuration.h"
 #include "common/log.hpp"
 #include "common/dataformat.h"
 #include "transport/endpoints.h"
@@ -19,27 +19,35 @@ int main(int argc, char* argv[]) {
 
   assert(argc == 3 && "bu <config_file> <id>");
 
-  int const bu_id = std::stol(argv[2]);
-  assert(bu_id >= 0 && "Negative bu id");
+  std::ifstream f(argv[1]);
+  if (!f) {
+    std::cerr << argv[1] << ": No such file or directory\n";
+    return EXIT_FAILURE;
+  }
+  Configuration configuration = read_configuration(f);
 
-  Parser parser(argv[1]);
+  Log::init(
+    "BuilderUnit",
+    Log::FromString(configuration.get<std::string>("BU.LOG_LEVEL")));
 
-  Log::init("BuilderUnit", Log::FromString(parser.top()("BU")["LOG_LEVEL"]));
+  LOG(INFO) << configuration << std::endl;
 
-  int const max_fragment_size = std::stol(
-    parser.top()("GENERAL")["MAX_FRAGMENT_SIZE"]);
-  size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
-  int const tokens = std::stol(parser.top()("GENERAL")["TOKENS"]);
+  int const max_fragment_size = configuration.get<int>(
+    "GENERAL.MAX_FRAGMENT_SIZE");
+  int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  int const tokens = configuration.get<int>("GENERAL.TOKENS");
 
-  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
-  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
+  std::vector<Endpoint> const ru_endpoints = get_endpoints(
+    configuration.get_child("RU.ENDPOINTS"));
+  std::vector<Endpoint> const bu_endpoints = get_endpoints(
+    configuration.get_child("BU.ENDPOINTS"));
+
+  std::chrono::milliseconds ms_timeout(configuration.get<int>("BU.MS_TIMEOUT"));
 
   size_t const data_size = max_fragment_size * bulk_size * tokens;
 
-  std::chrono::milliseconds ms_timeout(
-    std::stol(parser.top()("BU")["MS_TIMEOUT"]));
-
-  LOG(INFO) << parser << std::endl;
+  int const bu_id = std::stol(argv[2]);
+  assert(bu_id >= 0 && "Negative bu id");
 
   assert(bu_id < bu_endpoints.size() && "Wrong bu id");
 

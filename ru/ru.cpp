@@ -7,7 +7,7 @@
 #include "common/dataformat.h"
 #include "common/log.hpp"
 #include "common/utility.h"
-#include "common/iniparser.hpp"
+#include "common/configuration.h"
 #include "common/frequency_meter.h"
 #include "common/timer.h"
 
@@ -28,31 +28,39 @@ int main(int argc, char* argv[]) {
 
   assert(argc == 3 && "ru <config_file> <id>");
 
-  Parser parser(argv[1]);
+  std::ifstream f(argv[1]);
+  if (!f) {
+    std::cerr << argv[1] << ": No such file or directory\n";
+    return EXIT_FAILURE;
+  }
+  Configuration configuration = read_configuration(f);
+
+  Log::init(
+    "ReadoutUnit",
+    Log::FromString(configuration.get<std::string>("RU.LOG_LEVEL")));
+
+  LOG(INFO) << configuration << std::endl;
+
+  int const generator_frequency = configuration.get<int>("GENERATOR.FREQUENCY");
+  int const mean = configuration.get<int>("GENERATOR.MEAN");
+  int const stddev = configuration.get<int>("GENERATOR.STD_DEV");
+
+  int const max_fragment_size = configuration.get<int>(
+    "GENERAL.MAX_FRAGMENT_SIZE");
+  int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  int const tokens = configuration.get<int>("GENERAL.TOKENS");
+
+  int const meta_size = configuration.get<int>("RU.META_BUFFER");
+  int const data_size = configuration.get<int>("RU.DATA_BUFFER");
+
+  std::chrono::milliseconds ms_timeout(configuration.get<int>("RU.MS_TIMEOUT"));
+
+  std::vector<Endpoint> const ru_endpoints = get_endpoints(
+    configuration.get_child("RU.ENDPOINTS"));
+  std::vector<Endpoint> const bu_endpoints = get_endpoints(
+    configuration.get_child("BU.ENDPOINTS"));
+
   size_t const ru_id = std::stol(argv[2]);
-
-  Log::init("ReadoutUnit", Log::FromString(parser.top()("RU")["LOG_LEVEL"]));
-
-  size_t const generator_frequency = std::stol(
-    parser.top()("GENERATOR")["FREQUENCY"]);
-  size_t const mean = std::stol(parser.top()("GENERATOR")["MEAN"]);
-  size_t const stddev = std::stol(parser.top()("GENERATOR")["STD_DEV"]);
-
-  int const max_fragment_size = std::stol(
-    parser.top()("GENERAL")["MAX_FRAGMENT_SIZE"]);
-  size_t const bulk_size = std::stol(parser.top()("GENERAL")["BULKED_EVENTS"]);
-  int const tokens = std::stol(parser.top()("GENERAL")["TOKENS"]);
-
-  size_t const meta_size = std::stol(parser.top()("RU")["META_BUFFER"]);
-  size_t const data_size = std::stol(parser.top()("RU")["DATA_BUFFER"]);
-  std::chrono::milliseconds ms_timeout(
-    std::stol(parser.top()("RU")["MS_TIMEOUT"]));
-
-  Endpoints const ru_endpoints = get_endpoints(parser.top()("RU")["ENDPOINTS"]);
-  Endpoints const bu_endpoints = get_endpoints(parser.top()("BU")["ENDPOINTS"]);
-
-  LOG(INFO) << parser << std::endl;
-
   assert(ru_id < ru_endpoints.size() && "Wrong ru id");
 
   assert(
