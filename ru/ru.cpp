@@ -42,16 +42,29 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << configuration << std::endl;
 
   int const generator_frequency = configuration.get<int>("GENERATOR.FREQUENCY");
+  assert(generator_frequency > 0);
+
   int const mean = configuration.get<int>("GENERATOR.MEAN");
+  assert(mean > 0);
+
   int const stddev = configuration.get<int>("GENERATOR.STD_DEV");
+  assert(stddev > 0);
 
   int const max_fragment_size = configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
+  assert(max_fragment_size > 0);
+
   int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  assert(bulk_size > 0);
+
   int const tokens = configuration.get<int>("GENERAL.TOKENS");
+  assert(tokens > 0);
 
   int const meta_size = configuration.get<int>("RU.META_BUFFER");
+  assert(meta_size > 0);
+
   int const data_size = configuration.get<int>("RU.DATA_BUFFER");
+  assert(data_size > 0);
 
   std::chrono::milliseconds ms_timeout(configuration.get<int>("RU.MS_TIMEOUT"));
 

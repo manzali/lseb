@@ -34,8 +34,13 @@ int main(int argc, char* argv[]) {
 
   int const max_fragment_size = configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
+  assert(max_fragment_size > 0);
+
   int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  assert(bulk_size > 0);
+
   int const tokens = configuration.get<int>("GENERAL.TOKENS");
+  assert(tokens > 0);
 
   std::vector<Endpoint> const ru_endpoints = get_endpoints(
     configuration.get_child("RU.ENDPOINTS"));
