@@ -157,54 +157,59 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
 }
 
 bool lseb_poll(RuConnectionId& conn) {
-  std::vector<ibv_wc> wcs(conn.tokens);
-  int ret = ibv_poll_cq(conn.id->send_cq, wcs.size(), &wcs.front());
-  if (ret < 0) {
-    throw std::runtime_error(
-      "Error on ibv_poll_cq: " + std::string(strerror(ret)));
+  if (conn.wr_count == conn.tokens) {
+    std::vector<ibv_wc> wcs(conn.tokens);
+    int ret = ibv_poll_cq(conn.id->send_cq, wcs.size(), &wcs.front());
+    if (ret < 0) {
+      throw std::runtime_error(
+        "Error on ibv_poll_cq: " + std::string(strerror(ret)));
+    }
+    conn.wr_count -= ret;
+    if (conn.wr_count == conn.tokens) {
+      return false;
+    }
   }
-  conn.wr_count -= ret;
-  if (conn.wr_count != conn.tokens) {
-    return true;
-  }
-  return false;
+  return true;
+}
+
+bool lseb_poll(BuConnectionId& conn) {
+  return !conn.wr_map.empty();
 }
 
 size_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
 
-  if (conn.wr_count == conn.tokens) {
-    while (!lseb_poll(conn)) {
-      ;
-    }
-  }
+  size_t bytes_sent = 0;
 
   // create scatter gather elements (max 2 elements!)
   assert(iov.size() <= 2 && "Size of DataIov can be only 1 or 2");
 
-  size_t bytes_sent = 0;
-  std::vector<ibv_sge> sges;
-  for (auto& i : iov) {
-    ibv_sge sge;
-    sge.addr = (uint64_t) (uintptr_t) i.iov_base;
-    sge.length = (uint32_t) i.iov_len;
-    sge.lkey = conn.mr ? conn.mr->lkey : 0;
-    sges.push_back(sge);
-    bytes_sent += i.iov_len;
+  if (conn.wr_count < conn.tokens) {
+
+    std::vector<ibv_sge> sges;
+    for (auto& i : iov) {
+      ibv_sge sge;
+      sge.addr = (uint64_t) (uintptr_t) i.iov_base;
+      sge.length = (uint32_t) i.iov_len;
+      sge.lkey = conn.mr ? conn.mr->lkey : 0;
+      sges.push_back(sge);
+      bytes_sent += i.iov_len;
+    }
+
+    int ret = rdma_post_sendv(conn.id, nullptr, &sges.front(), sges.size(), 0);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on rdma_post_sendv: " + std::string(strerror(ret)));
+    }
+
+    ++conn.wr_count;
   }
 
-  int ret = rdma_post_sendv(conn.id, nullptr, &sges.front(), sges.size(), 0);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on rdma_post_sendv: " + std::string(strerror(ret)));
-  }
-
-  ++conn.wr_count;
   return bytes_sent;
 }
 
 std::vector<iovec> lseb_read(BuConnectionId& conn) {
 
-  std::vector<ibv_wc> wcs(conn.tokens);
+  std::vector<ibv_wc> wcs(conn.wr_map.size());
   int ret = ibv_poll_cq(conn.id->recv_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw std::runtime_error(

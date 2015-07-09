@@ -50,9 +50,11 @@ void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
 
 bool lseb_poll(RuConnectionId& conn);
-size_t lseb_write(RuConnectionId& conn, DataIov const& iov);
+bool lseb_poll(BuConnectionId& conn);
 
+size_t lseb_write(RuConnectionId& conn, DataIov const& iov);
 std::vector<iovec> lseb_read(BuConnectionId& conn);
+
 void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs);
 
 }

@@ -10,7 +10,7 @@ Receiver::Receiver(std::vector<BuConnectionId> const& connection_ids)
 std::map<int, std::vector<iovec> > Receiver::receive() {
   std::map<int, std::vector<iovec> > iov_map;
   for (int conn = 0; conn < m_connection_ids.size(); ++conn) {
-    std::vector<iovec> conn_iov = lseb_read(m_connection_ids[conn]);
+    std::vector<iovec> conn_iov = receive(conn);
     if (conn_iov.size()) {
       iov_map[conn] = conn_iov;
     }
@@ -19,7 +19,10 @@ std::map<int, std::vector<iovec> > Receiver::receive() {
 }
 
 std::vector<iovec> Receiver::receive(int conn) {
-  std::vector<iovec> conn_iov = lseb_read(m_connection_ids[conn]);
+  std::vector<iovec> conn_iov;
+  if (lseb_poll(m_connection_ids[conn])) {
+    conn_iov = lseb_read(m_connection_ids[conn]);
+  }
   return conn_iov;
 }
 
