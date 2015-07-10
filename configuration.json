@@ -7,13 +7,13 @@
   "GENERAL": {
     "MAX_FRAGMENT_SIZE": "250",
     "BULKED_EVENTS": "600",
-    "TOKENS": "1000"
+    "TOKENS": "10"
   },
   "RU": {
     "LOG_LEVEL": "INFO",
     "META_BUFFER": "57521880",
     "DATA_BUFFER": "536870912",
-    "MS_TIMEOUT": "500",
+    "MS_TIMEOUT": "100",
     "ENDPOINTS": [
       {
         "HOST": "127.0.0.1",
@@ -23,7 +23,7 @@
   },
   "BU": {
     "LOG_LEVEL": "INFO",
-    "MS_TIMEOUT": "50",
+    "MS_TIMEOUT": "100",
         "ENDPOINTS": [
       {
         "HOST": "127.0.0.1",
