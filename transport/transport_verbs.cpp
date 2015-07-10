@@ -62,7 +62,7 @@ BuSocket lseb_listen(
   std::string const& port,
   int tokens) {
 
-  assert(tokens > 1);
+  assert(tokens > 0);
 
   rdma_addrinfo hints;
   memset(&hints, 0, sizeof hints);
@@ -82,7 +82,7 @@ BuSocket lseb_listen(
   ibv_qp_init_attr attr;
   memset(&attr, 0, sizeof(attr));
   attr.cap.max_send_wr = 1;
-  attr.cap.max_recv_wr = tokens;  // maybe it can be passed as argument?
+  attr.cap.max_recv_wr = tokens;
   attr.cap.max_send_sge = attr.cap.max_recv_sge = 1;
   attr.sq_sig_all = 1;
 
