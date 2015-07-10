@@ -15,8 +15,6 @@ RuConnectionId lseb_connect(
   std::string const& port,
   int tokens) {
 
-  assert(tokens > 1);
-
   rdma_addrinfo hints;
   memset(&hints, 0, sizeof(hints));
   hints.ai_port_space = RDMA_PS_TCP;
@@ -34,8 +32,8 @@ RuConnectionId lseb_connect(
 
   ibv_qp_init_attr attr;
   memset(&attr, 0, sizeof(attr));
-  attr.cap.max_send_wr = tokens;  // maybe it can be passed as argument?
-  attr.cap.max_send_sge = 2;  // in case of wrap of multievent (to check)
+  attr.cap.max_send_wr = tokens;
+  attr.cap.max_send_sge = 2;
   attr.cap.max_recv_wr = 1;
   attr.cap.max_recv_sge = 1;
   attr.sq_sig_all = 1;
