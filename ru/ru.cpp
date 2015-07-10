@@ -142,12 +142,10 @@ int main(int argc, char* argv[]) {
         multievents);
       t_spli.pause();
 
-      for (auto const& m : iov_map) {
-        t_send.start();
-        size_t sent_bytes = sender.send(m.first, m.second);
-        t_send.pause();
-        bandwith.add(sent_bytes);
-      }
+      t_send.start();
+      size_t sent_bytes = sender.send(iov_map, ms_timeout);
+      t_send.pause();
+      bandwith.add(sent_bytes);
 
       t_accu.start();
       controller.release(

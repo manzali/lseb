@@ -1,7 +1,9 @@
 #ifndef RU_SENDER_H
 #define RU_SENDER_H
 
+#include <map>
 #include <vector>
+#include <chrono>
 
 #include "common/dataformat.h"
 
@@ -11,11 +13,12 @@ namespace lseb {
 
 class Sender {
   std::vector<RuConnectionId> m_connection_ids;
-  std::vector<RuConnectionId>::iterator m_next_bu;
 
  public:
   Sender(std::vector<RuConnectionId> const& connection_ids);
-  size_t send(int conn_id, std::vector<DataIov> const& data_iovecs);
+  size_t send(
+    std::map<int, std::vector<DataIov> > const& iov_map,
+    std::chrono::milliseconds const& ms_timeout);
 };
 
 }

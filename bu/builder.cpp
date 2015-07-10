@@ -15,8 +15,8 @@ void checkData(int conn, iovec const& iov) {
       static_cast<char*>(iov.iov_base) + bytes_parsed)->length;
     uint64_t current_event_flags = pointer_cast<EventHeader>(
       static_cast<char*>(iov.iov_base) + bytes_parsed)->flags;
-    if (conn != current_event_flags || expected_event_id != current_event_id) {
-      if (conn != current_event_flags || warning) {
+    if (expected_event_id != current_event_id) {
+      if (warning) {
         // Print event header
         LOG(WARNING)
           << "Error parsing EventHeader:"

@@ -6,27 +6,27 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(
-  t_sender
-  t_sender.cpp
-)
+#add_executable(
+#  t_sender
+#  t_sender.cpp
+#)
 
-target_link_libraries(
-  t_sender
-  transport
-  ${Boost_LIBRARIES}
-)
+#target_link_libraries(
+#  t_sender
+#  transport
+#  ${Boost_LIBRARIES}
+#)
 
-add_executable(
-  t_receiver
-  t_receiver.cpp
-)
+#add_executable(
+#  t_receiver
+#  t_receiver.cpp
+#)
 
-target_link_libraries(
-  t_receiver
-  transport
-  ${Boost_LIBRARIES}
-)
+#target_link_libraries(
+#  t_receiver
+#  transport
+#  ${Boost_LIBRARIES}
+#)
 
 add_executable(
   t_length_generator

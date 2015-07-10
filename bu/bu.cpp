@@ -119,9 +119,11 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    t_recv.start();
-    receiver.release(wrs_map);
-    t_recv.pause();
+    if(!wrs_map.empty()){
+      t_recv.start();
+      receiver.release(wrs_map);
+      t_recv.pause();
+    }
 
     if (bandwith.check()) {
       LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";

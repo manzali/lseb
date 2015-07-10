@@ -134,21 +134,16 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
     len % conn.tokens == 0 && "length of buffer not divisible by number of wr");
   conn.wr_len = len / conn.tokens;
   assert(conn.wr_len != 0 && "Too much tokens");
+
+  std::vector<void*> credits;
   for (int i = 0; i < conn.tokens; ++i) {
     auto it = conn.wr_map.find(i);
     assert(it == std::end(conn.wr_map));
-    it = conn.wr_map.insert(it, std::make_pair(i, buffer + conn.wr_len * i));
-    int ret = rdma_post_recv(
-      conn.id,
-      (void*) it->first,
-      it->second,
-      conn.wr_len,
-      conn.mr);
-    if (ret) {
-      throw std::runtime_error(
-        "Error on rdma_post_recv: " + std::string(strerror(errno)));
-    }
+    void* credit = buffer + conn.wr_len * i;
+    it = conn.wr_map.insert(it, std::make_pair(i, credit));
+    credits.push_back(credit);
   }
+  lseb_release(conn, credits);
 
   if (rdma_accept(conn.id, NULL)) {
     throw std::runtime_error(
@@ -156,37 +151,44 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   }
 }
 
-bool lseb_poll(RuConnectionId& conn) {
-  if (conn.wr_count == conn.tokens) {
-    std::vector<ibv_wc> wcs(conn.tokens);
+int lseb_avail(RuConnectionId& conn) {
+  if (conn.wr_count) {
+    std::vector<ibv_wc> wcs(conn.wr_count);
     int ret = ibv_poll_cq(conn.id->send_cq, wcs.size(), &wcs.front());
     if (ret < 0) {
       throw std::runtime_error(
         "Error on ibv_poll_cq: " + std::string(strerror(ret)));
     }
     conn.wr_count -= ret;
-    if (conn.wr_count == conn.tokens) {
-      return false;
-    }
   }
-  return true;
+  return conn.tokens - conn.wr_count;
 }
 
 bool lseb_poll(BuConnectionId& conn) {
   return !conn.wr_map.empty();
 }
 
-size_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
+size_t lseb_write(
+  RuConnectionId& conn,
+  std::vector<DataIov> const& data_iovecs) {
+
+  assert(
+    conn.tokens - conn.wr_count >= data_iovecs.size() && "Too much data to send");
 
   size_t bytes_sent = 0;
 
-  // create scatter gather elements (max 2 elements!)
-  assert(iov.size() <= 2 && "Size of DataIov can be only 1 or 2");
+  ibv_send_wr* bad;
+  std::vector<std::pair<ibv_send_wr, std::vector<ibv_sge> > > wrs(
+    data_iovecs.size());
 
-  if (conn.wr_count < conn.tokens) {
+  for (int i = 0; i < wrs.size(); ++i) {
 
-    std::vector<ibv_sge> sges;
-    for (auto& i : iov) {
+    // Get references
+    ibv_send_wr& wr = wrs[i].first;
+    std::vector<ibv_sge>& sges = wrs[i].second;
+    DataIov const& iov = data_iovecs[i];
+
+    for (auto const& i : iov) {
       ibv_sge sge;
       sge.addr = (uint64_t) (uintptr_t) i.iov_base;
       sge.length = (uint32_t) i.iov_len;
@@ -195,13 +197,22 @@ size_t lseb_write(RuConnectionId& conn, DataIov const& iov) {
       bytes_sent += i.iov_len;
     }
 
-    int ret = rdma_post_sendv(conn.id, nullptr, &sges.front(), sges.size(), 0);
-    if (ret) {
-      throw std::runtime_error(
-        "Error on rdma_post_sendv: " + std::string(strerror(ret)));
-    }
+    wr.wr_id = (uintptr_t) nullptr;
+    wr.next = (i + 1 == wrs.size()) ? nullptr : &(wrs[i + 1].first);
+    wr.sg_list = &sges.front();
+    wr.num_sge = sges.size();
+    wr.opcode = IBV_WR_SEND;
+    wr.send_flags = 0;
 
     ++conn.wr_count;
+  }
+
+  if (!wrs.empty()) {
+    int ret = ibv_post_send(conn.id->qp, &(wrs.front().first), &bad);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on ibv_post_send: " + std::string(strerror(ret)));
+    }
   }
 
   return bytes_sent;
@@ -227,15 +238,43 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   return iov;
 }
 
-void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
-  for (auto& wr : wrs) {
+void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
+
+  ibv_recv_wr* bad;
+  std::vector<std::pair<ibv_recv_wr, ibv_sge> > wrs(credits.size());
+
+  for (int i = 0; i < wrs.size(); ++i) {
+
+    // Get references
+    ibv_recv_wr& wr = wrs[i].first;
+    ibv_sge& sge = wrs[i].second;
+
+    // ...
     int key = 0;
     auto it = std::begin(conn.wr_map);
     for (; it != std::end(conn.wr_map) && it->first == key; ++it) {
       ++key;
     }
-    conn.wr_map.emplace_hint(it, key, wr);
-    rdma_post_recv(conn.id, (void*) key, wr, conn.wr_len, conn.mr);
+    conn.wr_map.emplace_hint(it, key, credits[i]);
+
+    // ...
+    sge.addr = (uint64_t) (uintptr_t) credits[i];
+    sge.length = (uint32_t) conn.wr_len;
+    sge.lkey = conn.mr ? conn.mr->lkey : 0;
+
+    // ...
+    wr.wr_id = (uintptr_t) key;
+    wr.next = (i + 1 == wrs.size()) ? nullptr : &(wrs[i + 1].first);
+    wr.sg_list = &(wrs[i].second);
+    wr.num_sge = 1;
+  }
+
+  if (!wrs.empty()) {
+    int ret = ibv_post_recv(conn.id->qp, &(wrs.front().first), &bad);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on ibv_post_recv: " + std::string(strerror(ret)));
+    }
   }
 }
 
