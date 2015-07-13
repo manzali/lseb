@@ -62,5 +62,5 @@ add_test(t_configuration t_configuration ${LSEB_SOURCE_DIR}/test/test.json)
 
 add_custom_target(
   check COMMAND ${CMAKE_CTEST_COMMAND}  --verbose
-  DEPENDS t_length_generator t_iniparser t_log t_configuration
+  DEPENDS t_length_generator t_log t_configuration
 )
