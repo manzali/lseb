@@ -118,13 +118,13 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.len = len;
 }
 
-bool lseb_poll(RuConnectionId const& conn) {
+int lseb_avail(RuConnectionId const& conn) {
   pollfd poll_fd { conn.socket, POLLOUT, 0 };
   int ret = poll(&poll_fd, 1, 0);
   if (ret == -1) {
     throw std::runtime_error("Error on poll: " + std::string(strerror(errno)));
   }
-  return ret != 0;
+  return ret;
 }
 
 bool lseb_poll(BuConnectionId const& conn) {
@@ -136,20 +136,26 @@ bool lseb_poll(BuConnectionId const& conn) {
   return ret != 0;
 }
 
-ssize_t lseb_write(RuConnectionId const& conn, DataIov const& iov) {
-  size_t length = 0;
-  for (auto& i : iov) {
-    length += i.iov_len;
+ssize_t lseb_write(
+  RuConnectionId const& conn,
+  std::vector<DataIov> const& data_iovecs) {
+  size_t bytes_written = 0;
+  for (auto const& iov : data_iovecs) {
+    size_t length = 0;
+    for (auto const& i : iov) {
+      length += i.iov_len;
+    }
+    // Add as first iovec the length of data
+    DataIov new_iov(1, {&length, sizeof(length)});
+    new_iov.insert(new_iov.end(), iov.begin(), iov.end());
+    ssize_t ret = writev(conn.socket, new_iov.data(), new_iov.size());
+    if (ret == -1) {
+      throw std::runtime_error(
+          "Error on writev: " + std::string(strerror(errno)));
+    }
+    bytes_written += (ret - sizeof(length));
   }
-  // Add as first iovec the length of data
-  DataIov new_iov(1, { &length, sizeof(length) });
-  new_iov.insert(new_iov.end(), iov.begin(), iov.end());
-  ssize_t ret = writev(conn.socket, new_iov.data(), new_iov.size());
-  if (ret == -1) {
-    throw std::runtime_error(
-      "Error on writev: " + std::string(strerror(errno)));
-  }
-  return ret - sizeof(length);
+  return bytes_written;
 }
 
 std::vector<iovec> lseb_read(BuConnectionId& conn) {

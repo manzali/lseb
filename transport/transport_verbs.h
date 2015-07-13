@@ -49,10 +49,10 @@ BuConnectionId lseb_accept(BuSocket const& socket);
 void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
 
-bool lseb_poll(BuConnectionId& conn);
 int lseb_avail(RuConnectionId& conn);
+bool lseb_poll(BuConnectionId& conn);
 
-size_t lseb_write(RuConnectionId& conn, std::vector<DataIov> const& iov);
+size_t lseb_write(RuConnectionId& conn, std::vector<DataIov> const& data_iovecs);
 std::vector<iovec> lseb_read(BuConnectionId& conn);
 
 void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits);
