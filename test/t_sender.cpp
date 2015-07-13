@@ -23,16 +23,18 @@ int main(int argc, char* argv[]) {
   char* buffer = new char[transfer_size];
   memset(buffer, '0', transfer_size);
 
-  std::vector<iovec> iov;
-  iov.push_back( { buffer, transfer_size});
+  DataIov iov;
+  iov.push_back( { buffer, transfer_size });
+  std::vector<DataIov> data_iovecs;
+  data_iovecs.push_back(iov);
 
   lseb_register(conn, buffer, transfer_size);
 
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    if (lseb_poll(conn)) {
-      ssize_t ret = lseb_write(conn, iov);
+    if (lseb_avail(conn)) {
+      ssize_t ret = lseb_write(conn, data_iovecs);
       assert(ret != -1);
       if (ret != -2) {
         bandwith.add(ret);
