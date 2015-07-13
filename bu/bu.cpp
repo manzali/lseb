@@ -94,6 +94,7 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(1.0);
   Timer t_recv;
   Timer t_build;
+  Timer t_rel;
 
   while (true) {
 
@@ -119,9 +120,9 @@ int main(int argc, char* argv[]) {
 
       }
 
-      t_recv.start();
+      t_rel.start();
       receiver.release(wrs_map);
-      t_recv.pause();
+      t_rel.pause();
     }
 
     if (bandwith.check()) {
@@ -137,9 +138,13 @@ int main(int argc, char* argv[]) {
         << "%\n"
         << "\tt_build: "
         << t_build.rate()
+        << "%\n"
+        << "\tt_rel: "
+        << t_rel.rate()
         << "%";
       t_recv.reset();
       t_build.reset();
+      t_rel.reset();
     }
   }
 
