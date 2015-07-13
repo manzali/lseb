@@ -140,18 +140,18 @@ ssize_t lseb_write(
   RuConnectionId const& conn,
   std::vector<DataIov> const& data_iovecs) {
   size_t bytes_written = 0;
-  for (auto const& iov : data_iovecs) {
+  for (auto const& iov : data_iovecs) {
     size_t length = 0;
     for (auto const& i : iov) {
       length += i.iov_len;
     }
     // Add as first iovec the length of data
-    DataIov new_iov(1, {&length, sizeof(length)});
+    DataIov new_iov(1, { &length, sizeof(length) });
     new_iov.insert(new_iov.end(), iov.begin(), iov.end());
     ssize_t ret = writev(conn.socket, new_iov.data(), new_iov.size());
     if (ret == -1) {
       throw std::runtime_error(
-          "Error on writev: " + std::string(strerror(errno)));
+        "Error on writev: " + std::string(strerror(errno)));
     }
     bytes_written += (ret - sizeof(length));
   }
