@@ -248,7 +248,8 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
     ibv_sge& sge = wrs[i].second;
 
     // ...
-    auto it = std::begin(conn.wr_map) + key;
+    auto it = std::begin(conn.wr_map);
+    std::advance(it, key);
     for (; it != std::end(conn.wr_map) && it->first == key; ++it) {
       ++key;
     }
