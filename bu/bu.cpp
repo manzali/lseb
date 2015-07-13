@@ -97,36 +97,38 @@ int main(int argc, char* argv[]) {
 
   while (true) {
 
-    std::map<int, std::vector<void*> > wrs_map;
+    t_recv.start();
+    std::map<int, std::vector<iovec> > iov_map = receiver.receive();
+    t_recv.pause();
 
-    for (int conn = 0; conn < connection_ids.size(); ++conn) {
-      t_recv.start();
-      std::vector<iovec> conn_iov = receiver.receive(conn);
-      t_recv.pause();
-      if (conn_iov.size()) {
+    if (!iov_map.empty()) {
+
+      std::map<int, std::vector<void*> > wrs_map;
+      for (auto const& iov_vects : iov_map) {
+        auto it = wrs_map.insert(
+          std::make_pair(iov_vects.first, std::vector<void*>()));
+        for (auto const& iov : iov_vects.second) {
+          it.first->second.push_back(iov.iov_base);
+        }
         /*
          t_build.start();
-         builder.build(conn, conn_iov);
+         builder.build(iov_vects.first, iov_vects.second);
          t_build.pause();
          */
+        bandwith.add(iovec_length(iov_vects.second));
 
-        auto it = wrs_map.insert(std::make_pair(conn, std::vector<void*>()));
-        for (auto const& i : conn_iov) {
-          it.first->second.push_back(i.iov_base);
-        }
-
-        bandwith.add(iovec_length(conn_iov));
       }
-    }
 
-    if(!wrs_map.empty()){
       t_recv.start();
       receiver.release(wrs_map);
       t_recv.pause();
     }
 
     if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"
