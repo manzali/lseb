@@ -24,9 +24,9 @@ struct RuConnectionId {
 struct BuConnectionId {
   rdma_cm_id* id;
   ibv_mr* mr;
-  int tokens;
   size_t wr_len;
-  std::map<int, void*> wr_map;
+  std::vector<void*> wr_vect;
+  int wr_count;
 };
 
 struct BuSocket {

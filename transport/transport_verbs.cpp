@@ -105,7 +105,7 @@ BuSocket lseb_listen(
 
 BuConnectionId lseb_accept(BuSocket const& socket) {
   BuConnectionId conn;
-  conn.tokens = socket.tokens;
+  conn.wr_vect.resize(socket.tokens, nullptr);
   if (rdma_get_request(socket.id, &conn.id)) {
     throw std::runtime_error(
       "Error on rdma_get_request: " + std::string(strerror(errno)));
@@ -127,21 +127,17 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
     throw std::runtime_error(
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
   }
-
+  int tokens = conn.wr_vect.size();
   assert(
-    len % conn.tokens == 0 && "length of buffer not divisible by number of wr");
-  conn.wr_len = len / conn.tokens;
+    len % tokens) == 0 && "length of buffer not divisible by number of wr");
+  conn.wr_len = len / tokens;
   assert(conn.wr_len != 0 && "Too much tokens");
 
-  std::vector<void*> credits;
-  for (int i = 0; i < conn.tokens; ++i) {
-    auto it = conn.wr_map.find(i);
-    assert(it == std::end(conn.wr_map));
-    void* credit = buffer + conn.wr_len * i;
-    it = conn.wr_map.insert(it, std::make_pair(i, credit));
-    credits.push_back(credit);
+  for (int i = 0; i < tokens; ++i) {
+    conn.wr_vect[i] = buffer + conn.wr_len * i;
   }
-  lseb_release(conn, credits);
+  conn.wr_count = tokens;
+  lseb_release(conn, conn.wr_vect);
 
   if (rdma_accept(conn.id, NULL)) {
     throw std::runtime_error(
@@ -163,7 +159,7 @@ int lseb_avail(RuConnectionId& conn) {
 }
 
 bool lseb_poll(BuConnectionId& conn) {
-  return !conn.wr_map.empty();
+  return conn.wr_count != 0;
 }
 
 size_t lseb_write(
@@ -218,7 +214,7 @@ size_t lseb_write(
 
 std::vector<iovec> lseb_read(BuConnectionId& conn) {
 
-  std::vector<ibv_wc> wcs(conn.wr_map.size());
+  std::vector<ibv_wc> wcs(conn.wr_count);
   int ret = ibv_poll_cq(conn.id->recv_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw std::runtime_error(
@@ -227,10 +223,10 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 
   std::vector<iovec> iov;
   for (int i = 0; i < ret; ++i) {
-    auto it = conn.wr_map.find(wcs[i].wr_id);
-    assert(it != std::end(conn.wr_map));
-    iov.push_back( { it->second, wcs[i].byte_len });
-    conn.wr_map.erase(it);
+    assert(conn.wr_vect[wcs[i].wr_id] != nullptr);
+    iov.push_back( { conn.wr_vect[wcs[i].wr_id], wcs[i].byte_len });
+    conn.wr_vect[wcs[i].wr_id] = nullptr;
+    --conn.wr_count;
   }
 
   return iov;
@@ -248,12 +244,13 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
     ibv_sge& sge = wrs[i].second;
 
     // ...
-    auto it = std::begin(conn.wr_map);
-    std::advance(it, key);
-    for (; it != std::end(conn.wr_map) && it->first == key; ++it) {
-      ++key;
-    }
-    conn.wr_map.emplace_hint(it, key, credits[i]);
+    auto it = std::find(
+      std::begin(conn.wr_vect),
+      std::end(conn.wr_vect),
+      nullptr);
+    assert(it != std::end(conn.wr_vect));
+    *it = credits[i];
+    ++conn.wr_count;
 
     // ...
     sge.addr = (uint64_t) (uintptr_t) credits[i];
