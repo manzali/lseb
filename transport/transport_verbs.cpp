@@ -236,7 +236,6 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
 void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
 
   std::vector<std::pair<ibv_recv_wr, ibv_sge> > wrs(credits.size());
-  int key = 0;
 
   for (int i = 0; i < wrs.size(); ++i) {
 
@@ -259,7 +258,7 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
     sge.lkey = conn.mr ? conn.mr->lkey : 0;
 
     // ...
-    wr.wr_id = (uintptr_t) key;
+    wr.wr_id = (uintptr_t) it - std::begin(conn.wr_vect);
     wr.next = (i + 1 == wrs.size()) ? nullptr : &(wrs[i + 1].first);
     wr.sg_list = &(wrs[i].second);
     wr.num_sge = 1;
