@@ -1,6 +1,7 @@
 #include "transport/transport_verbs.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include <cassert>
 #include <cstring>
@@ -258,7 +259,7 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
     sge.lkey = conn.mr ? conn.mr->lkey : 0;
 
     // ...
-    wr.wr_id = (uintptr_t) it - std::begin(conn.wr_vect);
+    wr.wr_id = (uintptr_t) std::distance(std::begin(conn.wr_vect), it);
     wr.next = (i + 1 == wrs.size()) ? nullptr : &(wrs[i + 1].first);
     wr.sg_list = &(wrs[i].second);
     wr.num_sge = 1;
