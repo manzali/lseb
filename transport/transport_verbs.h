@@ -17,7 +17,6 @@ struct RuConnectionId {
   RuConnectionId()
       :
         wr_count(0) {
-
   }
 };
 
@@ -27,6 +26,10 @@ struct BuConnectionId {
   size_t wr_len;
   std::vector<void*> wr_vect;
   int wr_count;
+  BuConnectionId()
+      :
+        wr_count(0) {
+  }
 };
 
 struct BuSocket {
