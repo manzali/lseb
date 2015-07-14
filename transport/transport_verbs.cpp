@@ -1,5 +1,7 @@
 #include "transport/transport_verbs.h"
 
+#include <algorithm>
+
 #include <cassert>
 #include <cstring>
 
@@ -128,8 +130,7 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
   }
   int tokens = conn.wr_vect.size();
-  assert(
-    len % tokens) == 0 && "length of buffer not divisible by number of wr");
+  assert(len % tokens == 0 && "length of buffer not divisible by number of wr");
   conn.wr_len = len / tokens;
   assert(conn.wr_len != 0 && "Too much tokens");
 
@@ -244,10 +245,10 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
     ibv_sge& sge = wrs[i].second;
 
     // ...
-    auto it = std::find(
+    auto it = std::find_if(
       std::begin(conn.wr_vect),
       std::end(conn.wr_vect),
-      nullptr);
+      [](void* p) {return p == nullptr;});
     assert(it != std::end(conn.wr_vect));
     *it = credits[i];
     ++conn.wr_count;
