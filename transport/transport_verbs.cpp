@@ -134,11 +134,11 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.wr_len = len / tokens;
   assert(conn.wr_len != 0 && "Too much tokens");
 
+  std::vector<void*> wrs(tokens);
   for (int i = 0; i < tokens; ++i) {
-    conn.wr_vect[i] = buffer + conn.wr_len * i;
+    wrs[i] = buffer + conn.wr_len * i;
   }
-  conn.wr_count = tokens;
-  lseb_release(conn, conn.wr_vect);
+  lseb_release(conn, wrs);
 
   if (rdma_accept(conn.id, NULL)) {
     throw std::runtime_error(
