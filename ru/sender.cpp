@@ -19,7 +19,7 @@ size_t Sender::send(
 
   size_t bytes_sent = 0;
 
-  // Creste the new map with iterators
+  // Create the new map with iterators
   std::map<int,
       std::pair<std::vector<DataIov>::const_iterator,
           std::vector<DataIov>::const_iterator> > it_map;
@@ -31,28 +31,34 @@ size_t Sender::send(
   auto it = std::begin(it_map);
   while (it != std::end(it_map) && std::chrono::high_resolution_clock::now() < end_time) {
     bool remove_it = false;
-    int avail = lseb_avail(m_connection_ids[it->first]);
+    int conn = it->first;
+    auto& b = it->second.first;
+    auto& e = it->second.second;
+    int avail = lseb_avail(m_connection_ids[conn]);
     if (avail) {
 
-      if (avail >= it->second.second - it->second.first) {
-        avail = it->second.second - it->second.first;
+      if (avail >= e - b) {
+        avail = e - b;
         remove_it = true;
       }
 
-      std::vector<DataIov> subvect(it->second.first, it->second.first + avail);
+      std::vector<DataIov> subvect(b, b + avail);
       size_t load = 0;
       for (auto const& el : subvect) {
-        load += iovec_length(el);
+        size_t len = iovec_length(el);
+        if (!len) {
+          LOG(WARNING) << "Empty iovec";
+        }
+        load += len;
       }
 
-      LOG(DEBUG) << "Writing " << subvect.size() << " wr (" << it->second.second - (it
-        ->second.first + avail) << " remaining) to connection " << it->first;
+      LOG(DEBUG) << "Writing " << subvect.size() << " wr (" << e - (b + avail) << " remaining) to connection " << conn;
 
-      size_t ret = lseb_write(m_connection_ids[it->first], subvect);
+      size_t ret = lseb_write(m_connection_ids[conn], subvect);
       assert(ret == load);
       bytes_sent += ret;
 
-      it->second.first += avail;
+      b += avail;
 
     }
     if (remove_it) {

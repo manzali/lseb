@@ -44,14 +44,23 @@ void checkData(int conn, iovec const& iov) {
   }
 }
 
-Builder::Builder() {
+Builder::Builder(int connections)
+    :
+      m_multievents(connections) {
 }
 
-void Builder::build(int conn, std::vector<iovec> const& conn_iov) {
-  // Check data
-  for (auto const& iov : conn_iov) {
-    checkData(conn, iov);
-  }
+void Builder::add(int conn, std::vector<iovec> const& multifragments) {
+  /*
+   // Check data
+   for (auto const& multifragment : multifragments) {
+   checkData(conn, multifragment);
+   }
+   */
+  assert(conn < m_multievents.size());
+  m_multievents[conn].insert(
+    m_multievents[conn].end(),
+    multifragments.begin(),
+    multifragments.end());
 }
 
 }

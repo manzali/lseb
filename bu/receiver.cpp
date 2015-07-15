@@ -27,14 +27,17 @@ std::vector<iovec> Receiver::receive(int conn) {
   return conn_iov;
 }
 
-void Receiver::release(std::map<int, std::vector<void*> > const& wrs_map) {
-  for (auto const& m : wrs_map) {
-    LOG(DEBUG)
-      << "Posting "
-      << m.second.size()
-      << " credits to connection "
-      << m.first;
-    lseb_release(m_connection_ids[m.first], m.second);
+void Receiver::release(std::vector<std::vector<void*> > const& wrs_vects) {
+  assert(wrs_vects.size() <= m_connection_ids.size());
+  for (int i = 0; i < wrs_vects.size(); ++i) {
+    if (!wrs_vects[i].empty()) {
+      LOG(DEBUG)
+        << "Posting "
+        << wrs_vects[i].size()
+        << " credits to connection "
+        << i;
+      lseb_release(m_connection_ids[i], wrs_vects[i]);
+    }
   }
 }
 

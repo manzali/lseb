@@ -68,13 +68,11 @@ int main(int argc, char* argv[]) {
 
   std::chrono::milliseconds ms_timeout(configuration.get<int>("RU.MS_TIMEOUT"));
 
-  std::vector<Endpoint> const ru_endpoints = get_endpoints(
-    configuration.get_child("RU.ENDPOINTS"));
-  std::vector<Endpoint> const bu_endpoints = get_endpoints(
-    configuration.get_child("BU.ENDPOINTS"));
+  std::vector<Endpoint> const endpoints = get_endpoints(
+    configuration.get_child("ENDPOINTS"));
 
   size_t const ru_id = std::stol(argv[2]);
-  assert(ru_id < ru_endpoints.size() && "Wrong ru id");
+  assert(ru_id < endpoints.size() && "Wrong ru id");
 
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
@@ -82,8 +80,8 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Waiting for connections...";
   std::vector<RuConnectionId> connection_ids;
   std::transform(
-    std::begin(bu_endpoints),
-    std::end(bu_endpoints),
+    std::begin(endpoints),
+    std::end(endpoints),
     std::back_inserter(connection_ids),
     [tokens](Endpoint const& endpoint) {
       return lseb_connect(endpoint.hostname(), endpoint.port(), tokens);
@@ -158,11 +156,17 @@ int main(int argc, char* argv[]) {
     }
 
     if (frequency.check()) {
-      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num << " MHz";
+      LOG(INFO)
+        << "Frequency: "
+        << frequency.frequency() / std::mega::num
+        << " MHz";
     }
 
     if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"

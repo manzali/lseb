@@ -8,10 +8,11 @@
 namespace lseb {
 
 class Builder {
+  std::vector<std::vector<iovec> > m_multievents;
 
  public:
-  Builder();
-  void build(int conn, std::vector<iovec> const& conn_iov);
+  Builder(int connections);
+  void add(int conn, std::vector<iovec> const& conn_iov);
 };
 
 }

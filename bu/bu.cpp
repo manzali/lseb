@@ -42,10 +42,8 @@ int main(int argc, char* argv[]) {
   int const tokens = configuration.get<int>("GENERAL.TOKENS");
   assert(tokens > 0);
 
-  std::vector<Endpoint> const ru_endpoints = get_endpoints(
-    configuration.get_child("RU.ENDPOINTS"));
-  std::vector<Endpoint> const bu_endpoints = get_endpoints(
-    configuration.get_child("BU.ENDPOINTS"));
+  std::vector<Endpoint> const endpoints = get_endpoints(
+    configuration.get_child("ENDPOINTS"));
 
   std::chrono::milliseconds ms_timeout(configuration.get<int>("BU.MS_TIMEOUT"));
 
@@ -54,23 +52,23 @@ int main(int argc, char* argv[]) {
   int const bu_id = std::stol(argv[2]);
   assert(bu_id >= 0 && "Negative bu id");
 
-  assert(bu_id < bu_endpoints.size() && "Wrong bu id");
+  assert(bu_id < endpoints.size() && "Wrong bu id");
 
   // Allocate memory
 
   std::unique_ptr<unsigned char[]> const data_ptr(
-    new unsigned char[data_size * ru_endpoints.size()]);
+    new unsigned char[data_size * endpoints.size()]);
 
   LOG(INFO)
     << "Allocated "
-    << data_size * ru_endpoints.size()
+    << data_size * endpoints.size()
     << " bytes of memory";
 
   // Connections
 
   BuSocket socket = lseb_listen(
-    bu_endpoints[bu_id].hostname(),
-    bu_endpoints[bu_id].port(),
+    endpoints[bu_id].hostname(),
+    endpoints[bu_id].port(),
     tokens);
 
   std::vector<BuConnectionId> connection_ids;
@@ -78,8 +76,8 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Waiting for connections...";
   int endpoint_count = 0;
   std::transform(
-    std::begin(ru_endpoints),
-    std::end(ru_endpoints),
+    std::begin(endpoints),
+    std::end(endpoints),
     std::back_inserter(connection_ids),
     [&](Endpoint const& endpoint) {
       BuConnectionId conn = lseb_accept(socket);
@@ -88,7 +86,7 @@ int main(int argc, char* argv[]) {
     });
   LOG(INFO) << "Connections established";
 
-  Builder builder;
+  Builder builder(connection_ids.size());
   Receiver receiver(connection_ids);
 
   FrequencyMeter bandwith(1.0);
@@ -103,25 +101,21 @@ int main(int argc, char* argv[]) {
     t_recv.pause();
 
     if (!iov_map.empty()) {
-
-      std::map<int, std::vector<void*> > wrs_map;
+      std::vector<std::vector<void*> > wrs_vects(connection_ids.size());
       for (auto const& iov_vects : iov_map) {
-        auto it = wrs_map.insert(
-          std::make_pair(iov_vects.first, std::vector<void*>()));
         for (auto const& iov : iov_vects.second) {
-          it.first->second.push_back(iov.iov_base);
+          wrs_vects[iov_vects.first].push_back(iov.iov_base);
         }
         /*
          t_build.start();
-         builder.build(iov_vects.first, iov_vects.second);
+         builder.add(iov_vects.first, iov_vects.second);
          t_build.pause();
          */
         bandwith.add(iovec_length(iov_vects.second));
-
       }
 
       t_rel.start();
-      receiver.release(wrs_map);
+      receiver.release(wrs_vects);
       t_rel.pause();
     }
 
