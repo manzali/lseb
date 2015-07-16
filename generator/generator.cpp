@@ -4,7 +4,7 @@
 #include <cassert>
 
 #include "common/utility.h"
-#include "common/log.h"
+#include "common/log.hpp"
 
 namespace lseb {
 

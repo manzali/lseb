@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "common/log.h"
+#include "common/log.hpp"
 #include "common/utility.h"
 
 namespace lseb {

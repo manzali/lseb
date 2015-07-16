@@ -2,8 +2,7 @@
 #define BU_RECEIVER_H
 
 #include <vector>
-
-#include "common/dataformat.h"
+#include <map>
 
 #include "transport/transport.h"
 
@@ -12,15 +11,12 @@ namespace lseb {
 class Receiver {
   std::vector<BuConnectionId> m_connection_ids;
 
- private:
-  bool checkData(std::vector<iovec> total_iov);
-
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
-  size_t receive(double ms_timeout);
-  size_t receiveAndForget();
+  std::vector<iovec> receive(int conn);
+  std::map<int, std::vector<iovec> > receive();
+  void release(std::vector<std::vector<void*> > const& wrs_vects);
 };
-
 }
 
 #endif

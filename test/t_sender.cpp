@@ -11,31 +11,30 @@ using namespace lseb;
 int main(int argc, char* argv[]) {
 
   // Check arguments
-  assert(argc == 3 && "sender <ip_address> <buffer_size>");
+  assert(argc == 5 && "sender <ip_address> <port> <transfer_size> <tokens>");
 
   // Connect to the receiver
-  RuConnectionId conn = lseb_connect(argv[1], 7123);
+  RuConnectionId conn = lseb_connect(argv[1], argv[2], std::stol(argv[4]));
 
   std::cout << "Connection established\n";
 
-  // Sync with the receiver
-  lseb_sync(conn);
+  size_t transfer_size = std::stol(argv[3]);
 
-  std::cout << "Sync done\n";
+  char* buffer = new char[transfer_size];
+  memset(buffer, '0', transfer_size);
 
-  size_t buffer_size = std::stol(argv[2]);
+  DataIov iov;
+  iov.push_back( { buffer, transfer_size });
+  std::vector<DataIov> data_iovecs;
+  data_iovecs.push_back(iov);
 
-  char* buffer = new char[buffer_size];
-  memset(buffer, '0', buffer_size);
-
-  std::vector<iovec> iov;
-  iov.push_back( { buffer, buffer_size});
+  lseb_register(conn, buffer, transfer_size);
 
   FrequencyMeter bandwith(1.0);
 
   while (true) {
-    if (lseb_poll(conn)) {
-      ssize_t ret = lseb_write(conn, iov);
+    if (lseb_avail(conn)) {
+      ssize_t ret = lseb_write(conn, data_iovecs);
       assert(ret != -1);
       if (ret != -2) {
         bandwith.add(ret);

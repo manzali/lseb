@@ -198,6 +198,15 @@ DataIov create_iovec(R sub_range, T range) {
   return iov;
 }
 
+inline size_t iovec_length(std::vector<iovec> const& iov) {
+  return std::accumulate(
+    std::begin(iov),
+    std::end(iov),
+    0,
+    [](size_t partial, iovec const& v) {
+      return partial + v.iov_len;});
+}
+
 }
 
 #endif

@@ -1,0 +1,19 @@
+{
+	"key1": {
+		"integer": 123,
+		"double": 4.56,
+		"bool": true
+	},
+	"key2": [
+		{
+			"array": "value"
+		},
+		{
+			"array": "value"
+		},
+		{
+			"array": "value"
+		}
+	],
+	"key3": "abc"
+}

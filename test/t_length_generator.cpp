@@ -1,6 +1,7 @@
 #include <iostream>
 
-#include "common/boost_lightweight_test.hpp"
+#include <boost/detail/lightweight_test.hpp>
+
 #include "generator/length_generator.h"
 
 using namespace lseb;
@@ -40,6 +41,6 @@ int main() {
     BOOST_TEST(payload <= max);
   }
 
-  boost::report_errors();
+  return boost::report_errors();
 }
 

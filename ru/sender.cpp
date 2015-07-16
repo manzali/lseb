@@ -1,125 +1,82 @@
-#include <algorithm>
-#include <list>
-#include <chrono>
-
-#include <cstring>
-#include <sys/uio.h>
-
-#include "common/log.h"
+#include "common/log.hpp"
 #include "common/utility.h"
 
 #include "ru/sender.h"
 
 namespace lseb {
 
-static size_t iovec_length(std::vector<iovec> const& iov) {
-  return std::accumulate(
-    std::begin(iov),
-    std::end(iov),
-    0,
-    [](size_t partial, iovec const& v) {
-      return partial + v.iov_len;});
-}
-
-Sender::Sender(
-  std::vector<RuConnectionId> const& connection_ids,
-  size_t recv_buffer_size)
+Sender::Sender(std::vector<RuConnectionId> const& connection_ids)
     :
-      m_connection_ids(connection_ids),
-      m_next_bu(std::begin(m_connection_ids)),
-      m_recv_buffer_size(recv_buffer_size) {
-  LOG(INFO) << "Waiting for synchronization...";
-  for (auto& conn : m_connection_ids) {
-    lseb_sync(conn);
-  }
-  LOG(INFO) << "Synchronization completed";
+      m_connection_ids(connection_ids) {
 }
 
-size_t Sender::send(std::vector<DataIov> data_iovecs) {
+size_t Sender::send(
+  std::map<int, std::vector<DataIov> > const& iov_map,
+  std::chrono::milliseconds const& ms_timeout) {
 
-  using DataVectorIter = std::vector<DataIov>::iterator;
+  std::chrono::high_resolution_clock::time_point const end_time =
+    std::chrono::high_resolution_clock::now() + ms_timeout;
 
-  struct SendingStruct {
-    std::vector<RuConnectionId>::iterator ruConnectionIdIter;
-    std::vector<DataVectorIter> dataVector;
-    std::vector<DataVectorIter>::iterator dataVectorIter;
-  };
+  size_t bytes_sent = 0;
 
-  size_t list_size =
-      (data_iovecs.size() < m_connection_ids.size()) ?
-        data_iovecs.size() :
-        m_connection_ids.size();
-  std::list<SendingStruct> sending_list(list_size);
-
-  // Filling dataVector
-  auto sending_list_it = std::begin(sending_list);
-  for (auto it = std::begin(data_iovecs); it != std::end(data_iovecs); ++it) {
-    sending_list_it->dataVector.emplace_back(it);
-    if (++sending_list_it == std::end(sending_list)) {
-      sending_list_it = std::begin(sending_list);
-    }
+  // Create the new map with iterators
+  std::map<int,
+      std::pair<std::vector<DataIov>::const_iterator,
+          std::vector<DataIov>::const_iterator> > it_map;
+  for (auto const& m : iov_map) {
+    it_map[m.first] = std::make_pair(std::begin(m.second), std::end(m.second));
   }
 
-  // Setting ruConnectionIdIter and dataVector
-  for (auto it = std::begin(sending_list); it != std::end(sending_list); ++it) {
-    it->ruConnectionIdIter = m_next_bu;
-    it->dataVectorIter = std::begin(it->dataVector);
-    if (++m_next_bu == std::end(m_connection_ids)) {
-      m_next_bu = std::begin(m_connection_ids);
-    }
-  }
-
-  sending_list_it = select_randomly(
-    std::begin(sending_list),
-    std::end(sending_list));
-  size_t written_bytes = 0;
-
-  while (sending_list_it != std::end(sending_list)) {
-
+  // Iterate until the map is empty (or timeout is reached)
+  auto it = std::begin(it_map);
+  while (it != std::end(it_map) && std::chrono::high_resolution_clock::now() < end_time) {
     bool remove_it = false;
-    auto& conn = *(sending_list_it->ruConnectionIdIter);
+    int conn = it->first;
+    auto& b = it->second.first;
+    auto& e = it->second.second;
+    int avail = lseb_avail(m_connection_ids[conn]);
+    if (avail) {
 
-    if (lseb_poll(conn)) {
-
-      auto& iov_it = sending_list_it->dataVectorIter;
-      auto& iov = *iov_it;
-      size_t load = iovec_length(*iov);
-
-      LOG(DEBUG) << "Written " << load << " bytes in " << iov->size() << " iovec and sending to connection id " << conn
-        .socket;
-
-      assert(
-        load <= m_recv_buffer_size && "Trying to send a buffer bigger than the receiver one");
-
-      m_send_timer.start();
-      ssize_t ret = lseb_write(conn, *iov);
-      m_send_timer.pause();
-      if (ret != -2) {
-        assert(ret >= 0 && static_cast<size_t>(ret) == load);
-        written_bytes += ret;
-        if (++iov_it == std::end(sending_list_it->dataVector)) {
-          remove_it = true;
-        }
+      if (avail >= e - b) {
+        avail = e - b;
+        remove_it = true;
       }
-    }
 
+      std::vector<DataIov> subvect(b, b + avail);
+      size_t load = 0;
+      for (auto const& el : subvect) {
+        size_t len = iovec_length(el);
+        if (!len) {
+          LOG(WARNING) << "Empty iovec";
+        }
+        load += len;
+      }
+
+      LOG(DEBUG) << "Writing " << subvect.size() << " wr (" << e - (b + avail) << " remaining) to connection " << conn;
+
+      size_t ret = lseb_write(m_connection_ids[conn], subvect);
+      assert(ret == load);
+      bytes_sent += ret;
+
+      b += avail;
+
+    }
     if (remove_it) {
-      sending_list_it = sending_list.erase(sending_list_it);
+      it = it_map.erase(it);
     } else {
-      ++sending_list_it;
+      ++it;
     }
 
-    if (sending_list_it == std::end(sending_list)) {
-      sending_list_it = std::begin(sending_list);
+    if (it == std::end(it_map)) {
+      it = std::begin(it_map);
     }
   }
 
-  if (std::chrono::duration<double>(m_send_timer.total_time()).count() > 1.0) {
-    LOG(INFO) << "send call: " << m_send_timer.rate() << "%";
-    m_send_timer.reset();
+  if (it_map.size()) {
+    LOG(WARNING) << "Uncompleted send";
   }
 
-  return written_bytes;
+  return bytes_sent;
 }
 
 }
