@@ -110,7 +110,6 @@ void BuilderUnit::operator()() {
         << t_rel.rate()
         << "%";
       t_recv.reset();
-      t_build.reset();
       t_rel.reset();
     }
   }
