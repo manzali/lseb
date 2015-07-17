@@ -135,9 +135,9 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.wr_len = len / tokens;
   assert(conn.wr_len != 0 && "Too much tokens");
 
-  std::vector<void*> wrs(tokens);
+  std::vector<iovec> wrs(tokens);
   for (int i = 0; i < tokens; ++i) {
-    wrs[i] = buffer + conn.wr_len * i;
+    wrs[i].iov_base = buffer + conn.wr_len * i;
   }
   lseb_release(conn, wrs);
 
