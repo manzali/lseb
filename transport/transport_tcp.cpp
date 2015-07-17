@@ -2,8 +2,6 @@
 
 #include <algorithm>
 #include <stdexcept>
-#include <thread>
-#include <chrono>
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -42,18 +40,10 @@ RuConnectionId lseb_connect(
   reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
   );
 
-  int ret = 0;
-  do {
-    ret = connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr));
-    // 111 -> Connection refused
-    if (ret) {
-      if (errno != 111) {
-        throw std::runtime_error(
-          "Error on rdma_connect: " + std::string(strerror(errno)));
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-  } while (ret);
+  if (connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr))) {
+    throw std::runtime_error(
+      "Error on rdma_connect: " + std::string(strerror(errno)));
+  }
 
   LOG(DEBUG)
     << "Connected to host "
