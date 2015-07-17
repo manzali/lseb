@@ -5,11 +5,14 @@
 
 namespace lseb {
 
-Splitter::Splitter(int connections, DataRange const& data_range)
+Splitter::Splitter(int id, int connections, DataRange const& data_range)
     :
+      m_id(id),
       m_connections(connections),
       m_next_connection(0),
       m_data_range(data_range) {
+  assert(m_id < m_connections);
+  m_next_connection = (m_id + 1 == m_connections) ? 0 : m_id + 1;
 }
 
 std::map<int, std::vector<DataIov> > Splitter::split(

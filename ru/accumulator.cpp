@@ -20,11 +20,12 @@ Accumulator::Accumulator(
       m_generated_events(0) {
 }
 
-MultiEvents Accumulator::add(MetaDataRange const& metadata_range) {
-
-  MultiEvents multievents;
+void Accumulator::add(MetaDataRange const& metadata_range) {
   m_generated_events += distance_in_range(metadata_range, m_metadata_range);
+}
 
+MultiEvents Accumulator::get() {
+  MultiEvents multievents;
   // Handle bulk submission and release events
   while (m_generated_events >= m_events_in_multievent) {
 

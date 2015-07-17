@@ -111,17 +111,19 @@ void ReadoutUnit::operator()() {
     m_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
-  Splitter splitter(connection_ids.size(), data_range);
+  Splitter splitter(m_id, connection_ids.size(), data_range);
 
   FrequencyMeter frequency(1.0);
   FrequencyMeter bandwith(1.0);
-  Timer t_send;
+
   Timer t_accu;
+  Timer t_send;
   Timer t_spli;
 
   while (true) {
     t_accu.start();
-    MultiEvents multievents = accumulator.add(controller.read());
+    accumulator.add(controller.read());
+    MultiEvents multievents = accumulator.get();
     t_accu.pause();
 
     if (multievents.size()) {
@@ -147,31 +149,25 @@ void ReadoutUnit::operator()() {
     }
 
     if (frequency.check()) {
-      LOG(INFO)
-        << "Frequency: "
-        << frequency.frequency() / std::mega::num
-        << " MHz";
+      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num << " MHz";
     }
 
     if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
+      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"
-        << "\tt_send: "
-        << t_send.rate()
-        << "%\n"
         << "\tt_accu: "
         << t_accu.rate()
+        << "%\n"
+        << "\tt_send: "
+        << t_send.rate()
         << "%\n"
         << "\tt_spli: "
         << t_spli.rate()
         << "%";
-      t_send.reset();
       t_accu.reset();
+      t_send.reset();
       t_spli.reset();
     }
   }
