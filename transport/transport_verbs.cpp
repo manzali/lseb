@@ -52,14 +52,15 @@ RuConnectionId lseb_connect(
       "Error on rdma_create_ep: " + std::string(strerror(errno)));
   }
 
-  while (rdma_connect(conn.id, NULL)) {
+  do {
+    ret = rdma_connect(conn.id, NULL);
     // 111 -> Connection refused
     if (errno != 111) {
       throw std::runtime_error(
         "Error on rdma_connect: " + std::string(strerror(errno)));
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
+  } while (ret);
 
   return conn;
 }

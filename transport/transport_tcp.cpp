@@ -42,14 +42,16 @@ RuConnectionId lseb_connect(
   reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
   );
 
-  while (connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr))) {
+  int ret = 0;
+  do {
+    ret = connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr));
     // 111 -> Connection refused
     if (errno != 111) {
       throw std::runtime_error(
         "Error on rdma_connect: " + std::string(strerror(errno)));
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
+  } while (ret);
 
   LOG(DEBUG)
     << "Connected to host "
