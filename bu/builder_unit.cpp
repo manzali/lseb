@@ -78,7 +78,6 @@ void BuilderUnit::operator()() {
 
   FrequencyMeter bandwith(1.0);
   Timer t_recv;
-  Timer t_build;
   Timer t_rel;
 
   while (true) {
@@ -87,15 +86,14 @@ void BuilderUnit::operator()() {
     std::map<int, std::vector<iovec> > iov_map = receiver.receive();
     t_recv.pause();
 
+    t_rel.start();
     if (!iov_map.empty()) {
       for (auto const& iov_pair : iov_map) {
         bandwith.add(iovec_length(iov_pair.second));
       }
-
-      t_rel.start();
       receiver.release(iov_map);
-      t_rel.pause();
     }
+    t_rel.pause();
 
     if (bandwith.check()) {
       LOG(INFO)
@@ -107,9 +105,6 @@ void BuilderUnit::operator()() {
         << "Times:\n"
         << "\tt_recv: "
         << t_recv.rate()
-        << "%\n"
-        << "\tt_build: "
-        << t_build.rate()
         << "%\n"
         << "\tt_rel: "
         << t_rel.rate()
