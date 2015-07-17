@@ -184,7 +184,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   return iov;
 }
 
-void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
+void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits) {
 
 }
 

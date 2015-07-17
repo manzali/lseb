@@ -4,10 +4,9 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(
+add_library(
   bu
-  bu.cpp
-  builder.cpp
+  builder_unit.cpp
   receiver.cpp
 )
 

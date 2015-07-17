@@ -18,61 +18,52 @@
 #include "ru/accumulator.h"
 #include "ru/sender.h"
 #include "ru/splitter.h"
+#include "ru/readout_unit.h"
 
 #include "transport/transport.h"
 #include "transport/endpoints.h"
 
-using namespace lseb;
+namespace lseb {
 
-int main(int argc, char* argv[]) {
+ReadoutUnit::ReadoutUnit(Configuration const& configuration, int id)
+    :
+      m_configuration(configuration),
+      m_id(id) {
+}
 
-  assert(argc == 3 && "ru <config_file> <id>");
+void ReadoutUnit::operator()() {
 
-  std::ifstream f(argv[1]);
-  if (!f) {
-    std::cerr << argv[1] << ": No such file or directory\n";
-    return EXIT_FAILURE;
-  }
-  Configuration configuration = read_configuration(f);
-
-  Log::init(
-    "ReadoutUnit",
-    Log::FromString(configuration.get<std::string>("RU.LOG_LEVEL")));
-
-  LOG(INFO) << configuration << std::endl;
-
-  int const generator_frequency = configuration.get<int>("GENERATOR.FREQUENCY");
+  int const generator_frequency = m_configuration.get<int>(
+    "GENERATOR.FREQUENCY");
   assert(generator_frequency > 0);
 
-  int const mean = configuration.get<int>("GENERATOR.MEAN");
+  int const mean = m_configuration.get<int>("GENERATOR.MEAN");
   assert(mean > 0);
 
-  int const stddev = configuration.get<int>("GENERATOR.STD_DEV");
+  int const stddev = m_configuration.get<int>("GENERATOR.STD_DEV");
   assert(stddev > 0);
 
-  int const max_fragment_size = configuration.get<int>(
+  int const max_fragment_size = m_configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
   assert(max_fragment_size > 0);
 
-  int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  int const bulk_size = m_configuration.get<int>("GENERAL.BULKED_EVENTS");
   assert(bulk_size > 0);
 
-  int const tokens = configuration.get<int>("GENERAL.TOKENS");
+  int const tokens = m_configuration.get<int>("GENERAL.TOKENS");
   assert(tokens > 0);
 
-  int const meta_size = configuration.get<int>("RU.META_BUFFER");
+  int const meta_size = m_configuration.get<int>("RU.META_BUFFER");
   assert(meta_size > 0);
 
-  int const data_size = configuration.get<int>("RU.DATA_BUFFER");
+  int const data_size = m_configuration.get<int>("RU.DATA_BUFFER");
   assert(data_size > 0);
 
-  std::chrono::milliseconds ms_timeout(configuration.get<int>("RU.MS_TIMEOUT"));
+  std::chrono::milliseconds ms_timeout(
+    m_configuration.get<int>("RU.MS_TIMEOUT"));
 
   std::vector<Endpoint> const endpoints = get_endpoints(
-    configuration.get_child("ENDPOINTS"));
-
-  size_t const ru_id = std::stol(argv[2]);
-  assert(ru_id < endpoints.size() && "Wrong ru id");
+    m_configuration.get_child("ENDPOINTS"));
 
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
@@ -117,7 +108,7 @@ int main(int argc, char* argv[]) {
     payload_size_generator,
     metadata_buffer,
     data_buffer,
-    ru_id);
+    m_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
   Splitter splitter(connection_ids.size(), data_range);
@@ -184,4 +175,6 @@ int main(int argc, char* argv[]) {
       t_spli.reset();
     }
   }
+}
+
 }

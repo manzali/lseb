@@ -1,4 +1,5 @@
 {
+  "LOG_LEVEL": "INFO",
   "GENERATOR":
   {
     "MEAN": "200",
@@ -13,14 +14,13 @@
   },
   "RU":
   {
-    "LOG_LEVEL": "INFO",
+
     "META_BUFFER": "57521880",
     "DATA_BUFFER": "536870912",
     "MS_TIMEOUT": "1000"
   },
   "BU":
   {
-    "LOG_LEVEL": "INFO",
     "MS_TIMEOUT": "1000"
   },
   "ENDPOINTS":

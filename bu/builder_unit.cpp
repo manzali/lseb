@@ -7,52 +7,40 @@
 #include "common/configuration.h"
 #include "common/log.hpp"
 #include "common/dataformat.h"
+
 #include "transport/endpoints.h"
 #include "transport/transport.h"
 
 #include "bu/receiver.h"
-#include "bu/builder.h"
+#include "bu/builder_unit.h"
 
-using namespace lseb;
+namespace lseb {
 
-int main(int argc, char* argv[]) {
+BuilderUnit::BuilderUnit(Configuration const& configuration, int id)
+    :
+      m_configuration(configuration),
+      m_id(id) {
+}
 
-  assert(argc == 3 && "bu <config_file> <id>");
+void BuilderUnit::operator()() {
 
-  std::ifstream f(argv[1]);
-  if (!f) {
-    std::cerr << argv[1] << ": No such file or directory\n";
-    return EXIT_FAILURE;
-  }
-  Configuration configuration = read_configuration(f);
-
-  Log::init(
-    "BuilderUnit",
-    Log::FromString(configuration.get<std::string>("BU.LOG_LEVEL")));
-
-  LOG(INFO) << configuration << std::endl;
-
-  int const max_fragment_size = configuration.get<int>(
+  int const max_fragment_size = m_configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
   assert(max_fragment_size > 0);
 
-  int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  int const bulk_size = m_configuration.get<int>("GENERAL.BULKED_EVENTS");
   assert(bulk_size > 0);
 
-  int const tokens = configuration.get<int>("GENERAL.TOKENS");
+  int const tokens = m_configuration.get<int>("GENERAL.TOKENS");
   assert(tokens > 0);
 
   std::vector<Endpoint> const endpoints = get_endpoints(
-    configuration.get_child("ENDPOINTS"));
+    m_configuration.get_child("ENDPOINTS"));
 
-  std::chrono::milliseconds ms_timeout(configuration.get<int>("BU.MS_TIMEOUT"));
+  std::chrono::milliseconds ms_timeout(
+    m_configuration.get<int>("BU.MS_TIMEOUT"));
 
   size_t const data_size = max_fragment_size * bulk_size * tokens;
-
-  int const bu_id = std::stol(argv[2]);
-  assert(bu_id >= 0 && "Negative bu id");
-
-  assert(bu_id < endpoints.size() && "Wrong bu id");
 
   // Allocate memory
 
@@ -67,8 +55,8 @@ int main(int argc, char* argv[]) {
   // Connections
 
   BuSocket socket = lseb_listen(
-    endpoints[bu_id].hostname(),
-    endpoints[bu_id].port(),
+    endpoints[m_id].hostname(),
+    endpoints[m_id].port(),
     tokens);
 
   std::vector<BuConnectionId> connection_ids;
@@ -86,7 +74,6 @@ int main(int argc, char* argv[]) {
     });
   LOG(INFO) << "Connections established";
 
-  Builder builder(connection_ids.size());
   Receiver receiver(connection_ids);
 
   FrequencyMeter bandwith(1.0);
@@ -101,21 +88,12 @@ int main(int argc, char* argv[]) {
     t_recv.pause();
 
     if (!iov_map.empty()) {
-      std::vector<std::vector<void*> > wrs_vects(connection_ids.size());
-      for (auto const& iov_vects : iov_map) {
-        for (auto const& iov : iov_vects.second) {
-          wrs_vects[iov_vects.first].push_back(iov.iov_base);
-        }
-        /*
-         t_build.start();
-         builder.add(iov_vects.first, iov_vects.second);
-         t_build.pause();
-         */
-        bandwith.add(iovec_length(iov_vects.second));
+      for (auto const& iov_pair : iov_map) {
+        bandwith.add(iovec_length(iov_pair.second));
       }
 
       t_rel.start();
-      receiver.release(wrs_vects);
+      receiver.release(iov_map);
       t_rel.pause();
     }
 
@@ -141,6 +119,5 @@ int main(int argc, char* argv[]) {
       t_rel.reset();
     }
   }
-
 }
-
+}

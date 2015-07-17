@@ -51,3 +51,20 @@ add_subdirectory(generator)
 add_subdirectory(ru)
 add_subdirectory(bu)
 add_subdirectory(test)
+
+include_directories(
+  ${LSEB_SOURCE_DIR}
+  ${Boost_INCLUDE_DIRS}
+)
+
+add_executable(
+  lseb
+  main.cpp
+)
+
+target_link_libraries(
+  lseb
+  ru
+  bu
+  ${Boost_LIBRARIES}
+)

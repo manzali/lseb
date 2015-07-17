@@ -53,7 +53,7 @@ bool lseb_poll(BuConnectionId const& conn);
 ssize_t lseb_write(RuConnectionId const& conn, std::vector<DataIov> const& data_iovecs);
 std::vector<iovec> lseb_read(BuConnectionId& conn);
 
-void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs);
+void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits);
 
 }
 
