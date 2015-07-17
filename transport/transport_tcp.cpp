@@ -46,11 +46,13 @@ RuConnectionId lseb_connect(
   do {
     ret = connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr));
     // 111 -> Connection refused
-    if (errno != 111) {
-      throw std::runtime_error(
-        "Error on rdma_connect: " + std::string(strerror(errno)));
+    if (ret) {
+      if (errno != 111) {
+        throw std::runtime_error(
+          "Error on rdma_connect: " + std::string(strerror(errno)));
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   } while (ret);
 
   LOG(DEBUG)
