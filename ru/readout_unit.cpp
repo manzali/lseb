@@ -147,6 +147,7 @@ void ReadoutUnit::operator()() {
 
     t_send.start();
     for (auto& iov_pair : iov_map) {
+      assert(iov_pair.second.size() == tokens);
       while (lseb_avail(connection_ids[iov_pair.first]) < iov_pair.second.size()) {
         ;
       }

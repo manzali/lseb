@@ -89,7 +89,17 @@ void BuilderUnit::operator()() {
   while (true) {
 
     t_recv.start();
-    std::map<int, std::vector<iovec> > iov_map = receiver.receive();
+    std::map<int, std::vector<iovec> > iov_map;
+    for (int i = 0; i < connection_ids.size(); ++i) {
+      std::vector<iovec> conn_iov;
+      while (conn_iov.size() < tokens) {
+        std::vector<iovec> temp = lseb_read(connection_ids[i]);
+        conn_iov.insert(std::end(conn_iov), std::begin(temp), std::end(temp));
+      }
+      iov_map.emplace(i, conn_iov);
+    }
+    //std::map<int, std::vector<iovec> > iov_map = receiver.receive();
+
     t_recv.pause();
 
     //m_ready_local_data.pop();
