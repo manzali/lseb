@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   SharedQueue<iovec> free_local_data;
   SharedQueue<iovec> ready_local_data;
 
-  free_local_data.push(iovec{});
+  //free_local_data.push(iovec{});
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
