@@ -21,15 +21,6 @@ std::map<int, std::vector<iovec> > Receiver::receive() {
   return iov_map;
 }
 
-std::vector<iovec> Receiver::receive(int conn, int credits) {
-  std::vector<iovec> iov;
-  while(iov.size() < credits){
-    std::vector<iovec> temp = lseb_read(m_connection_ids[conn]);
-    iov.insert(std::end(iov), std::begin(temp), std::end(temp));
-  }
-  return iov;
-}
-
 void Receiver::release(std::map<int, std::vector<iovec> > const& wrs_map) {
   assert(wrs_map.size() <= m_connection_ids.size());
   for (auto const& wrs_pair : wrs_map) {
