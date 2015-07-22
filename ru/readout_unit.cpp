@@ -146,12 +146,18 @@ void ReadoutUnit::operator()() {
     t_spli.pause();
 
     t_send.start();
-    size_t sent_bytes = sender.send(iov_map, ms_timeout);
+    for (auto& iov_pair : iov_map) {
+      while (lseb_avail(connection_ids[iov_pair.first]) < iov_pair.second.size()) {
+        ;
+      }
+      bandwith.add(lseb_write(connection_ids[iov_pair.first], iov_pair.second));
+    }
+    //size_t sent_bytes = sender.send(iov_map, ms_timeout);
     t_send.pause();
-    bandwith.add(sent_bytes);
+    //bandwith.add(sent_bytes);
 
-    m_free_local_data.pop();
-    m_ready_local_data.push(iovec { });
+    //m_free_local_data.pop();
+    //m_ready_local_data.push(iovec { });
 
     t_accu.start();
     controller.release(
