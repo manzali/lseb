@@ -145,13 +145,12 @@ void ReadoutUnit::operator()() {
     std::map<int, std::vector<DataIov> > iov_map = splitter.split(multievents);
     t_spli.pause();
 
-    //m_free_local_data.pop();
-
     t_send.start();
     size_t sent_bytes = sender.send(iov_map, ms_timeout);
     t_send.pause();
     bandwith.add(sent_bytes);
 
+    m_free_local_data.pop();
     m_ready_local_data.push(iovec { });
 
     t_accu.start();
