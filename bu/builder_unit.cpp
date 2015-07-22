@@ -11,7 +11,7 @@
 #include "transport/endpoints.h"
 #include "transport/transport.h"
 
-//#include "bu/receiver.h"
+#include "bu/receiver.h"
 #include "bu/builder_unit.h"
 
 namespace lseb {
@@ -80,7 +80,7 @@ void BuilderUnit::operator()() {
     });
   LOG(INFO) << "Connections established";
 
-  //Receiver receiver(connection_ids);
+  Receiver receiver(connection_ids);
 
   FrequencyMeter bandwith(1.0);
   Timer t_recv;
@@ -89,33 +89,21 @@ void BuilderUnit::operator()() {
   while (true) {
 
     t_recv.start();
-    std::map<int, std::vector<iovec> > iov_map;
-    for (int i = 0; i < connection_ids.size(); ++i) {
-      std::vector<iovec> conn_iov;
-      while (conn_iov.size() < tokens) {
-        std::vector<iovec> temp = lseb_read(connection_ids[i]);
-        conn_iov.insert(std::end(conn_iov), std::begin(temp), std::end(temp));
-      }
-      assert(conn_iov.size() == tokens);
-      iov_map.emplace(i, conn_iov);
-    }
-    //std::map<int, std::vector<iovec> > iov_map = receiver.receive();
-
+    std::map<int, std::vector<iovec> > iov_map = receiver.receive();
     t_recv.pause();
 
-    m_ready_local_data.pop();
+    //m_ready_local_data.pop();
 
     t_rel.start();
     if (!iov_map.empty()) {
       for (auto const& iov_pair : iov_map) {
         bandwith.add(iovec_length(iov_pair.second));
-        lseb_release(connection_ids[iov_pair.first], iov_pair.second);
       }
-      //receiver.release(iov_map);
+      receiver.release(iov_map);
     }
     t_rel.pause();
 
-    m_free_local_data.push(iovec { });
+    //m_free_local_data.push(iovec { });
 
     if (bandwith.check()) {
       LOG(INFO)
