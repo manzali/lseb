@@ -109,8 +109,9 @@ void BuilderUnit::operator()() {
     if (!iov_map.empty()) {
       for (auto const& iov_pair : iov_map) {
         bandwith.add(iovec_length(iov_pair.second));
+        lseb_release(connection_ids[iov_pair.first], iov_pair.second);
       }
-      receiver.release(iov_map);
+      //receiver.release(iov_map);
     }
     t_rel.pause();
 
