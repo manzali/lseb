@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
   ReadoutUnit ru(configuration, id);
 
   std::thread bu_th(bu);
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   std::thread ru_th(ru);
 
   bu_th.join();
