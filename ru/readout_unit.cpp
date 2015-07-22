@@ -16,7 +16,7 @@
 
 #include "ru/controller.h"
 #include "ru/accumulator.h"
-#include "ru/sender.h"
+//#include "ru/sender.h"
 #include "ru/splitter.h"
 #include "ru/readout_unit.h"
 
@@ -107,7 +107,7 @@ void ReadoutUnit::operator()() {
     lseb_register(conn, data_ptr.get(), data_size);
   }
 
-  Sender sender(connection_ids);
+  //Sender sender(connection_ids);
 
   LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
   Generator generator(
@@ -157,8 +157,8 @@ void ReadoutUnit::operator()() {
     t_send.pause();
     //bandwith.add(sent_bytes);
 
-    //m_free_local_data.pop();
-    //m_ready_local_data.push(iovec { });
+    m_free_local_data.pop();
+    m_ready_local_data.push(iovec { });
 
     t_accu.start();
     controller.release(

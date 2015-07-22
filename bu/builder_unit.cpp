@@ -11,7 +11,7 @@
 #include "transport/endpoints.h"
 #include "transport/transport.h"
 
-#include "bu/receiver.h"
+//#include "bu/receiver.h"
 #include "bu/builder_unit.h"
 
 namespace lseb {
@@ -80,7 +80,7 @@ void BuilderUnit::operator()() {
     });
   LOG(INFO) << "Connections established";
 
-  Receiver receiver(connection_ids);
+  //Receiver receiver(connection_ids);
 
   FrequencyMeter bandwith(1.0);
   Timer t_recv;
@@ -103,7 +103,7 @@ void BuilderUnit::operator()() {
 
     t_recv.pause();
 
-    //m_ready_local_data.pop();
+    m_ready_local_data.pop();
 
     t_rel.start();
     if (!iov_map.empty()) {
@@ -115,7 +115,7 @@ void BuilderUnit::operator()() {
     }
     t_rel.pause();
 
-    //m_free_local_data.push(iovec { });
+    m_free_local_data.push(iovec { });
 
     if (bandwith.check()) {
       LOG(INFO)
