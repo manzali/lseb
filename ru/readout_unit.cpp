@@ -157,8 +157,8 @@ void ReadoutUnit::operator()() {
     t_send.pause();
     //bandwith.add(sent_bytes);
 
-    m_free_local_data.pop();
-    m_ready_local_data.push(iovec { });
+    //m_free_local_data.pop();
+    //m_ready_local_data.push(iovec { });
 
     t_accu.start();
     controller.release(
