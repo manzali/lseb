@@ -13,7 +13,7 @@ class Receiver {
 
  public:
   Receiver(std::vector<BuConnectionId> const& connection_ids);
-  std::vector<iovec> receive(int conn);
+  std::vector<iovec> receive(int conn, int credits);
   std::map<int, std::vector<iovec> > receive();
   void release(std::map<int, std::vector<iovec> > const& wrs_map);
 };

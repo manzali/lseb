@@ -82,8 +82,12 @@ void BuilderUnit::operator()() {
 
   while (true) {
 
+    std::map<int, std::vector<iovec> > iov_map;
     t_recv.start();
-    std::map<int, std::vector<iovec> > iov_map = receiver.receive();
+    for (int i = 0; i < connection_ids.size(); ++i) {
+      std::vector<iovec> iov = receiver.receive(i, tokens);
+      iov_map.emplace(i, iov);
+    }
     t_recv.pause();
 
     t_rel.start();
