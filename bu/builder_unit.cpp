@@ -96,6 +96,7 @@ void BuilderUnit::operator()() {
         std::vector<iovec> temp = lseb_read(connection_ids[i]);
         conn_iov.insert(std::end(conn_iov), std::begin(temp), std::end(temp));
       }
+      assert(conn_iov.size() == tokens);
       iov_map.emplace(i, conn_iov);
     }
     //std::map<int, std::vector<iovec> > iov_map = receiver.receive();
