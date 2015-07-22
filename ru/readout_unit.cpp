@@ -120,40 +120,50 @@ void ReadoutUnit::operator()() {
   Timer t_send;
   Timer t_spli;
 
+  unsigned int const needed_events = bulk_size * tokens * endpoints.size();
+  unsigned int const needed_multievents = tokens * endpoints.size();
+
   while (true) {
     t_accu.start();
-    accumulator.add(controller.read());
-    MultiEvents multievents = accumulator.get();
+    unsigned int ready_events = 0;
+    do {
+      ready_events = accumulator.add(controller.read());
+    } while (needed_events >= ready_events);
+    MultiEvents multievents = accumulator.get_multievents(needed_multievents);
     t_accu.pause();
 
-    if (multievents.size()) {
+    assert(multievents.size() == needed_multievents);
 
-      t_spli.start();
-      std::map<int, std::vector<DataIov> > iov_map = splitter.split(
-        multievents);
-      t_spli.pause();
+    t_spli.start();
+    std::map<int, std::vector<DataIov> > iov_map = splitter.split(multievents);
+    t_spli.pause();
 
-      t_send.start();
-      size_t sent_bytes = sender.send(iov_map, ms_timeout);
-      t_send.pause();
-      bandwith.add(sent_bytes);
+    t_send.start();
+    size_t sent_bytes = sender.send(iov_map, ms_timeout);
+    t_send.pause();
+    bandwith.add(sent_bytes);
 
-      t_accu.start();
-      controller.release(
-        MetaDataRange(
-          std::begin(multievents.front().first),
-          std::end(multievents.back().first)));
-      t_accu.pause();
+    t_accu.start();
+    controller.release(
+      MetaDataRange(
+        std::begin(multievents.front().first),
+        std::end(multievents.back().first)));
+    t_accu.pause();
 
-      frequency.add(multievents.size() * bulk_size);
-    }
+    frequency.add(multievents.size() * bulk_size);
 
     if (frequency.check()) {
-      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num << " MHz";
+      LOG(INFO)
+        << "Frequency: "
+        << frequency.frequency() / std::mega::num
+        << " MHz";
     }
 
     if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"
