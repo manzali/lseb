@@ -7,6 +7,7 @@
 
 #include "common/log.hpp"
 #include "common/configuration.h"
+#include "common/shared_queue.h"
 
 #include "transport/endpoints.h"
 
@@ -34,8 +35,13 @@ int main(int argc, char* argv[]) {
   int endpoints = get_endpoints(configuration.get_child("ENDPOINTS")).size();
   assert(id < endpoints && "Wrong id");
 
-  BuilderUnit bu(configuration, id);
-  ReadoutUnit ru(configuration, id);
+  SharedQueue<iovec> free_local_data;
+  SharedQueue<iovec> ready_local_data;
+
+  free_local_data.push(iovec{});
+
+  BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
+  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
 
   std::thread bu_th(bu);
   std::this_thread::sleep_for(std::chrono::seconds(5));

@@ -16,9 +16,15 @@
 
 namespace lseb {
 
-BuilderUnit::BuilderUnit(Configuration const& configuration, int id)
+BuilderUnit::BuilderUnit(
+  Configuration const& configuration,
+  int id,
+  SharedQueue<iovec>& free_local_data,
+  SharedQueue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
+      m_free_local_data(free_local_data),
+      m_ready_local_data(ready_local_data),
       m_id(id) {
 }
 
@@ -82,6 +88,8 @@ void BuilderUnit::operator()() {
 
   while (true) {
 
+    m_ready_local_data.pop();
+
     t_recv.start();
     std::map<int, std::vector<iovec> > iov_map = receiver.receive();
     t_recv.pause();
@@ -94,6 +102,8 @@ void BuilderUnit::operator()() {
       receiver.release(iov_map);
     }
     t_rel.pause();
+
+    m_free_local_data.push(iovec { });
 
     if (bandwith.check()) {
       LOG(INFO)

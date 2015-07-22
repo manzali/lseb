@@ -25,9 +25,15 @@
 
 namespace lseb {
 
-ReadoutUnit::ReadoutUnit(Configuration const& configuration, int id)
+ReadoutUnit::ReadoutUnit(
+  Configuration const& configuration,
+  int id,
+  SharedQueue<iovec>& free_local_data,
+  SharedQueue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
+      m_free_local_data(free_local_data),
+      m_ready_local_data(ready_local_data),
       m_id(id) {
 }
 
@@ -124,6 +130,7 @@ void ReadoutUnit::operator()() {
   unsigned int const needed_multievents = tokens * endpoints.size();
 
   while (true) {
+
     t_accu.start();
     unsigned int ready_events = 0;
     do {
@@ -138,10 +145,14 @@ void ReadoutUnit::operator()() {
     std::map<int, std::vector<DataIov> > iov_map = splitter.split(multievents);
     t_spli.pause();
 
+    m_free_local_data.pop();
+
     t_send.start();
     size_t sent_bytes = sender.send(iov_map, ms_timeout);
     t_send.pause();
     bandwith.add(sent_bytes);
+
+    m_ready_local_data.push(iovec { });
 
     t_accu.start();
     controller.release(
