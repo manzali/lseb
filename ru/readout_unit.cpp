@@ -27,8 +27,8 @@ namespace lseb {
 ReadoutUnit::ReadoutUnit(
   Configuration const& configuration,
   int id,
-  SharedQueue<iovec>& free_local_data,
-  SharedQueue<iovec>& ready_local_data)
+  SharedQueue<std::vector<iovec> >& free_local_data,
+  SharedQueue<std::vector<iovec> >& ready_local_data)
     :
       m_configuration(configuration),
       m_free_local_data(free_local_data),
@@ -152,16 +152,23 @@ void ReadoutUnit::operator()() {
         }
         bandwith.add(lseb_write(it->second, iov_pair.second));
       } else {
+        std::vector<iovec> vect = m_free_local_data.pop();
+        assert(vect.size() == iov_pair.second.size());
+        auto vect_it = std::begin(vect);
         for (auto& data_iov : iov_pair.second) {
-          iovec i = m_free_local_data.pop();
+          iovec& i = *vect_it;
+          ++vect_it;
           i.iov_len = 0;
           for (auto& iov : data_iov) {
-            memcpy(static_cast<unsigned char*>(i.iov_base) + i.iov_len, iov.iov_base, iov.iov_len);
+            memcpy(
+              static_cast<unsigned char*>(i.iov_base) + i.iov_len,
+              iov.iov_base,
+              iov.iov_len);
             i.iov_len += iov.iov_len;
           }
-          m_ready_local_data.push(i);
           bandwith.add(i.iov_len);
         }
+        m_ready_local_data.push(vect);
       }
     }
     t_send.pause();

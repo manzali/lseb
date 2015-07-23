@@ -44,14 +44,16 @@ int main(int argc, char* argv[]) {
   assert(tokens > 0);
   size_t const multievent_size = max_fragment_size * bulk_size;
 
-  SharedQueue<iovec> free_local_data;
-  SharedQueue<iovec> ready_local_data;
+  SharedQueue<std::vector<iovec> > free_local_data;
+  SharedQueue<std::vector<iovec> > ready_local_data;
 
   std::unique_ptr<unsigned char[]> const local_data_ptr(
     new unsigned char[multievent_size * tokens]);
+  std::vector<iovec> iov;
   for (int i = 0; i < tokens; ++i) {
-    free_local_data.push( { local_data_ptr.get() + i * multievent_size, 0 });
+    iov.push_back( { local_data_ptr.get() + i * multievent_size, 0 });
   }
+  free_local_data.push(iov);
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
