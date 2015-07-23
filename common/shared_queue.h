@@ -33,6 +33,11 @@ class SharedQueue {
     m_cond.notify_one();
   }
 
+  size_t size() {
+    std::unique_lock<std::mutex> mlock(m_mutex);
+    return m_queue.size();
+  }
+
   SharedQueue() = default;
   SharedQueue(const SharedQueue&) = delete;
   SharedQueue& operator=(const SharedQueue&) = delete;
