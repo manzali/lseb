@@ -154,7 +154,15 @@ void ReadoutUnit::operator()() {
         while (!lseb_avail(it->second)) {
           ;
         }
-        bandwith.add(lseb_write(it->second, iov_pair.second));
+        // time
+        size_t bytes = lseb_write(it->second, iov_pair.second);
+        // time
+        LOG(DEBUG)
+          << "Written "
+          << iov_pair.second.size()
+          << " wr to conn "
+          << it->first;
+        bandwith.add(bytes);
       } else {
         iovec i = m_free_local_data.pop();
         auto& data_iov = iov_pair.second.front();

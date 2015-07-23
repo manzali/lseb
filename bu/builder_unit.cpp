@@ -90,7 +90,14 @@ void BuilderUnit::operator()() {
     iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
     for (auto& conn : connection_ids) {
       if (lseb_poll(conn.second)) {
+        // time
         std::vector<iovec> conn_iov = lseb_read(conn.second);
+        // time
+        LOG(DEBUG)
+          << "Read "
+          << conn_iov.size()
+          << " wr from conn "
+          << conn.first;
         if (conn_iov.size()) {
           iov_map[conn.first] = conn_iov;
         }
@@ -105,6 +112,11 @@ void BuilderUnit::operator()() {
         auto conn_it = connection_ids.find(iov_pair.first);
         assert(conn_it != std::end(connection_ids));
         lseb_release(conn_it->second, iov_pair.second);
+        LOG(DEBUG)
+          << "Released "
+          << iov_pair.second.size()
+          << " wr for conn "
+          << conn_it->first;
       } else {
         for (auto& i : iov_pair.second) {
           m_free_local_data.push(i);
