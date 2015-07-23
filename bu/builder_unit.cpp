@@ -87,7 +87,6 @@ void BuilderUnit::operator()() {
 
     t_recv.start();
     std::map<int, std::vector<iovec> > iov_map;
-    iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
     for (auto& conn : connection_ids) {
       if (lseb_poll(conn.second)) {
         // time
@@ -103,6 +102,7 @@ void BuilderUnit::operator()() {
         }
       }
     }
+    iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
     t_recv.pause();
 
     t_rel.start();
