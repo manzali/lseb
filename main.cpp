@@ -35,10 +35,23 @@ int main(int argc, char* argv[]) {
   int endpoints = get_endpoints(configuration.get_child("ENDPOINTS")).size();
   assert(id < endpoints && "Wrong id");
 
+  int const max_fragment_size = configuration.get<int>(
+    "GENERAL.MAX_FRAGMENT_SIZE");
+  assert(max_fragment_size > 0);
+  int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
+  assert(bulk_size > 0);
+  int const tokens = configuration.get<int>("GENERAL.TOKENS");
+  assert(tokens > 0);
+  size_t const multievent_size = max_fragment_size * bulk_size;
+
   SharedQueue<iovec> free_local_data;
   SharedQueue<iovec> ready_local_data;
 
-  free_local_data.push(iovec{});
+  std::unique_ptr<unsigned char[]> const local_data_ptr(
+    new unsigned char[multievent_size * tokens]);
+  for (int i = 0; i < tokens; ++i) {
+    free_local_data.push( { local_data_ptr.get() + i * multievent_size, 0 });
+  }
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);

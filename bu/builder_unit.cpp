@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <algorithm>
+#include <map>
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
@@ -11,7 +12,6 @@
 #include "transport/endpoints.h"
 #include "transport/transport.h"
 
-#include "bu/receiver.h"
 #include "bu/builder_unit.h"
 
 namespace lseb {
@@ -51,11 +51,11 @@ void BuilderUnit::operator()() {
   // Allocate memory
 
   std::unique_ptr<unsigned char[]> const data_ptr(
-    new unsigned char[data_size * endpoints.size()]);
+    new unsigned char[data_size * (endpoints.size() - 1)]);
 
   LOG(INFO)
     << "Allocated "
-    << data_size * endpoints.size()
+    << data_size * (endpoints.size() - 1)
     << " bytes of memory";
 
   // Connections
@@ -65,22 +65,19 @@ void BuilderUnit::operator()() {
     endpoints[m_id].port(),
     tokens);
 
-  std::vector<BuConnectionId> connection_ids;
-
   LOG(INFO) << "Waiting for connections...";
-  int endpoint_count = 0;
-  std::transform(
-    std::begin(endpoints),
-    std::end(endpoints),
-    std::back_inserter(connection_ids),
-    [&](Endpoint const& endpoint) {
-      BuConnectionId conn = lseb_accept(socket);
-      lseb_register(conn, data_ptr.get() + endpoint_count++ * data_size,data_size);
-      return conn;
-    });
+  std::map<int, BuConnectionId> connection_ids;
+  int count = 0;
+  for (int i = 0; i < endpoints.size(); ++i) {
+    if (i != m_id) {
+      auto p = connection_ids.emplace(i, lseb_accept(socket));
+      lseb_register(
+        p.first->second,
+        data_ptr.get() + count++ * data_size,
+        data_size);
+    }
+  }
   LOG(INFO) << "Connections established";
-
-  Receiver receiver(connection_ids);
 
   FrequencyMeter bandwith(1.0);
   Timer t_recv;
@@ -89,21 +86,51 @@ void BuilderUnit::operator()() {
   while (true) {
 
     t_recv.start();
-    std::map<int, std::vector<iovec> > iov_map = receiver.receive();
+    std::map<int, std::vector<iovec> > iov_map;
+    auto conn_it = std::begin(connection_ids);
+    while (m_ready_local_data.size() < tokens) {
+      if (conn_it != std::end(connection_ids)) {
+        if (lseb_poll(conn_it->second)) {
+          std::vector<iovec> conn_iov = lseb_read(conn_it->second);
+          if (conn_iov.size()) {
+            auto map_it = iov_map.find(conn_it->first);
+            if (map_it == std::end(iov_map)) {
+              iov_map.emplace(conn_it->first, conn_iov);
+            } else {
+              map_it->second.insert(
+                std::end(map_it->second),
+                std::begin(conn_iov),
+                std::end(conn_iov));
+            }
+          }
+        }
+        ++conn_it;
+      } else {
+        conn_it = std::begin(connection_ids);
+      }
+    }
+    auto p = iov_map.emplace(m_id, std::vector<iovec>());
+    for (int i = 0; i < tokens; ++i) {
+      p.first->second.push_back(m_ready_local_data.pop());
+    }
     t_recv.pause();
 
-    //m_ready_local_data.pop();
-
     t_rel.start();
-    if (!iov_map.empty()) {
-      for (auto const& iov_pair : iov_map) {
-        bandwith.add(iovec_length(iov_pair.second));
+    for (auto const& iov_pair : iov_map) {
+      bandwith.add(iovec_length(iov_pair.second));
+      if (iov_pair.first != m_id) {
+        auto conn_it = connection_ids.find(iov_pair.first);
+        assert(conn_it != std::end(connection_ids));
+        lseb_release(conn_it->second, iov_pair.second);
+      } else {
+        for (auto& i : iov_pair.second) {
+          m_free_local_data.push(i);
+        }
       }
-      receiver.release(iov_map);
     }
     t_rel.pause();
 
-    //m_free_local_data.push(iovec { });
+    //
 
     if (bandwith.check()) {
       LOG(INFO)

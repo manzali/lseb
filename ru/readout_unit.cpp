@@ -16,7 +16,6 @@
 
 #include "ru/controller.h"
 #include "ru/accumulator.h"
-//#include "ru/sender.h"
 #include "ru/splitter.h"
 #include "ru/readout_unit.h"
 
@@ -75,14 +74,14 @@ void ReadoutUnit::operator()() {
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
   LOG(INFO) << "Waiting for connections...";
-  std::vector<RuConnectionId> connection_ids;
-  std::transform(
-    std::begin(endpoints),
-    std::end(endpoints),
-    std::back_inserter(connection_ids),
-    [tokens](Endpoint const& endpoint) {
-      return lseb_connect(endpoint.hostname(), endpoint.port(), tokens);
-    });
+  std::map<int, RuConnectionId> connection_ids;
+  for (int i = 0; i < endpoints.size(); ++i) {
+    if (i != m_id) {
+      connection_ids.emplace(
+        i,
+        lseb_connect(endpoints[i].hostname(), endpoints[i].port(), tokens));
+    }
+  }
   LOG(INFO) << "Connections established";
 
   // Allocate memory
@@ -104,10 +103,8 @@ void ReadoutUnit::operator()() {
   Accumulator accumulator(metadata_range, data_range, bulk_size);
 
   for (auto& conn : connection_ids) {
-    lseb_register(conn, data_ptr.get(), data_size);
+    lseb_register(conn.second, data_ptr.get(), data_size);
   }
-
-  //Sender sender(connection_ids);
 
   LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
   Generator generator(
@@ -117,7 +114,7 @@ void ReadoutUnit::operator()() {
     m_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
-  Splitter splitter(m_id, connection_ids.size(), data_range);
+  Splitter splitter(m_id, endpoints.size(), data_range);
 
   FrequencyMeter frequency(1.0);
   FrequencyMeter bandwith(1.0);
@@ -148,17 +145,26 @@ void ReadoutUnit::operator()() {
     t_send.start();
     for (auto& iov_pair : iov_map) {
       assert(iov_pair.second.size() == tokens);
-      while (lseb_avail(connection_ids[iov_pair.first]) < iov_pair.second.size()) {
-        ;
+      if (iov_pair.first != m_id) {
+        auto it = connection_ids.find(iov_pair.first);
+        while (lseb_avail(it->second) < iov_pair.second.size()) {
+          ;
+        }
+        bandwith.add(lseb_write(it->second, iov_pair.second));
+      } else {
+        for (auto& data_iov : iov_pair.second) {
+          iovec i = m_free_local_data.pop();
+          i.iov_len = 0;
+          for (auto& iov : data_iov) {
+            memcpy(static_cast<unsigned char*>(i.iov_base) + i.iov_len, iov.iov_base, iov.iov_len);
+            i.iov_len += iov.iov_len;
+          }
+          m_ready_local_data.push(i);
+          bandwith.add(i.iov_len);
+        }
       }
-      bandwith.add(lseb_write(connection_ids[iov_pair.first], iov_pair.second));
     }
-    //size_t sent_bytes = sender.send(iov_map, ms_timeout);
     t_send.pause();
-    //bandwith.add(sent_bytes);
-
-    //m_free_local_data.pop();
-    //m_ready_local_data.push(iovec { });
 
     t_accu.start();
     controller.release(
