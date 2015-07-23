@@ -27,8 +27,8 @@ namespace lseb {
 ReadoutUnit::ReadoutUnit(
   Configuration const& configuration,
   int id,
-  SharedQueue<std::vector<iovec> >& free_local_data,
-  SharedQueue<std::vector<iovec> >& ready_local_data)
+  SharedQueue<iovec>& free_local_data,
+  SharedQueue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
       m_free_local_data(free_local_data),
@@ -122,9 +122,13 @@ void ReadoutUnit::operator()() {
   Timer t_accu;
   Timer t_send;
   Timer t_spli;
+  /*
+   unsigned int const needed_events = bulk_size * tokens * endpoints.size();
+   unsigned int const needed_multievents = tokens * endpoints.size();
+   */
 
-  unsigned int const needed_events = bulk_size * tokens * endpoints.size();
-  unsigned int const needed_multievents = tokens * endpoints.size();
+  unsigned int const needed_events = bulk_size * endpoints.size();
+  unsigned int const needed_multievents = endpoints.size();
 
   while (true) {
 
@@ -144,31 +148,26 @@ void ReadoutUnit::operator()() {
 
     t_send.start();
     for (auto& iov_pair : iov_map) {
-      assert(iov_pair.second.size() == tokens);
+      assert(iov_pair.second.size() == 1);
       if (iov_pair.first != m_id) {
         auto it = connection_ids.find(iov_pair.first);
-        while (lseb_avail(it->second) < iov_pair.second.size()) {
+        while (!lseb_avail(it->second)) {
           ;
         }
         bandwith.add(lseb_write(it->second, iov_pair.second));
       } else {
-        std::vector<iovec> vect = m_free_local_data.pop();
-        assert(vect.size() == iov_pair.second.size());
-        auto vect_it = std::begin(vect);
-        for (auto& data_iov : iov_pair.second) {
-          iovec& i = *vect_it;
-          ++vect_it;
-          i.iov_len = 0;
-          for (auto& iov : data_iov) {
-            memcpy(
-              static_cast<unsigned char*>(i.iov_base) + i.iov_len,
-              iov.iov_base,
-              iov.iov_len);
-            i.iov_len += iov.iov_len;
-          }
-          bandwith.add(i.iov_len);
+        iovec i = m_free_local_data.pop();
+        auto& data_iov = iov_pair.second.front();
+        i.iov_len = 0;
+        for (auto& iov : data_iov) {
+          memcpy(
+            static_cast<unsigned char*>(i.iov_base) + i.iov_len,
+            iov.iov_base,
+            iov.iov_len);
+          i.iov_len += iov.iov_len;
         }
-        m_ready_local_data.push(vect);
+        bandwith.add(i.iov_len);
+        m_ready_local_data.push(i);
       }
     }
     t_send.pause();

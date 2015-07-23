@@ -19,8 +19,8 @@ namespace lseb {
 BuilderUnit::BuilderUnit(
   Configuration const& configuration,
   int id,
-  SharedQueue<std::vector<iovec> >& free_local_data,
-  SharedQueue<std::vector<iovec> >& ready_local_data)
+  SharedQueue<iovec>& free_local_data,
+  SharedQueue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
       m_free_local_data(free_local_data),
@@ -87,29 +87,15 @@ void BuilderUnit::operator()() {
 
     t_recv.start();
     std::map<int, std::vector<iovec> > iov_map;
-    auto conn_it = std::begin(connection_ids);
-    while (!m_ready_local_data.size()) {
-      if (conn_it != std::end(connection_ids)) {
-        if (lseb_poll(conn_it->second)) {
-          std::vector<iovec> conn_iov = lseb_read(conn_it->second);
-          if (conn_iov.size()) {
-            auto map_it = iov_map.find(conn_it->first);
-            if (map_it == std::end(iov_map)) {
-              iov_map.emplace(conn_it->first, conn_iov);
-            } else {
-              map_it->second.insert(
-                std::end(map_it->second),
-                std::begin(conn_iov),
-                std::end(conn_iov));
-            }
-          }
+    iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
+    for (auto& conn : connection_ids) {
+      if (lseb_poll(conn.second)) {
+        std::vector<iovec> conn_iov = lseb_read(conn.second);
+        if (conn_iov.size()) {
+          iov_map[conn.first] = conn_iov;
         }
-        ++conn_it;
-      } else {
-        conn_it = std::begin(connection_ids);
       }
     }
-    iov_map[m_id] = m_ready_local_data.pop();
     t_recv.pause();
 
     t_rel.start();
@@ -120,7 +106,9 @@ void BuilderUnit::operator()() {
         assert(conn_it != std::end(connection_ids));
         lseb_release(conn_it->second, iov_pair.second);
       } else {
-        m_free_local_data.push(iov_pair.second);
+        for (auto& i : iov_pair.second) {
+          m_free_local_data.push(i);
+        }
       }
     }
     t_rel.pause();
