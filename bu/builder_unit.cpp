@@ -88,20 +88,18 @@ void BuilderUnit::operator()() {
     t_recv.start();
     std::map<int, std::vector<iovec> > iov_map;
     for (auto& conn : connection_ids) {
-      if (lseb_poll(conn.second)) {
-        // time
-        std::vector<iovec> conn_iov = lseb_read(conn.second);
-        // time
-        LOG(DEBUG)
-          << "Read "
-          << conn_iov.size()
-          << " wr from conn "
-          << conn.first;
-        if (conn_iov.size()) {
-          iov_map[conn.first] = conn_iov;
-        }
+      std::vector<iovec> conn_iov;
+      while (conn_iov.size()) {
+        conn_iov = lseb_read(conn.second);
       }
+      LOG(DEBUG)
+        << "Read "
+        << conn_iov.size()
+        << " wr from conn "
+        << conn.first;
+      iov_map[conn.first] = conn_iov;
     }
+
     iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
     t_recv.pause();
 
