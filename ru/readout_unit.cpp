@@ -157,7 +157,7 @@ void ReadoutUnit::operator()() {
       auto map_it = iov_map.find(i);
       assert(map_it != std::end(iov_map));
       auto& iov_pair = *map_it;
-      assert(iov_pair.second.size() == 1);
+      assert(iov_pair.second.size() == mul);
       auto it = connection_ids.find(iov_pair.first);
 
       while (lseb_avail(it->second) < mul) {
