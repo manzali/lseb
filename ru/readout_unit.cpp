@@ -130,6 +130,9 @@ void ReadoutUnit::operator()() {
   unsigned int const needed_events = bulk_size * endpoints.size();
   unsigned int const needed_multievents = endpoints.size();
 
+  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
+  int wrap_id = endpoints.size() - 1;
+
   while (true) {
 
     t_accu.start();
@@ -147,37 +150,42 @@ void ReadoutUnit::operator()() {
     t_spli.pause();
 
     t_send.start();
-    for (auto& iov_pair : iov_map) {
+
+    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
+      auto map_it = iov_map.find(i);
+      assert(map_it != std::end(iov_map));
+      auto& iov_pair = *map_it;
       assert(iov_pair.second.size() == 1);
-      if (iov_pair.first != m_id) {
-        auto it = connection_ids.find(iov_pair.first);
-        while (!lseb_avail(it->second)) {
-          ;
-        }
-        // time
-        size_t bytes = lseb_write(it->second, iov_pair.second);
-        // time
-        LOG(DEBUG)
-          << "Written "
-          << iov_pair.second.size()
-          << " wr to conn "
-          << it->first;
-        bandwith.add(bytes);
-      } else {
-        iovec i = m_free_local_data.pop();
-        auto& data_iov = iov_pair.second.front();
-        i.iov_len = 0;
-        for (auto& iov : data_iov) {
-          memcpy(
-            static_cast<unsigned char*>(i.iov_base) + i.iov_len,
-            iov.iov_base,
-            iov.iov_len);
-          i.iov_len += iov.iov_len;
-        }
-        bandwith.add(i.iov_len);
-        m_ready_local_data.push(i);
+      auto it = connection_ids.find(iov_pair.first);
+      while (!lseb_avail(it->second)) {
+        ;
       }
+      // time
+      size_t bytes = lseb_write(it->second, iov_pair.second);
+      // time
+      LOG(DEBUG)
+        << "Written "
+        << iov_pair.second.size()
+        << " wr to conn "
+        << it->first;
+      bandwith.add(bytes);
     }
+    iovec i = m_free_local_data.pop();
+    auto it = iov_map.find(m_id);
+    assert(it != std::end(iov_map));
+    auto& iov_pair = *it;
+    assert(iov_pair.second.size() == 1);
+    auto& data_iov = iov_pair.second.front();
+    i.iov_len = 0;
+    for (auto& iov : data_iov) {
+      memcpy(
+        static_cast<unsigned char*>(i.iov_base) + i.iov_len,
+        iov.iov_base,
+        iov.iov_len);
+      i.iov_len += iov.iov_len;
+    }
+    bandwith.add(i.iov_len);
+    m_ready_local_data.push(i);
     t_send.pause();
 
     t_accu.start();
@@ -190,17 +198,11 @@ void ReadoutUnit::operator()() {
     frequency.add(multievents.size() * bulk_size);
 
     if (frequency.check()) {
-      LOG(INFO)
-        << "Frequency: "
-        << frequency.frequency() / std::mega::num
-        << " MHz";
+      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num << " MHz";
     }
 
     if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
+      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"
