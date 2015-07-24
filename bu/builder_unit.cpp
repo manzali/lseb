@@ -105,12 +105,13 @@ void BuilderUnit::operator()() {
       LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
       iov_map[i] = conn_iov;
     }
-
+/*
     std::vector<iovec> conn_iov;
     for(int i = 0; i < mul; ++i){
       conn_iov.push_back(m_ready_local_data.pop());
     }
     iov_map[m_id] = conn_iov;
+*/
     t_recv.pause();
 
     t_rel.start();
@@ -127,7 +128,7 @@ void BuilderUnit::operator()() {
           << conn_it->first;
       } else {
         for (auto& i : iov_pair.second) {
-          m_free_local_data.push(i);
+          //m_free_local_data.push(i);
         }
       }
     }
