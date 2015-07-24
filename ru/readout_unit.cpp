@@ -127,8 +127,10 @@ void ReadoutUnit::operator()() {
    unsigned int const needed_multievents = tokens * endpoints.size();
    */
 
-  unsigned int const needed_events = bulk_size * endpoints.size();
-  unsigned int const needed_multievents = endpoints.size();
+  int mul = 2;
+
+  unsigned int const needed_events = mul * bulk_size * endpoints.size();
+  unsigned int const needed_multievents = mul * endpoints.size();
 
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
@@ -157,7 +159,8 @@ void ReadoutUnit::operator()() {
       auto& iov_pair = *map_it;
       assert(iov_pair.second.size() == 1);
       auto it = connection_ids.find(iov_pair.first);
-      while (!lseb_avail(it->second)) {
+
+      while (lseb_avail(it->second) < mul) {
         ;
       }
       // time
@@ -170,22 +173,25 @@ void ReadoutUnit::operator()() {
         << it->first;
       bandwith.add(bytes);
     }
-    iovec i = m_free_local_data.pop();
+
     auto it = iov_map.find(m_id);
     assert(it != std::end(iov_map));
     auto& iov_pair = *it;
-    assert(iov_pair.second.size() == 1);
-    auto& data_iov = iov_pair.second.front();
-    i.iov_len = 0;
-    for (auto& iov : data_iov) {
-      memcpy(
-        static_cast<unsigned char*>(i.iov_base) + i.iov_len,
-        iov.iov_base,
-        iov.iov_len);
-      i.iov_len += iov.iov_len;
+    assert(iov_pair.second.size() == mul);
+
+    for(auto& data_iov : iov_pair.second){
+      iovec i = m_free_local_data.pop();
+      i.iov_len = 0;
+      for (auto& iov : data_iov) {
+        memcpy(
+          static_cast<unsigned char*>(i.iov_base) + i.iov_len,
+          iov.iov_base,
+          iov.iov_len);
+        i.iov_len += iov.iov_len;
+      }
+      bandwith.add(i.iov_len);
+      m_ready_local_data.push(i);
     }
-    bandwith.add(i.iov_len);
-    m_ready_local_data.push(i);
     t_send.pause();
 
     t_accu.start();

@@ -86,6 +86,8 @@ void BuilderUnit::operator()() {
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
 
+  int mul = 2;
+
   while (true) {
 
     t_recv.start();
@@ -94,14 +96,21 @@ void BuilderUnit::operator()() {
       std::vector<iovec> conn_iov;
       auto conn = connection_ids.find(i);
       assert(conn != std::end(connection_ids));
-      while (conn_iov.empty()) {
-        conn_iov = lseb_read(conn->second);
+      while (conn_iov.size() < mul) {
+        std::vector<iovec> temp = lseb_read(conn->second);
+        if(temp.size()){
+          conn_iov.insert(std::end(conn_iov), std::begin(temp), std::end(temp));
+        }
       }
       LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
       iov_map[i] = conn_iov;
     }
 
-    iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
+    std::vector<iovec> conn_iov;
+    for(int i = 0; i < mul; ++i){
+      conn_iov.push_back(m_ready_local_data.pop());
+    }
+    iov_map[m_id] = conn_iov;
     t_recv.pause();
 
     t_rel.start();
