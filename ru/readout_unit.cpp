@@ -127,7 +127,8 @@ void ReadoutUnit::operator()() {
    unsigned int const needed_multievents = tokens * endpoints.size();
    */
 
-  int mul = 4;
+  int const mul = m_configuration.get<int>("GENERAL.MUL");
+  assert(mul > 0);
 
   unsigned int const needed_events = mul * bulk_size * endpoints.size();
   unsigned int const needed_multievents = mul * endpoints.size();

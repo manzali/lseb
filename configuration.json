@@ -10,7 +10,8 @@
   {
     "MAX_FRAGMENT_SIZE": "250",
     "BULKED_EVENTS": "600",
-    "TOKENS": "10"
+    "TOKENS": "10",
+	"MUL": "2"
   },
   "RU":
   {
