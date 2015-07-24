@@ -89,7 +89,7 @@ void BuilderUnit::operator()() {
     std::map<int, std::vector<iovec> > iov_map;
     for (auto& conn : connection_ids) {
       std::vector<iovec> conn_iov;
-      while (conn_iov.size()) {
+      while (conn_iov.empty()) {
         conn_iov = lseb_read(conn.second);
       }
       LOG(DEBUG)
