@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<unsigned char[]> const local_data_ptr(
     new unsigned char[multievent_size * tokens]);
   for (int i = 0; i < tokens; ++i) {
-    //free_local_data.push( { local_data_ptr.get() + i * multievent_size, 0 });
+    free_local_data.push( { local_data_ptr.get() + i * multievent_size, 0 });
   }
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);

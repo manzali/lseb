@@ -178,7 +178,7 @@ void ReadoutUnit::operator()() {
     assert(it != std::end(iov_map));
     auto& iov_pair = *it;
     assert(iov_pair.second.size() == mul);
-/*
+
     for(auto& data_iov : iov_pair.second){
       iovec i = m_free_local_data.pop();
       i.iov_len = 0;
@@ -192,7 +192,6 @@ void ReadoutUnit::operator()() {
       bandwith.add(i.iov_len);
       m_ready_local_data.push(i);
     }
-    */
     t_send.pause();
 
     t_accu.start();
