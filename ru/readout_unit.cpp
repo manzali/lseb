@@ -127,7 +127,7 @@ void ReadoutUnit::operator()() {
    unsigned int const needed_multievents = tokens * endpoints.size();
    */
 
-  int mul = 2;
+  int mul = 4;
 
   unsigned int const needed_events = mul * bulk_size * endpoints.size();
   unsigned int const needed_multievents = mul * endpoints.size();

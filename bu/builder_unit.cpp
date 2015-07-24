@@ -86,7 +86,7 @@ void BuilderUnit::operator()() {
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
 
-  int mul = 2;
+  int mul = 4;
 
   while (true) {
 
