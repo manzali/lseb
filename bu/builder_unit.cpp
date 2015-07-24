@@ -83,21 +83,22 @@ void BuilderUnit::operator()() {
   Timer t_recv;
   Timer t_rel;
 
+  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
+  int wrap_id = endpoints.size() - 1;
+
   while (true) {
 
     t_recv.start();
     std::map<int, std::vector<iovec> > iov_map;
-    for (auto& conn : connection_ids) {
+    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
       std::vector<iovec> conn_iov;
+      auto conn = connection_ids.find(i);
+      assert(conn != std::end(connection_ids));
       while (conn_iov.empty()) {
-        conn_iov = lseb_read(conn.second);
+        conn_iov = lseb_read(conn->second);
       }
-      LOG(DEBUG)
-        << "Read "
-        << conn_iov.size()
-        << " wr from conn "
-        << conn.first;
-      iov_map[conn.first] = conn_iov;
+      LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
+      iov_map[i] = conn_iov;
     }
 
     iov_map[m_id] = std::vector<iovec>(1, m_ready_local_data.pop());
