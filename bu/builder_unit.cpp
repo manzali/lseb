@@ -99,17 +99,31 @@ void BuilderUnit::operator()() {
       assert(conn != std::end(connection_ids));
       while (conn_iov.size() < mul) {
         std::vector<iovec> temp = lseb_read(conn->second);
-        if(temp.size()){
+        if (temp.size()) {
           conn_iov.insert(std::end(conn_iov), std::begin(temp), std::end(temp));
+          LOG(DEBUG)
+            << "Read "
+            << temp.size()
+            << " wr from conn "
+            << i
+            << " ("
+            << mul - 1 - conn_iov.size()
+            << " wrs remaining)";
         }
       }
-      LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
+      //LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
       iov_map[i] = conn_iov;
     }
 
     std::vector<iovec> conn_iov;
-    for(int i = 0; i < mul; ++i){
+    for (int i = 0; i < mul; ++i) {
       conn_iov.push_back(m_ready_local_data.pop());
+      LOG(DEBUG)
+        << "Read 1 wr from conn "
+        << m_id
+        << " ("
+        << mul - 1 - i
+        << " wrs remaining)";
     }
     iov_map[m_id] = conn_iov;
     t_recv.pause();
