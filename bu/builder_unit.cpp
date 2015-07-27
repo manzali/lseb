@@ -112,6 +112,7 @@ void BuilderUnit::operator()() {
         }
       }
       //LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
+      assert(conn_iov.size() == mul);
       iov_map[i] = conn_iov;
     }
 
