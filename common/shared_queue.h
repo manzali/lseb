@@ -26,6 +26,16 @@ class SharedQueue {
     return item;
   }
 
+  bool pop_nowait(T& item) {
+    std::unique_lock<std::mutex> mlock(m_mutex);
+    if(!m_queue.empty()){
+      item = m_queue.front();
+      m_queue.pop();
+      return true;
+    }
+    return false;
+  }
+
   void push(T const& item) {
     std::unique_lock<std::mutex> mlock(m_mutex);
     m_queue.push(item);
