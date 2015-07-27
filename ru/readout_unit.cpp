@@ -73,14 +73,15 @@ void ReadoutUnit::operator()() {
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
+  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
+  int wrap_id = endpoints.size() - 1;
+
   LOG(INFO) << "Waiting for connections...";
   std::map<int, RuConnectionId> connection_ids;
-  for (int i = 0; i < endpoints.size(); ++i) {
-    if (i != m_id) {
-      connection_ids.emplace(
-        i,
-        lseb_connect(endpoints[i].hostname(), endpoints[i].port(), tokens));
-    }
+  for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
+    connection_ids.emplace(
+      i,
+      lseb_connect(endpoints[i].hostname(), endpoints[i].port(), tokens));
   }
   LOG(INFO) << "Connections established";
 
@@ -133,9 +134,6 @@ void ReadoutUnit::operator()() {
   unsigned int const needed_events = mul * bulk_size * endpoints.size();
   unsigned int const needed_multievents = mul * endpoints.size();
 
-  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
-  int wrap_id = endpoints.size() - 1;
-
   while (true) {
 
     t_accu.start();
@@ -180,7 +178,7 @@ void ReadoutUnit::operator()() {
     auto& iov_pair = *it;
     assert(iov_pair.second.size() == mul);
 
-    for(auto& data_iov : iov_pair.second){
+    for (auto& data_iov : iov_pair.second) {
       iovec i = m_free_local_data.pop();
       i.iov_len = 0;
       for (auto& iov : data_iov) {
@@ -205,11 +203,17 @@ void ReadoutUnit::operator()() {
     frequency.add(multievents.size() * bulk_size);
 
     if (frequency.check()) {
-      LOG(INFO) << "Frequency: " << frequency.frequency() / std::mega::num << " MHz";
+      LOG(INFO)
+        << "Frequency: "
+        << frequency.frequency() / std::mega::num
+        << " MHz";
     }
 
     if (bandwith.check()) {
-      LOG(INFO) << "Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
+      LOG(INFO)
+        << "Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"
