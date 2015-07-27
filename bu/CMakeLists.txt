@@ -7,7 +7,6 @@ include_directories(
 add_library(
   bu
   builder_unit.cpp
-  receiver.cpp
 )
 
 target_link_libraries(
