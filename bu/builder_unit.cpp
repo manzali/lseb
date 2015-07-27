@@ -90,8 +90,9 @@ void BuilderUnit::operator()() {
 
   while (true) {
 
+    int min_wrs = 0;
+
     t_recv.start();
-    int min_wrs;
     do {
       min_wrs = tokens;
       for (auto& m : iov_map) {
@@ -140,7 +141,7 @@ void BuilderUnit::operator()() {
           m_free_local_data.push(i);
         }
       }
-      m.second.erase(std::begin(m.second) + min_wrs);
+      m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
     }
     t_rel.pause();
 
