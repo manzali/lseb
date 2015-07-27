@@ -94,38 +94,24 @@ void BuilderUnit::operator()() {
     t_recv.start();
     std::map<int, std::vector<iovec> > iov_map;
     for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
-      std::vector<iovec> conn_iov;
       auto conn = connection_ids.find(i);
       assert(conn != std::end(connection_ids));
-      while (conn_iov.size() < mul) {
-        std::vector<iovec> temp = lseb_read(conn->second);
-        if (temp.size()) {
-          conn_iov.insert(std::end(conn_iov), std::begin(temp), std::end(temp));
-          LOG(DEBUG)
-            << "Read "
-            << temp.size()
-            << " wr from conn "
-            << i
-            << " ("
-            << mul - conn_iov.size()
-            << " wrs remaining)";
-        }
+      std::vector<iovec> conn_iov = lseb_read(conn->second);
+      if (conn_iov.size()) {
+        LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
       }
-      //LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << i;
       iov_map[i] = conn_iov;
     }
 
     std::vector<iovec> conn_iov;
-    for (int i = 0; i < mul; ++i) {
-      conn_iov.push_back(m_ready_local_data.pop());
-      LOG(DEBUG)
-        << "Read 1 wr from conn "
-        << m_id
-        << " ("
-        << mul - 1 - i
-        << " wrs remaining)";
+    iovec i;
+    while (m_ready_local_data.pop_nowait(i)) {
+      conn_iov.push_back(i);
     }
-    iov_map[m_id] = conn_iov;
+    if (conn_iov.size()) {
+      LOG(DEBUG) << "Read " << conn_iov.size() << " wr from conn " << m_id;
+      iov_map[m_id] = conn_iov;
+    }
     t_recv.pause();
 
     t_rel.start();

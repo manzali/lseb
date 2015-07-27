@@ -123,10 +123,6 @@ void ReadoutUnit::operator()() {
   Timer t_accu;
   Timer t_send;
   Timer t_spli;
-  /*
-   unsigned int const needed_events = bulk_size * tokens * endpoints.size();
-   unsigned int const needed_multievents = tokens * endpoints.size();
-   */
 
   int const mul = m_configuration.get<int>("GENERAL.MUL");
   assert(mul > 0);
