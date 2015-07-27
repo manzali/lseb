@@ -93,10 +93,9 @@ void BuilderUnit::operator()() {
 
   while (true) {
 
-    int min_wrs = 0;
+    int min_wrs = tokens;
 
     t_recv.start();
-
     for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
       auto map_it = iov_map.find(i);
       assert(map_it != std::end(iov_map));
@@ -109,20 +108,20 @@ void BuilderUnit::operator()() {
       }
       LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
       m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+      min_wrs = (min_wrs < vect.size()) ? min_wrs : vect.size();
     }
     auto map_it = iov_map.find(m_id);
     assert(map_it != std::end(iov_map));
     auto& m = *map_it;
-    size_t count = m.second.size();
+    size_t old_local_size = m.second.size();
     m.second.push_back(m_ready_local_data.pop());
     iovec i;
     while (m_ready_local_data.pop_nowait(i)) {
       m.second.push_back(i);
     }
-    count = m.second.size() - count;
-    if (count) {
-      LOG(DEBUG) << "Read " << count << " wr from conn " << m_id;
-    }
+    int new_local_wrs =  m.second.size() - old_local_size;
+    LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
+    min_wrs = (min_wrs < new_local_wrs) ? min_wrs : new_local_wrs;
     t_recv.pause();
 
     // check
@@ -137,16 +136,12 @@ void BuilderUnit::operator()() {
         auto conn = connection_ids.find(m.first);
         assert(conn != std::end(connection_ids));
         lseb_release(conn->second, vect);
-        LOG(DEBUG)
-          << "Released "
-          << vect.size()
-          << " wr for conn "
-          << conn->first;
       } else {
         for (auto& i : vect) {
           m_free_local_data.push(i);
         }
       }
+      LOG(DEBUG) << "Released " << vect.size() << " wr for conn " << m.first;
       m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
     }
     t_rel.pause();
