@@ -107,7 +107,7 @@ void BuilderUnit::operator()() {
             << " wr from conn "
             << i
             << " ("
-            << mul - 1 - conn_iov.size()
+            << mul - conn_iov.size()
             << " wrs remaining)";
         }
       }
