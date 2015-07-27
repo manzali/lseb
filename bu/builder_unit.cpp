@@ -127,10 +127,7 @@ void BuilderUnit::operator()() {
     // check
 
     t_rel.start();
-    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
-      auto map_it = iov_map.find(i);
-      assert(map_it != std::end(iov_map));
-      auto& m = *map_it;
+    for (auto& m : iov_map) {
       std::vector<iovec> vect(
         std::begin(m.second),
         std::begin(m.second) + min_wrs);
