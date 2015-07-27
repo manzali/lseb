@@ -187,6 +187,11 @@ void ReadoutUnit::operator()() {
       bandwith.add(i.iov_len);
       m_ready_local_data.push(i);
     }
+    LOG(DEBUG)
+      << "Written "
+      << iov_pair.second.size()
+      << " wr to conn "
+      << m_id;
     t_send.pause();
 
     t_accu.start();
