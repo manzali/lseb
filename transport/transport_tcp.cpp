@@ -158,7 +158,7 @@ ssize_t lseb_write(
   return bytes_written;
 }
 
-std::vector<iovec> lseb_read(BuConnectionId& conn) {
+std::vector<iovec> lseb_read(BuConnectionId& conn, int max_wrs) {
   std::vector<iovec> iov;
   if (!lseb_poll(conn)) {
     return iov;

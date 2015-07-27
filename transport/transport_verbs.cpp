@@ -217,9 +217,11 @@ size_t lseb_write(
   return bytes_sent;
 }
 
-std::vector<iovec> lseb_read(BuConnectionId& conn) {
+std::vector<iovec> lseb_read(BuConnectionId& conn, int max_wrs) {
 
-  std::vector<ibv_wc> wcs(conn.wr_count);
+  size_t wcs_size =
+      (max_wrs == 0 || max_wrs > conn.wr_count) ? conn.wr_count : max_wrs;
+  std::vector<ibv_wc> wcs(wcs_size);
   int ret = ibv_poll_cq(conn.id->recv_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw std::runtime_error(
