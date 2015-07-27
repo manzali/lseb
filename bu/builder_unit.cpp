@@ -88,35 +88,41 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
+  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
+  int wrap_id = endpoints.size() - 1;
+
   while (true) {
 
     int min_wrs = 0;
 
     t_recv.start();
-    do {
-      min_wrs = tokens;
-      for (auto& m : iov_map) {
-        if (m.first != m_id) {
-          auto conn = connection_ids.find(m.first);
-          assert(conn != std::end(connection_ids));
-          std::vector<iovec> vect = lseb_read(conn->second);
-          if (!vect.empty()) {
-            LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
-            m.second.insert(
-              std::end(m.second),
-              std::begin(vect),
-              std::end(vect));
-          }
-        } else {
-          iovec i;
-          if (m_ready_local_data.pop_nowait(i)) {
-            LOG(DEBUG) << "Read " << 1 << " wr from conn " << m_id;
-            m.second.push_back(i);
-          }
-        }
-        min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
+
+    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
+      auto map_it = iov_map.find(i);
+      assert(map_it != std::end(iov_map));
+      auto& m = *map_it;
+      auto conn = connection_ids.find(m.first);
+      assert(conn != std::end(connection_ids));
+      std::vector<iovec> vect;
+      while (vect.empty()) {
+        vect = lseb_read(conn->second);
       }
-    } while (!min_wrs);
+      LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
+      m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+    }
+    auto map_it = iov_map.find(m_id);
+    assert(map_it != std::end(iov_map));
+    auto& m = *map_it;
+    size_t count = m.second.size();
+    m.second.push_back(m_ready_local_data.pop());
+    iovec i;
+    while (m_ready_local_data.pop_nowait(i)) {
+      m.second.push_back(i);
+    }
+    count = m.second.size() - count;
+    if (count) {
+      LOG(DEBUG) << "Read " << count << " wr from conn " << m_id;
+    }
     t_recv.pause();
 
     // check
