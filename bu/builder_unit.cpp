@@ -108,7 +108,7 @@ void BuilderUnit::operator()() {
       }
       LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
       m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
-      min_wrs = (min_wrs < vect.size()) ? min_wrs : vect.size();
+      min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
     auto map_it = iov_map.find(m_id);
     assert(map_it != std::end(iov_map));
@@ -119,9 +119,9 @@ void BuilderUnit::operator()() {
     while (m_ready_local_data.pop_nowait(i)) {
       m.second.push_back(i);
     }
-    int new_local_wrs =  m.second.size() - old_local_size;
+    int new_local_wrs = m.second.size() - old_local_size;
     LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
-    min_wrs = (min_wrs < new_local_wrs) ? min_wrs : new_local_wrs;
+    min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     t_recv.pause();
 
     // check
