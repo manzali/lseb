@@ -84,6 +84,9 @@ void BuilderUnit::operator()() {
   Timer t_rel;
 
   std::map<int, std::vector<iovec> > iov_map;
+  for (int i = 0; i < endpoints.size(); ++i) {
+    iov_map.insert(std::make_pair(i, std::vector<iovec>()));
+  }
 
   while (true) {
 
