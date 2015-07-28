@@ -61,8 +61,6 @@ int main(int argc, char* argv[]) {
   }
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
-  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
-
   std::thread bu_th(bu);
 
   tcp_barrier(
@@ -71,6 +69,10 @@ int main(int argc, char* argv[]) {
     endpoints[0].hostname(),
     endpoints[0].port());
 
+  // This is for safety because the last process started can run ru before the bu has create the socket
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
   std::thread ru_th(ru);
 
   bu_th.join();
