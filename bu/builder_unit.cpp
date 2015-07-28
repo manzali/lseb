@@ -106,8 +106,9 @@ void BuilderUnit::operator()() {
       auto conn = connection_ids.find(m.first);
       assert(conn != std::end(connection_ids));
       std::vector<iovec> vect;
-      while (vect.empty()) {
-        vect = lseb_read(conn->second);
+      while (vect.size() < mul) {
+        std::vector<iovec> temp = lseb_read(conn->second);
+        vect.insert(std::end(vect), std::begin(temp), std::end(temp));
       }
       LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
       m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
