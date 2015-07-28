@@ -91,65 +91,57 @@ void BuilderUnit::operator()() {
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
 
-  int const mul = m_configuration.get<int>("GENERAL.MUL");
-  assert(mul > 0);
-
   while (true) {
 
-    int min_wrs = tokens;
-
     t_recv.start();
-    auto map_it = iov_map.find(m_id);
-    assert(map_it != std::end(iov_map));
-    auto& m = *map_it;
-    size_t old_local_size = m.second.size();
-    iovec i;
-    while (m.second.size() < mul) {
-      if (m_ready_local_data.pop(i)) {
-        m.second.push_back(i);
-      }
-    }
-    int new_local_wrs = m.second.size() - old_local_size;
-    LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
-    min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
       auto map_it = iov_map.find(i);
       assert(map_it != std::end(iov_map));
       auto& m = *map_it;
       auto conn = connection_ids.find(m.first);
       assert(conn != std::end(connection_ids));
-      std::vector<iovec> vect;
-      while (vect.size() < mul) {
-        std::vector<iovec> temp = lseb_read(conn->second);
-        vect.insert(std::end(vect), std::begin(temp), std::end(temp));
+      std::vector<iovec> vect = lseb_read(conn->second);
+      if (!vect.empty()) {
+        LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
+        m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
       }
-      LOG(DEBUG) << "Read " << vect.size() << " wr from conn " << m.first;
-      m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
-      min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
+    auto map_it = iov_map.find(m_id);
+    assert(map_it != std::end(iov_map));
+    auto& m = *map_it;
+    size_t old_local_size = m.second.size();
+    iovec i;
+    while (m_ready_local_data.pop(i)) {
+      m.second.push_back(i);
+    }
+    int new_local_wrs = m.second.size() - old_local_size;
+    LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
     t_recv.pause();
 
     // check
 
     t_rel.start();
     for (auto& m : iov_map) {
-      std::vector<iovec> vect(
-        std::begin(m.second),
-        std::begin(m.second) + min_wrs);
-      bandwith.add(iovec_length(vect));
-      if (m.first != m_id) {
-        auto conn = connection_ids.find(m.first);
-        assert(conn != std::end(connection_ids));
-        lseb_release(conn->second, vect);
-      } else {
-        for (auto& i : vect) {
-          while (!m_free_local_data.push(i)) {
-            ;
+      if (!m.second.empty()) {
+        bandwith.add(iovec_length(m.second));
+        if (m.first != m_id) {
+          auto conn = connection_ids.find(m.first);
+          assert(conn != std::end(connection_ids));
+          lseb_release(conn->second, m.second);
+        } else {
+          for (auto& i : m.second) {
+            while (!m_free_local_data.push(i)) {
+              ;
+            }
           }
         }
+        LOG(DEBUG)
+          << "Released "
+          << m.second.size()
+          << " wr for conn "
+          << m.first;
+        m.second.clear();
       }
-      LOG(DEBUG) << "Released " << vect.size() << " wr for conn " << m.first;
-      m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
     }
     t_rel.pause();
 
