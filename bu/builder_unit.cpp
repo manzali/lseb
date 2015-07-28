@@ -91,6 +91,9 @@ void BuilderUnit::operator()() {
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
 
+  int const mul = m_configuration.get<int>("GENERAL.MUL");
+  assert(mul > 0);
+
   while (true) {
 
     int min_wrs = tokens;
@@ -115,7 +118,7 @@ void BuilderUnit::operator()() {
     auto& m = *map_it;
     size_t old_local_size = m.second.size();
     iovec i;
-    while (m.second.empty()) {
+    while (m.second.size() < mul) {
       if (m_ready_local_data.pop_nowait(i)) {
         m.second.push_back(i);
       }
