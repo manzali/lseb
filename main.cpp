@@ -9,7 +9,7 @@
 
 #include "common/log.hpp"
 #include "common/configuration.h"
-#include "common/tcp_barrier.h"
+
 #include "transport/endpoints.h"
 
 using namespace lseb;
@@ -34,9 +34,9 @@ int main(int argc, char* argv[]) {
   int const id = std::stol(argv[2]);
   assert(id >= 0 && "Negative id");
 
-  std::vector<Endpoint> const endpoints = get_endpoints(
-    configuration.get_child("ENDPOINTS"));
-  assert(id < endpoints.size() && "Wrong id");
+  int const endpoints =
+    get_endpoints(configuration.get_child("ENDPOINTS")).size();
+  assert(id < endpoints && "Wrong id");
 
   int const max_fragment_size = configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
@@ -62,16 +62,6 @@ int main(int argc, char* argv[]) {
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
   std::thread bu_th(bu);
-/*
-  tcp_barrier(
-    id,
-    endpoints.size(),
-    endpoints[0].hostname(),
-    endpoints[0].port());
-*/
-
-  // This is for safety because the last process started can run ru before the bu has create the socket
-  //std::this_thread::sleep_for(std::chrono::seconds(1));
 
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
   std::thread ru_th(ru);

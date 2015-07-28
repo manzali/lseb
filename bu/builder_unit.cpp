@@ -110,14 +110,13 @@ void BuilderUnit::operator()() {
     assert(map_it != std::end(iov_map));
     auto& m = *map_it;
     size_t old_local_size = m.second.size();
+    // Wait for exactly 1 wr
     iovec i;
-    while (m_ready_local_data.pop(i)) {
-      m.second.push_back(i);
+    while (!m_ready_local_data.pop(i)) {
+      ;
     }
-    int new_local_wrs = m.second.size() - old_local_size;
-    if (new_local_wrs) {
-      LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
-    }
+    m.second.push_back(i);
+    LOG(DEBUG) << "Read 1 wr from conn " << m_id;
     t_recv.pause();
 
     // check

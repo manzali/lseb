@@ -15,6 +15,10 @@
 
 namespace lseb {
 
+namespace {
+auto retry_wait = std::chrono::seconds(1);
+}
+
 RuConnectionId lseb_connect(
   std::string const& hostname,
   std::string const& port,
@@ -61,7 +65,7 @@ RuConnectionId lseb_connect(
       rdma_destroy_ep(conn.id);
       if (errno == ECONNREFUSED) {
         retry = true;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(retry_wait);
       } else {
         throw std::runtime_error(
           "Error on rdma_connect: " + std::string(strerror(errno)));
