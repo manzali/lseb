@@ -99,6 +99,19 @@ void BuilderUnit::operator()() {
     int min_wrs = tokens;
 
     t_recv.start();
+    auto map_it = iov_map.find(m_id);
+    assert(map_it != std::end(iov_map));
+    auto& m = *map_it;
+    size_t old_local_size = m.second.size();
+    iovec i;
+    while (m.second.size() < mul) {
+      if (m_ready_local_data.pop_nowait(i)) {
+        m.second.push_back(i);
+      }
+    }
+    int new_local_wrs = m.second.size() - old_local_size;
+    LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
+    min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
       auto map_it = iov_map.find(i);
       assert(map_it != std::end(iov_map));
@@ -114,19 +127,6 @@ void BuilderUnit::operator()() {
       m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
       min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
-    auto map_it = iov_map.find(m_id);
-    assert(map_it != std::end(iov_map));
-    auto& m = *map_it;
-    size_t old_local_size = m.second.size();
-    iovec i;
-    while (m.second.size() < mul) {
-      if (m_ready_local_data.pop_nowait(i)) {
-        m.second.push_back(i);
-      }
-    }
-    int new_local_wrs = m.second.size() - old_local_size;
-    LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
-    min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     t_recv.pause();
 
     // check
