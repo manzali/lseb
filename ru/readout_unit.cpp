@@ -27,8 +27,8 @@ namespace lseb {
 ReadoutUnit::ReadoutUnit(
   Configuration const& configuration,
   int id,
-  SharedQueue<iovec>& free_local_data,
-  SharedQueue<iovec>& ready_local_data)
+  boost::lockfree::spsc_queue<iovec>& free_local_data,
+  boost::lockfree::spsc_queue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
       m_free_local_data(free_local_data),
@@ -175,7 +175,10 @@ void ReadoutUnit::operator()() {
     assert(iov_pair.second.size() == mul);
 
     for (auto& data_iov : iov_pair.second) {
-      iovec i = m_free_local_data.pop();
+      iovec i;
+      while (!m_free_local_data.pop(i)) {
+        ;
+      }
       i.iov_len = 0;
       for (auto& iov : data_iov) {
         memcpy(
@@ -185,7 +188,9 @@ void ReadoutUnit::operator()() {
         i.iov_len += iov.iov_len;
       }
       bandwith.add(i.iov_len);
-      m_ready_local_data.push(i);
+      while (!m_ready_local_data.push(i)) {
+        ;
+      }
     }
     LOG(DEBUG)
       << "Written "

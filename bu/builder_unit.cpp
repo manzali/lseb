@@ -19,8 +19,8 @@ namespace lseb {
 BuilderUnit::BuilderUnit(
   Configuration const& configuration,
   int id,
-  SharedQueue<iovec>& free_local_data,
-  SharedQueue<iovec>& ready_local_data)
+  boost::lockfree::spsc_queue<iovec>& free_local_data,
+  boost::lockfree::spsc_queue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
       m_free_local_data(free_local_data),
@@ -105,7 +105,7 @@ void BuilderUnit::operator()() {
     size_t old_local_size = m.second.size();
     iovec i;
     while (m.second.size() < mul) {
-      if (m_ready_local_data.pop_nowait(i)) {
+      if (m_ready_local_data.pop(i)) {
         m.second.push_back(i);
       }
     }
@@ -143,7 +143,9 @@ void BuilderUnit::operator()() {
         lseb_release(conn->second, vect);
       } else {
         for (auto& i : vect) {
-          m_free_local_data.push(i);
+          while (!m_free_local_data.push(i)) {
+            ;
+          }
         }
       }
       LOG(DEBUG) << "Released " << vect.size() << " wr for conn " << m.first;
