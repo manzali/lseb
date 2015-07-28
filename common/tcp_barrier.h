@@ -11,6 +11,10 @@
 
 namespace lseb {
 
+namespace {
+auto retry_wait = std::chrono::milliseconds(500);
+}
+
 void tcp_barrier(
   int id,
   int size,
@@ -44,7 +48,7 @@ void tcp_barrier(
       socket.close();
       socket.connect(*endpoint_iterator, error);
       if (error == boost::asio::error::connection_refused) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(retry_wait);
       } else {
         endpoint_iterator++;
       }
