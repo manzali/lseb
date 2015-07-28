@@ -42,14 +42,12 @@ void tcp_barrier(
     // First iteration
     while (error && endpoint_iterator != end) {
       socket.close();
-      socket.connect(*endpoint_iterator++, error);
-    }
-    // If error is "Connection refused", wait on this endpoint
-    endpoint_iterator--;
-    while (error == boost::asio::error::connection_refused) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      socket.close();
       socket.connect(*endpoint_iterator, error);
+      if (error == boost::asio::error::connection_refused) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+      } else {
+        endpoint_iterator++;
+      }
     }
     if (error) {
       throw boost::system::system_error(error);
