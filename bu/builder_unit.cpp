@@ -115,7 +115,9 @@ void BuilderUnit::operator()() {
       m.second.push_back(i);
     }
     int new_local_wrs = m.second.size() - old_local_size;
-    LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
+    if (new_local_wrs) {
+      LOG(DEBUG) << "Read " << new_local_wrs << " wr from conn " << m_id;
+    }
     t_recv.pause();
 
     // check

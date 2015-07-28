@@ -9,7 +9,7 @@
 
 #include "common/log.hpp"
 #include "common/configuration.h"
-
+#include "common/tcp_barrier.h"
 #include "transport/endpoints.h"
 
 using namespace lseb;
@@ -33,8 +33,10 @@ int main(int argc, char* argv[]) {
 
   int const id = std::stol(argv[2]);
   assert(id >= 0 && "Negative id");
-  int endpoints = get_endpoints(configuration.get_child("ENDPOINTS")).size();
-  assert(id < endpoints && "Wrong id");
+
+  std::vector<Endpoint> const endpoints = get_endpoints(
+    configuration.get_child("ENDPOINTS"));
+  assert(id < endpoints.size() && "Wrong id");
 
   int const max_fragment_size = configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
@@ -62,7 +64,13 @@ int main(int argc, char* argv[]) {
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
 
   std::thread bu_th(bu);
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  tcp_barrier(
+    id,
+    endpoints.size(),
+    endpoints[0].hostname(),
+    endpoints[0].port());
+
   std::thread ru_th(ru);
 
   bu_th.join();
