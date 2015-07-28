@@ -35,14 +35,6 @@ RuConnectionId lseb_connect(
       "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
   }
 
-  ibv_qp_init_attr attr;
-  memset(&attr, 0, sizeof(attr));
-  attr.cap.max_send_wr = tokens;
-  attr.cap.max_send_sge = 2;
-  attr.cap.max_recv_wr = 1;
-  attr.cap.max_recv_sge = 1;
-  attr.sq_sig_all = 1;
-
   RuConnectionId conn;
   conn.tokens = tokens;
 
@@ -51,6 +43,13 @@ RuConnectionId lseb_connect(
   do {
     retry = false;
 
+    ibv_qp_init_attr attr;
+    memset(&attr, 0, sizeof(attr));
+    attr.cap.max_send_wr = tokens;
+    attr.cap.max_send_sge = 2;
+    attr.cap.max_recv_wr = 1;
+    attr.cap.max_recv_sge = 1;
+    attr.sq_sig_all = 1;
     ret = rdma_create_ep(&conn.id, res, NULL, &attr);
     if (ret) {
       throw std::runtime_error(
