@@ -20,21 +20,6 @@ RuConnectionId lseb_connect(
   std::string const& port,
   int tokens) {
 
-  rdma_addrinfo hints;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_port_space = RDMA_PS_TCP;
-
-  rdma_addrinfo* res;
-  int ret = rdma_getaddrinfo(
-    (char*) hostname.c_str(),
-    (char*) port.c_str(),
-    &hints,
-    &res);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
-  }
-
   RuConnectionId conn;
   conn.tokens = tokens;
 
@@ -42,6 +27,21 @@ RuConnectionId lseb_connect(
 
   do {
     retry = false;
+
+    rdma_addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_port_space = RDMA_PS_TCP;
+
+    rdma_addrinfo* res;
+    int ret = rdma_getaddrinfo(
+      (char*) hostname.c_str(),
+      (char*) port.c_str(),
+      &hints,
+      &res);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
+    }
 
     ibv_qp_init_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -67,8 +67,11 @@ RuConnectionId lseb_connect(
           "Error on rdma_connect: " + std::string(strerror(errno)));
       }
     }
+
+    rdma_freeaddrinfo(res);
+
   } while (retry);
-  rdma_freeaddrinfo(res);
+
   return conn;
 }
 
