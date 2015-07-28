@@ -60,7 +60,7 @@ RuConnectionId lseb_connect(
 
     ret = rdma_connect(conn.id, NULL);
     if (ret) {
-      rdma_destroy_ep(&conn.id);
+      rdma_destroy_ep(conn.id);
       if (errno == ECONNREFUSED) {
         retry = true;
         std::this_thread::sleep_for(std::chrono::seconds(1));
