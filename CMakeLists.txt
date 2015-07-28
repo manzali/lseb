@@ -14,7 +14,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # using Clang or AppleClang
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+  set(CMAKE_CXX_FLAGS "-pthread -Wall -Wextra")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
   

@@ -1,6 +1,7 @@
 #ifndef COMMON_TCP_BARRIER_H
 #define COMMON_TCP_BARRIER_H
 
+#include <chrono>
 #include <string>
 
 #include <boost/array.hpp>
@@ -36,12 +37,18 @@ void tcp_barrier(
     boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver
       .resolve(query);
     boost::asio::ip::tcp::resolver::iterator end;
-
     boost::asio::ip::tcp::socket socket(io_service);
     boost::system::error_code error = boost::asio::error::host_not_found;
+    // First iteration
     while (error && endpoint_iterator != end) {
       socket.close();
       socket.connect(*endpoint_iterator++, error);
+    }
+    // If error is "Connection refused", wait on this endpoint
+    while (error == boost::asio::error::connection_refused) {
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      socket.close();
+      socket.connect(*endpoint_iterator, error);
     }
     if (error) {
       throw boost::system::system_error(error);
