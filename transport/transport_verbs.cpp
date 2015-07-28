@@ -46,17 +46,30 @@ RuConnectionId lseb_connect(
   RuConnectionId conn;
   conn.tokens = tokens;
 
-  ret = rdma_create_ep(&conn.id, res, NULL, &attr);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on rdma_create_ep: " + std::string(strerror(errno)));
-  }
+  bool retry = false;
 
-  ret = rdma_connect(conn.id, NULL);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on rdma_connect: " + std::string(strerror(errno)));
-  }
+  do {
+    retry = false;
+
+    ret = rdma_create_ep(&conn.id, res, NULL, &attr);
+    rdma_freeaddrinfo(res);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on rdma_create_ep: " + std::string(strerror(errno)));
+    }
+
+    ret = rdma_connect(conn.id, NULL);
+    if (ret) {
+      rdma_destroy_ep(&conn.id);
+      if (errno == ECONNREFUSED) {
+        retry = true;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+      } else {
+        throw std::runtime_error(
+          "Error on rdma_connect: " + std::string(strerror(errno)));
+      }
+    }
+  } while (retry);
 
   return conn;
 }
