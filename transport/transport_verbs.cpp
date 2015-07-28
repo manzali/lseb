@@ -52,7 +52,6 @@ RuConnectionId lseb_connect(
     retry = false;
 
     ret = rdma_create_ep(&conn.id, res, NULL, &attr);
-    rdma_freeaddrinfo(res);
     if (ret) {
       throw std::runtime_error(
         "Error on rdma_create_ep: " + std::string(strerror(errno)));
@@ -70,7 +69,7 @@ RuConnectionId lseb_connect(
       }
     }
   } while (retry);
-
+  rdma_freeaddrinfo(res);
   return conn;
 }
 
