@@ -45,6 +45,7 @@ void tcp_barrier(
       socket.connect(*endpoint_iterator++, error);
     }
     // If error is "Connection refused", wait on this endpoint
+    --endpoint_iterator;
     while (error == boost::asio::error::connection_refused) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       socket.close();
