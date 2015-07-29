@@ -70,11 +70,11 @@ inline void log_to_stream(
 class Log {
  public:
   enum Level {
-    ERROR, WARNING, INFO, DEBUG
+    ERROR, WARNING, NOTICE, INFO, DEBUG
   };
 
  public:
-  Log(Level level = INFO)
+  Log(Level level = NOTICE)
       :
         m_level(level) {
   }
@@ -153,12 +153,12 @@ class Log {
   }
   static int ToSyslog(Level level) {
     static int const syslog_level[] = {
-    LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG };
+    LOG_ERR, LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG };
     assert(level >= ERROR && level <= DEBUG);
     return syslog_level[level];
   }
   static std::string ToString(Level level) {
-    static const char* const buffer[] = { "ERROR", "WARNING", "INFO", "DEBUG" };
+    static const char* const buffer[] = { "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG" };
     assert(level >= ERROR && level <= DEBUG);
     return buffer[level];
   }
@@ -167,6 +167,8 @@ class Log {
       return DEBUG;
     if (level == "INFO")
       return INFO;
+    if (level == "NOTICE")
+      return NOTICE;
     if (level == "WARNING")
       return WARNING;
     if (level == "ERROR")
