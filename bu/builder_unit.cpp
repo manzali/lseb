@@ -79,7 +79,7 @@ void BuilderUnit::operator()() {
   }
   LOG(NOTICE) << "Connections established";
 
-  FrequencyMeter bandwith(3.0);
+  FrequencyMeter bandwith(5.0);
   Timer t_recv;
   Timer t_rel;
 
