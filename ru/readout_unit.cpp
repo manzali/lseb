@@ -137,7 +137,8 @@ void ReadoutUnit::operator()() {
     do {
       ready_events = accumulator.add(controller.read());
     } while (needed_events >= ready_events);
-    MultiEvents multievents = accumulator.get_multievents(needed_multievents);
+    std::vector<MultiEvent> multievents = accumulator.get_multievents(
+      needed_multievents);
     t_accu.pause();
 
     assert(multievents.size() == needed_multievents);

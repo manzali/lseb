@@ -25,8 +25,9 @@ unsigned int Accumulator::add(MetaDataRange const& metadata_range) {
   return m_generated_events;
 }
 
-MultiEvents Accumulator::get_multievents(int n) {
-  MultiEvents multievents;
+std::vector<MultiEvent> Accumulator::get_multievents(int n) {
+
+  std::vector<MultiEvent> multievents;
   // Handle bulk submission and release events
 
   assert(m_generated_events >= m_events_in_multievent * n);

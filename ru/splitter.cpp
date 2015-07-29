@@ -16,7 +16,7 @@ Splitter::Splitter(int id, int connections, DataRange const& data_range)
 }
 
 std::map<int, std::vector<DataIov> > Splitter::split(
-  MultiEvents const& multievents) {
+  std::vector<MultiEvent> const& multievents) {
   std::map<int, std::vector<DataIov> > iov_map;
   for (auto const& multievent : multievents) {
     iov_map[m_next_connection].push_back(

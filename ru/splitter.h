@@ -16,7 +16,8 @@ class Splitter {
 
  public:
   Splitter(int id, int connections, DataRange const& data_range);
-  std::map<int, std::vector<DataIov> > split(MultiEvents const& multievents);
+  std::map<int, std::vector<DataIov> > split(
+    std::vector<MultiEvent> const& multievents);
 };
 
 }

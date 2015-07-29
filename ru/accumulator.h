@@ -19,7 +19,7 @@ class Accumulator {
     DataRange const& data_range,
     unsigned int events_in_multievent);
   unsigned int add(MetaDataRange const& metadata_range);
-  MultiEvents get_multievents(int n);
+  std::vector<MultiEvent> get_multievents(int n);
 
 };
 
