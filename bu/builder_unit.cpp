@@ -114,6 +114,7 @@ void BuilderUnit::operator()() {
     while (!m_ready_local_data.pop(i)) {
       ;
     }
+    m.second.push_back(i);
     while (m_ready_local_data.pop(i)) {
       m.second.push_back(i);
     }
