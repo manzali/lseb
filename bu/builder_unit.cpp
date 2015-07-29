@@ -114,11 +114,13 @@ void BuilderUnit::operator()() {
     while (m_ready_local_data.pop(i)) {
       m.second.push_back(i);
     }
-    LOG(DEBUG)
-      << "Read "
-      << m.second.size() - old_local_size
-      << " wr from conn "
-      << m_id;
+    if (m.second.size() - old_local_size) {
+      LOG(DEBUG)
+        << "Read "
+        << m.second.size() - old_local_size
+        << " wr from conn "
+        << m_id;
+    }
     t_recv.pause();
 
     // check
