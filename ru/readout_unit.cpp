@@ -76,14 +76,14 @@ void ReadoutUnit::operator()() {
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
 
-  LOG(INFO) << "Waiting for connections...";
+  LOG(NOTICE) << "Waiting for connections...";
   std::map<int, RuConnectionId> connection_ids;
   for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
     connection_ids.emplace(
       i,
       lseb_connect(endpoints[i].hostname(), endpoints[i].port(), tokens));
   }
-  LOG(INFO) << "Connections established";
+  LOG(NOTICE) << "Connections established";
 
   // Allocate memory
 
@@ -117,8 +117,8 @@ void ReadoutUnit::operator()() {
 
   Splitter splitter(m_id, endpoints.size(), data_range);
 
-  FrequencyMeter frequency(1.0);
-  FrequencyMeter bandwith(1.0);
+  FrequencyMeter frequency(3.0);
+  FrequencyMeter bandwith(3.0);
 
   Timer t_accu;
   Timer t_send;
@@ -210,15 +210,15 @@ void ReadoutUnit::operator()() {
     frequency.add(multievents.size() * bulk_size);
 
     if (frequency.check()) {
-      LOG(INFO)
-        << "Frequency: "
+      LOG(NOTICE)
+        << "Readout Unit - Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
     }
 
     if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
+      LOG(NOTICE)
+        << "Readout Unit - Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
 

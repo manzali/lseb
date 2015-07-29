@@ -65,7 +65,7 @@ void BuilderUnit::operator()() {
     endpoints[m_id].port(),
     tokens);
 
-  LOG(INFO) << "Waiting for connections...";
+  LOG(NOTICE) << "Waiting for connections...";
   std::map<int, BuConnectionId> connection_ids;
   int count = 0;
   for (int i = 0; i < endpoints.size(); ++i) {
@@ -77,9 +77,9 @@ void BuilderUnit::operator()() {
         data_size);
     }
   }
-  LOG(INFO) << "Connections established";
+  LOG(NOTICE) << "Connections established";
 
-  FrequencyMeter bandwith(1.0);
+  FrequencyMeter bandwith(3.0);
   Timer t_recv;
   Timer t_rel;
 
@@ -168,8 +168,8 @@ void BuilderUnit::operator()() {
     }
 
     if (bandwith.check()) {
-      LOG(INFO)
-        << "Bandwith: "
+      LOG(NOTICE)
+        << "Builder Unit - Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
 
