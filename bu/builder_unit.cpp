@@ -111,15 +111,14 @@ void BuilderUnit::operator()() {
     auto& m = *map_it;
     int old_local_size = m.second.size();
     iovec i;
-    while (!m_ready_local_data.pop(i)) {
-      ;
-    }
-    m.second.push_back(i);
     while (m_ready_local_data.pop(i)) {
       m.second.push_back(i);
     }
-    int local_wrs = m.second.size() - old_local_size;
-    LOG(DEBUG) << "Read " << local_wrs << " wr from conn " << m_id;
+    LOG(DEBUG)
+      << "Read "
+      << m.second.size() - old_local_size
+      << " wr from conn "
+      << m_id;
     t_recv.pause();
 
     // check
