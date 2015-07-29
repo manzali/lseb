@@ -218,7 +218,7 @@ void ReadoutUnit::operator()() {
 
     if (frequency.check()) {
       LOG(NOTICE)
-        << "Frequency: "
+        << "Readout Unit - Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
 

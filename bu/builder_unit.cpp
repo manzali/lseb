@@ -79,7 +79,9 @@ void BuilderUnit::operator()() {
   }
   LOG(NOTICE) << "Connections established";
 
+  FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);
+
   Timer t_recv;
   Timer t_rel;
 
@@ -165,6 +167,8 @@ void BuilderUnit::operator()() {
         m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
       }
       t_rel.pause();
+
+      frequency.add(min_wrs * bulk_size * endpoints.size());
     }
 
     if (bandwith.check()) {
@@ -172,6 +176,13 @@ void BuilderUnit::operator()() {
         << "Builder Unit - Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
+    }
+
+    if (frequency.check()) {
+      LOG(NOTICE)
+        << "Builder Unit - Frequency: "
+        << frequency.frequency() / std::mega::num
+        << " MHz";
 
       LOG(INFO)
         << "Times:\n"
