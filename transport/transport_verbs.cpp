@@ -16,7 +16,7 @@
 namespace lseb {
 
 namespace {
-auto retry_wait = std::chrono::seconds(1);
+auto retry_wait = std::chrono::milliseconds(100);
 }
 
 RuConnectionId lseb_connect(
