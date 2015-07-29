@@ -138,33 +138,34 @@ void BuilderUnit::operator()() {
     t_recv.pause();
 
     // check
-
-    t_rel.start();
-    for (auto& m : iov_map) {
-      assert(m.second.size() >= min_wrs);
-      std::vector<iovec> vect(
-        std::begin(m.second),
-        std::begin(m.second) + min_wrs);
-      bandwith.add(iovec_length(vect));
-      if (m.first != m_id) {
-        auto conn = connection_ids.find(m.first);
-        assert(conn != std::end(connection_ids));
-        lseb_release(conn->second, vect);
-      } else {
-        for (auto& i : vect) {
-          while (!m_free_local_data.push(i)) {
-            ;
+    if (min_wrs > 0) {
+      t_rel.start();
+      for (auto& m : iov_map) {
+        assert(m.second.size() >= min_wrs);
+        std::vector<iovec> vect(
+          std::begin(m.second),
+          std::begin(m.second) + min_wrs);
+        bandwith.add(iovec_length(vect));
+        if (m.first != m_id) {
+          auto conn = connection_ids.find(m.first);
+          assert(conn != std::end(connection_ids));
+          lseb_release(conn->second, vect);
+        } else {
+          for (auto& i : vect) {
+            while (!m_free_local_data.push(i)) {
+              ;
+            }
           }
         }
+        LOG(DEBUG)
+          << "Released "
+          << m.second.size()
+          << " wr for conn "
+          << m.first;
+        m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
       }
-      LOG(DEBUG)
-        << "Released "
-        << m.second.size()
-        << " wr for conn "
-        << m.first;
-      m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
+      t_rel.pause();
     }
-    t_rel.pause();
 
     if (bandwith.check()) {
       LOG(INFO)
