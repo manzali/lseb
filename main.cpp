@@ -17,8 +17,8 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  std::string str_conf;
   int id;
+  std::string str_conf;
 
   boost::program_options::options_description desc("Options");
 
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     "Process ID.")(
     "configuration,c",
     boost::program_options::value<std::string>(&str_conf)->required(),
-    "Configuration filename.");
+    "Configuration JSON file.");
 
   try {
     boost::program_options::variables_map vm;
