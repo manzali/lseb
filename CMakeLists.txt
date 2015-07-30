@@ -44,7 +44,7 @@ endif()
 add_definitions(-D${TRANSPORT})
 
 # searching for boost 1.56 or newer
-find_package(Boost 1.56 REQUIRED COMPONENTS system)
+find_package(Boost 1.56 REQUIRED COMPONENTS system program_options)
 
 add_subdirectory(transport)
 add_subdirectory(generator)

@@ -100,6 +100,7 @@ void BuilderUnit::operator()() {
 
     int min_wrs = tokens;
 
+    // Acquire
     t_recv.start();
     for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
       auto map_it = iov_map.find(i);
@@ -139,7 +140,11 @@ void BuilderUnit::operator()() {
     min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     t_recv.pause();
 
-    // check
+    // -----------------------------------------------------------------------
+    // There should be event building here (for the first min_wrs multievents)
+    // -----------------------------------------------------------------------
+
+    // Release
     if (min_wrs > 0) {
       t_rel.start();
       for (auto& m : iov_map) {

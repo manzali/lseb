@@ -1,6 +1,7 @@
 #include <thread>
 
 #include <boost/lockfree/spsc_queue.hpp>
+#include <boost/program_options.hpp>
 
 #include <cassert>
 
@@ -16,13 +17,40 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  assert(argc == 3 && "lseb <config_file> <id>");
+  std::string str_conf;
+  int id;
 
-  std::ifstream f(argv[1]);
-  if (!f) {
-    std::cerr << argv[1] << ": No such file or directory\n";
+  boost::program_options::options_description desc("Options");
+
+  desc.add_options()("help,h", "Print help messages.")(
+    "id,i",
+    boost::program_options::value<int>(&id)->required(),
+    "Process ID.")(
+    "configuration,c",
+    boost::program_options::value<std::string>(&str_conf)->required(),
+    "Configuration filename.");
+
+  try {
+    boost::program_options::variables_map vm;
+    boost::program_options::store(
+      boost::program_options::command_line_parser(argc, argv).options(desc).run(),
+      vm);
+    if (vm.count("help")) {
+      std::cout << desc << std::endl;
+      return EXIT_SUCCESS;
+    }
+    boost::program_options::notify(vm);
+  } catch (const boost::program_options::error& e) {
+    std::cerr << e.what() << std::endl << desc << std::endl;
     return EXIT_FAILURE;
   }
+
+  std::ifstream f(str_conf);
+  if (!f) {
+    std::cerr << str_conf << ": No such file or directory\n";
+    return EXIT_FAILURE;
+  }
+
   Configuration configuration = read_configuration(f);
 
   Log::init(
@@ -31,20 +59,32 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << configuration << std::endl;
 
-  int const id = std::stol(argv[2]);
-  assert(id >= 0 && "Negative id");
-
   int const endpoints =
     get_endpoints(configuration.get_child("ENDPOINTS")).size();
-  assert(id < endpoints && "Wrong id");
+  if (id < 0 || id >= endpoints) {
+    LOG(ERROR) << "Wrong ID: " << id;
+    return EXIT_FAILURE;
+  }
 
   int const max_fragment_size = configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
-  assert(max_fragment_size > 0);
+  if (max_fragment_size <= 0) {
+    LOG(ERROR) << "Wrong MAX_FRAGMENT_SIZE: " << max_fragment_size;
+    return EXIT_FAILURE;
+  }
+
   int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
-  assert(bulk_size > 0);
+  if (bulk_size <= 0) {
+    LOG(ERROR) << "Wrong BULKED_EVENTS: " << bulk_size;
+    return EXIT_FAILURE;
+  }
+
   int const tokens = configuration.get<int>("GENERAL.TOKENS");
-  assert(tokens > 0);
+  if (tokens <= 0) {
+    LOG(ERROR) << "Wrong TOKENS: " << tokens;
+    return EXIT_FAILURE;
+  }
+
   size_t const multievent_size = max_fragment_size * bulk_size;
 
   boost::lockfree::spsc_queue<iovec> free_local_data(tokens);
@@ -69,5 +109,5 @@ int main(int argc, char* argv[]) {
   bu_th.join();
   ru_th.join();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
