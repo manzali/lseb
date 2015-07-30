@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <iterator>
+#include <thread>
+#include <chrono>
 
 #include <cassert>
 #include <cstring>
@@ -13,47 +15,66 @@
 
 namespace lseb {
 
+namespace {
+auto retry_wait = std::chrono::milliseconds(100);
+}
+
 RuConnectionId lseb_connect(
   std::string const& hostname,
   std::string const& port,
   int tokens) {
 
-  rdma_addrinfo hints;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_port_space = RDMA_PS_TCP;
-
-  rdma_addrinfo* res;
-  int ret = rdma_getaddrinfo(
-    (char*) hostname.c_str(),
-    (char*) port.c_str(),
-    &hints,
-    &res);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
-  }
-
-  ibv_qp_init_attr attr;
-  memset(&attr, 0, sizeof(attr));
-  attr.cap.max_send_wr = tokens;
-  attr.cap.max_send_sge = 2;
-  attr.cap.max_recv_wr = 1;
-  attr.cap.max_recv_sge = 1;
-  attr.sq_sig_all = 1;
-
   RuConnectionId conn;
   conn.tokens = tokens;
 
-  ret = rdma_create_ep(&conn.id, res, NULL, &attr);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on rdma_create_ep: " + std::string(strerror(errno)));
-  }
+  bool retry = false;
 
-  if (rdma_connect(conn.id, NULL)) {
-    throw std::runtime_error(
-      "Error on rdma_connect: " + std::string(strerror(errno)));
-  }
+  do {
+    retry = false;
+
+    rdma_addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_port_space = RDMA_PS_TCP;
+
+    rdma_addrinfo* res;
+    int ret = rdma_getaddrinfo(
+      (char*) hostname.c_str(),
+      (char*) port.c_str(),
+      &hints,
+      &res);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on rdma_getaddrinfo: " + std::string(strerror(errno)));
+    }
+
+    ibv_qp_init_attr attr;
+    memset(&attr, 0, sizeof(attr));
+    attr.cap.max_send_wr = tokens;
+    attr.cap.max_send_sge = 2;
+    attr.cap.max_recv_wr = 1;
+    attr.cap.max_recv_sge = 1;
+    attr.sq_sig_all = 1;
+    ret = rdma_create_ep(&conn.id, res, NULL, &attr);
+    if (ret) {
+      throw std::runtime_error(
+        "Error on rdma_create_ep: " + std::string(strerror(errno)));
+    }
+
+    ret = rdma_connect(conn.id, NULL);
+    if (ret) {
+      rdma_destroy_ep(conn.id);
+      if (errno == ECONNREFUSED) {
+        retry = true;
+        std::this_thread::sleep_for(retry_wait);
+      } else {
+        throw std::runtime_error(
+          "Error on rdma_connect: " + std::string(strerror(errno)));
+      }
+    }
+
+    rdma_freeaddrinfo(res);
+
+  } while (retry);
 
   return conn;
 }
@@ -135,9 +156,9 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.wr_len = len / tokens;
   assert(conn.wr_len != 0 && "Too much tokens");
 
-  std::vector<void*> wrs(tokens);
+  std::vector<iovec> wrs(tokens);
   for (int i = 0; i < tokens; ++i) {
-    wrs[i] = buffer + conn.wr_len * i;
+    wrs[i].iov_base = buffer + conn.wr_len * i;
   }
   lseb_release(conn, wrs);
 
@@ -215,7 +236,6 @@ size_t lseb_write(
 }
 
 std::vector<iovec> lseb_read(BuConnectionId& conn) {
-
   std::vector<ibv_wc> wcs(conn.wr_count);
   int ret = ibv_poll_cq(conn.id->recv_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
@@ -234,7 +254,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   return iov;
 }
 
-void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
+void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits) {
 
   std::vector<std::pair<ibv_recv_wr, ibv_sge> > wrs(credits.size());
 
@@ -250,11 +270,11 @@ void lseb_release(BuConnectionId& conn, std::vector<void*> const& credits) {
       std::end(conn.wr_vect),
       [](void* p) {return p == nullptr;});
     assert(it != std::end(conn.wr_vect));
-    *it = credits[i];
+    *it = credits[i].iov_base;
     ++conn.wr_count;
 
     // ...
-    sge.addr = (uint64_t) (uintptr_t) credits[i];
+    sge.addr = (uint64_t) (uintptr_t) credits[i].iov_base;
     sge.length = (uint32_t) conn.wr_len;
     sge.lkey = conn.mr ? conn.mr->lkey : 0;
 

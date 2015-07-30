@@ -4,9 +4,9 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(
+add_library(
   ru
-  ru.cpp
+  readout_unit.cpp
   controller.cpp
   accumulator.cpp
   sender.cpp

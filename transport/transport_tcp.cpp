@@ -40,9 +40,9 @@ RuConnectionId lseb_connect(
   reinterpret_cast<char*>(&serv_addr.sin_addr.s_addr)
   );
 
-  if (connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr)) != 0) {
+  if (connect(sockfd, (sockaddr*) &serv_addr, sizeof(serv_addr))) {
     throw std::runtime_error(
-      "Error on connect: " + std::string(strerror(errno)));
+      "Error on rdma_connect: " + std::string(strerror(errno)));
   }
 
   LOG(DEBUG)
@@ -184,7 +184,7 @@ std::vector<iovec> lseb_read(BuConnectionId& conn) {
   return iov;
 }
 
-void lseb_release(BuConnectionId& conn, std::vector<void*> const& wrs) {
+void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits) {
 
 }
 

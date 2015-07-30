@@ -14,7 +14,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # using Clang or AppleClang
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+  set(CMAKE_CXX_FLAGS "-pthread -Wall -Wextra")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
   
@@ -44,10 +44,27 @@ endif()
 add_definitions(-D${TRANSPORT})
 
 # searching for boost 1.56 or newer
-find_package(Boost 1.56 REQUIRED COMPONENTS system)
+find_package(Boost 1.56 REQUIRED COMPONENTS system program_options)
 
 add_subdirectory(transport)
 add_subdirectory(generator)
 add_subdirectory(ru)
 add_subdirectory(bu)
 add_subdirectory(test)
+
+include_directories(
+  ${LSEB_SOURCE_DIR}
+  ${Boost_INCLUDE_DIRS}
+)
+
+add_executable(
+  lseb
+  main.cpp
+)
+
+target_link_libraries(
+  lseb
+  ru
+  bu
+  ${Boost_LIBRARIES}
+)

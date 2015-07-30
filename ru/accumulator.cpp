@@ -20,14 +20,19 @@ Accumulator::Accumulator(
       m_generated_events(0) {
 }
 
-MultiEvents Accumulator::add(MetaDataRange const& metadata_range) {
-
-  MultiEvents multievents;
+unsigned int Accumulator::add(MetaDataRange const& metadata_range) {
   m_generated_events += distance_in_range(metadata_range, m_metadata_range);
+  return m_generated_events;
+}
 
+std::vector<MultiEvent> Accumulator::get_multievents(int n) {
+
+  std::vector<MultiEvent> multievents;
   // Handle bulk submission and release events
-  while (m_generated_events >= m_events_in_multievent) {
 
+  assert(m_generated_events >= m_events_in_multievent * n);
+
+  for (int i = 0; i < n; ++i) {
     // Create bulked metadata and data ranges
     MetaDataRange multievent_metadata(
       m_current_metadata,

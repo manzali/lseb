@@ -37,7 +37,7 @@ using DataRange = Range<unsigned char>;
 using MetaDataBuffer = Buffer<EventMetaData>;
 using DataBuffer = Buffer<unsigned char>;
 
-using MultiEvents = std::vector<std::pair<MetaDataRange, DataRange> >;
+using MultiEvent = std::pair<MetaDataRange, DataRange>;
 
 }
 

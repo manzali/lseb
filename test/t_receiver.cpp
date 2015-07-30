@@ -30,12 +30,10 @@ int main(int argc, char* argv[]) {
   while (true) {
     std::vector<iovec> iov = lseb_read(conn);
     if (iov.size()) {
-      std::vector<void*> wrs;
       for (auto& i : iov) {
         bandwith.add(i.iov_len);
-        wrs.push_back(i.iov_base);
       }
-      lseb_release(conn, wrs);
+      lseb_release(conn, iov);
     }
     if (bandwith.check()) {
       std::cout

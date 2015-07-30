@@ -1,4 +1,5 @@
 {
+  "LOG_LEVEL": "NOTICE",
   "GENERATOR":
   {
     "MEAN": "200",
@@ -9,25 +10,22 @@
   {
     "MAX_FRAGMENT_SIZE": "250",
     "BULKED_EVENTS": "600",
-    "TOKENS": "10"
+    "TOKENS": "20",
+    "MUL": "4"
   },
   "RU":
   {
-    "LOG_LEVEL": "INFO",
+
     "META_BUFFER": "57521880",
     "DATA_BUFFER": "536870912",
     "MS_TIMEOUT": "1000"
   },
   "BU":
   {
-    "LOG_LEVEL": "INFO",
     "MS_TIMEOUT": "1000"
   },
   "ENDPOINTS":
   [
-    {
-      "HOST": "127.0.0.1",
-      "PORT": "7000"
-    }
+    $$ENDPOINTS$$
   ]
 }

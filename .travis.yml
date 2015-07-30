@@ -4,9 +4,9 @@ compiler:
   - gcc
   - clang
 
-#branches:
-#  except:
-#    - verbs
+branches:
+  except:
+    - all_in_one
 
 # Problem with clang
 # http://stackoverflow.com/questions/15747223/why-does-this-basic-thread-program-fail-with-clang-but-pass-in-g
@@ -30,7 +30,7 @@ install:
   - if [ "$CXX" == "clang++" ]; then sudo apt-get install -qq libstdc++-4.8-dev; fi
 # boost 1.58
   - cd boost_1_58_0
-  - ./bootstrap.sh --with-libraries=system
+  - ./bootstrap.sh --with-libraries=system,program_options
   - ./b2
   - sudo ./b2 install &>/dev/null
   - cd ..
