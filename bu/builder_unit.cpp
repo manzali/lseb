@@ -111,7 +111,7 @@ void BuilderUnit::operator()() {
           m.second.push_back(i);
         }
       }
-      if (m.second.size != old_size) {
+      if (m.second.size() != old_size) {
         LOG(DEBUG)
           << "Read "
           << m.second.size() - old_size
