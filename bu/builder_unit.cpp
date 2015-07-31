@@ -99,27 +99,24 @@ void BuilderUnit::operator()() {
 
     // Acquire
     t_recv.start();
-    do {
-      min_wrs = tokens;
-      for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
-        auto map_it = iov_map.find(i);
-        assert(map_it != std::end(iov_map));
-        auto& m = *map_it;
-        auto conn = connection_ids.find(m.first);
-        assert(conn != std::end(connection_ids));
-        int old_size = m.second.size();
-        std::vector<iovec> vect = lseb_read(conn->second);
-        if (!vect.empty()) {
-          m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
-          LOG(DEBUG)
-            << "Read "
-            << m.second.size() - old_size
-            << " wr from conn "
-            << m.first;
-        }
-        min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
+    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
+      auto map_it = iov_map.find(i);
+      assert(map_it != std::end(iov_map));
+      auto& m = *map_it;
+      auto conn = connection_ids.find(m.first);
+      assert(conn != std::end(connection_ids));
+      int old_size = m.second.size();
+      std::vector<iovec> vect = lseb_read(conn->second);
+      if (!vect.empty()) {
+        m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+        LOG(DEBUG)
+          << "Read "
+          << m.second.size() - old_size
+          << " wr from conn "
+          << m.first;
       }
-    } while (min_wrs == 0);
+      min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
+    }
 
     auto map_it = iov_map.find(m_id);
     assert(map_it != std::end(iov_map));
@@ -176,11 +173,17 @@ void BuilderUnit::operator()() {
     }
 
     if (bandwith.check()) {
-      LOG(NOTICE) << "Builder Unit - Bandwith: " << bandwith.frequency() / std::giga::num * 8. << " Gb/s";
+      LOG(NOTICE)
+        << "Builder Unit - Bandwith: "
+        << bandwith.frequency() / std::giga::num * 8.
+        << " Gb/s";
     }
 
     if (frequency.check()) {
-      LOG(NOTICE) << "Builder Unit - Frequency: " << frequency.frequency() / std::mega::num << " MHz";
+      LOG(NOTICE)
+        << "Builder Unit - Frequency: "
+        << frequency.frequency() / std::mega::num
+        << " MHz";
 
       LOG(INFO)
         << "Times:\n"
