@@ -90,26 +90,28 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
-  int start_id = (m_id == 0) ? endpoints.size() - 1 : m_id - 1;
-  int wrap_id = 0;
-
   while (true) {
 
     int min_wrs = tokens;
 
     // Acquire
     t_recv.start();
-    for (int i = start_id; i != m_id;
-        i = (i == wrap_id) ? endpoints.size() - 1 : i - 1) {
-      auto map_it = iov_map.find(i);
-      assert(map_it != std::end(iov_map));
-      auto& m = *map_it;
-      auto conn = connection_ids.find(m.first);
-      assert(conn != std::end(connection_ids));
+    for (auto&m : iov_map) {
       int old_size = m.second.size();
-      std::vector<iovec> vect = lseb_read(conn->second);
-      if (!vect.empty()) {
-        m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+      if (m.first != m_id) {
+        auto conn = connection_ids.find(m.first);
+        assert(conn != std::end(connection_ids));
+        std::vector<iovec> vect = lseb_read(conn->second);
+        if (!vect.empty()) {
+          m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+        }
+      } else {
+        iovec i;
+        while (m_ready_local_data.pop(i)) {
+          m.second.push_back(i);
+        }
+      }
+      if (m.second.size != old_size) {
         LOG(DEBUG)
           << "Read "
           << m.second.size() - old_size
@@ -118,23 +120,6 @@ void BuilderUnit::operator()() {
       }
       min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
-
-    auto map_it = iov_map.find(m_id);
-    assert(map_it != std::end(iov_map));
-    auto& m = *map_it;
-    int old_local_size = m.second.size();
-    iovec i;
-    while (m_ready_local_data.pop(i)) {
-      m.second.push_back(i);
-    }
-    if (m.second.size() - old_local_size) {
-      LOG(DEBUG)
-        << "Read "
-        << m.second.size() - old_local_size
-        << " wr from conn "
-        << m_id;
-    }
-    min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     t_recv.pause();
 
     // -----------------------------------------------------------------------
