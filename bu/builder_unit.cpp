@@ -93,9 +93,6 @@ void BuilderUnit::operator()() {
   int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   int wrap_id = endpoints.size() - 1;
 
-  //int const mul = m_configuration.get<int>("GENERAL.MUL");
-  //assert(mul > 0);
-
   while (true) {
 
     int min_wrs = tokens;
@@ -109,18 +106,15 @@ void BuilderUnit::operator()() {
       auto conn = connection_ids.find(m.first);
       assert(conn != std::end(connection_ids));
       int old_size = m.second.size();
-      //while (m.second.size() < mul) {
-      std::vector<iovec> vect;
-      while (vect.empty()) {
-        vect = lseb_read(conn->second);
-      }
+      std::vector<iovec> vect = lseb_read(conn->second);
+      if(!vect.empty()){
       m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
       LOG(DEBUG)
         << "Read "
         << m.second.size() - old_size
         << " wr from conn "
         << m.first;
-      //}
+      }
       min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
     auto map_it = iov_map.find(m_id);
