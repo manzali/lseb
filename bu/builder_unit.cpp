@@ -121,7 +121,7 @@ void BuilderUnit::operator()() {
       }
       else{
         LOG(WARNING) << "No wrs from conn " << m.first;
-        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
       }
       min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
