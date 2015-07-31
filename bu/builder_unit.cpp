@@ -2,6 +2,7 @@
 #include <string>
 #include <algorithm>
 #include <map>
+#include <thread>
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
@@ -117,6 +118,10 @@ void BuilderUnit::operator()() {
           << m.second.size() - old_size
           << " wr from conn "
           << m.first;
+      }
+      else{
+        LOG(WARNING) << "No wrs from conn " << m.first;
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
       }
       min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
