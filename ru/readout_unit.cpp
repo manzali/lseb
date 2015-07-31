@@ -46,7 +46,7 @@ void ReadoutUnit::operator()() {
   assert(mean > 0);
 
   int const stddev = m_configuration.get<int>("GENERATOR.STD_DEV");
-  assert(stddev > 0);
+  assert(stddev >= 0);
 
   int const max_fragment_size = m_configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
