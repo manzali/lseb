@@ -90,6 +90,9 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
+  int const mul = m_configuration.get<int>("GENERAL.MUL");
+  assert(mul > 0);
+
   while (true) {
 
     int min_wrs = tokens;
@@ -125,7 +128,7 @@ void BuilderUnit::operator()() {
         }
         min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
       }
-    } while (min_wrs == 0);
+    } while (min_wrs < mul);
     t_recv.pause();
 
     // -----------------------------------------------------------------------
