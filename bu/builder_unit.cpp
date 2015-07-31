@@ -43,9 +43,6 @@ void BuilderUnit::operator()() {
   std::vector<Endpoint> const endpoints = get_endpoints(
     m_configuration.get_child("ENDPOINTS"));
 
-  std::chrono::milliseconds ms_timeout(
-    m_configuration.get<int>("BU.MS_TIMEOUT"));
-
   size_t const data_size = max_fragment_size * bulk_size * tokens;
 
   // Allocate memory
