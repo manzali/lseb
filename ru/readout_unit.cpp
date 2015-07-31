@@ -64,9 +64,6 @@ void ReadoutUnit::operator()() {
   int const data_size = m_configuration.get<int>("RU.DATA_BUFFER");
   assert(data_size > 0);
 
-  std::chrono::milliseconds ms_timeout(
-    m_configuration.get<int>("RU.MS_TIMEOUT"));
-
   std::vector<Endpoint> const endpoints = get_endpoints(
     m_configuration.get_child("ENDPOINTS"));
 
@@ -124,7 +121,7 @@ void ReadoutUnit::operator()() {
   Timer t_send;
   Timer t_spli;
 
-  int const mul = m_configuration.get<int>("GENERAL.MUL");
+  int const mul = m_configuration.get<int>("RU.MUL");
   assert(mul > 0);
 
   unsigned int const needed_events = mul * bulk_size * endpoints.size();

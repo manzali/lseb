@@ -10,22 +10,21 @@
   {
     "MAX_FRAGMENT_SIZE": "250",
     "BULKED_EVENTS": "600",
-    "TOKENS": "20",
-    "MUL": "4"
+    "TOKENS": "20"
   },
   "RU":
   {
 
     "META_BUFFER": "57521880",
     "DATA_BUFFER": "536870912",
-    "MS_TIMEOUT": "1000"
+    "MUL": "4"
   },
   "BU":
   {
-    "MS_TIMEOUT": "1000"
+    "MUL": "4"
   },
   "ENDPOINTS":
   [
-    $$ENDPOINTS$$
+    __ENDPOINTS__
   ]
 }

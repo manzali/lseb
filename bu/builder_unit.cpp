@@ -90,7 +90,7 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
-  int const mul = m_configuration.get<int>("GENERAL.MUL");
+  int const mul = m_configuration.get<int>("BU.MUL");
   assert(mul > 0);
 
   while (true) {
