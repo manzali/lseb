@@ -90,8 +90,8 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
-  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
-  int wrap_id = endpoints.size() - 1;
+  int start_id = (m_id == 0) ? endpoints.size() - 1 : m_id - 1;
+  int wrap_id = 0;
 
   while (true) {
 
@@ -99,7 +99,8 @@ void BuilderUnit::operator()() {
 
     // Acquire
     t_recv.start();
-    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
+    for (int i = start_id; i != m_id;
+        i = (i == wrap_id) ? endpoints.size() - 1 : i - 1) {
       auto map_it = iov_map.find(i);
       assert(map_it != std::end(iov_map));
       auto& m = *map_it;
