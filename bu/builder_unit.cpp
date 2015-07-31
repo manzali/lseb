@@ -110,15 +110,16 @@ void BuilderUnit::operator()() {
       assert(conn != std::end(connection_ids));
       int old_size = m.second.size();
       //while (m.second.size() < mul) {
-      std::vector<iovec> vect = lseb_read(conn->second);
-      if (!vect.empty()) {
-        m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
-        LOG(DEBUG)
-          << "Read "
-          << m.second.size() - old_size
-          << " wr from conn "
-          << m.first;
+      std::vector<iovec> vect;
+      while (vect.empty()) {
+        vect = lseb_read(conn->second);
       }
+      m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+      LOG(DEBUG)
+        << "Read "
+        << m.second.size() - old_size
+        << " wr from conn "
+        << m.first;
       //}
       min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
     }
