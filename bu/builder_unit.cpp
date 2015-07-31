@@ -2,7 +2,6 @@
 #include <string>
 #include <algorithm>
 #include <map>
-#include <thread>
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
@@ -97,34 +96,36 @@ void BuilderUnit::operator()() {
 
     // Acquire
     t_recv.start();
-    for (auto&m : iov_map) {
-      int old_size = m.second.size();
-      if (m.first != m_id) {
-        auto conn = connection_ids.find(m.first);
-        assert(conn != std::end(connection_ids));
-        std::vector<iovec> vect = lseb_read(conn->second);
-        if (!vect.empty()) {
-          m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+    do {
+      min_wrs = tokens;
+      for (auto&m : iov_map) {
+        int old_size = m.second.size();
+        if (m.first != m_id) {
+          auto conn = connection_ids.find(m.first);
+          assert(conn != std::end(connection_ids));
+          std::vector<iovec> vect = lseb_read(conn->second);
+          if (!vect.empty()) {
+            m.second.insert(
+              std::end(m.second),
+              std::begin(vect),
+              std::end(vect));
+          }
+        } else {
+          iovec i;
+          while (m_ready_local_data.pop(i)) {
+            m.second.push_back(i);
+          }
         }
-      } else {
-        iovec i;
-        while (m_ready_local_data.pop(i)) {
-          m.second.push_back(i);
+        if (m.second.size() != old_size) {
+          LOG(DEBUG)
+            << "Read "
+            << m.second.size() - old_size
+            << " wr from conn "
+            << m.first;
         }
+        min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
       }
-      if (m.second.size() != old_size) {
-        LOG(DEBUG)
-          << "Read "
-          << m.second.size() - old_size
-          << " wr from conn "
-          << m.first;
-      }
-      else{
-        LOG(WARNING) << "No wrs from conn " << m.first;
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
-      }
-      min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
-    }
+    } while (min_wrs == 0);
     t_recv.pause();
 
     // -----------------------------------------------------------------------
