@@ -87,6 +87,8 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
+  std::vector<int> diff(endpoints.size(), 0);
+
   while (true) {
 
     // Acquire
@@ -112,6 +114,7 @@ void BuilderUnit::operator()() {
           << m.second.size() - old_size
           << " wr from conn "
           << m.first;
+        diff[m.first] += m.second.size() - old_size;
       }
     }
     t_recv.pause();
@@ -147,6 +150,14 @@ void BuilderUnit::operator()() {
     }
     t_rel.pause();
 
+    int min = std::distance(
+      std::begin(diff),
+      std::min_element(std::begin(diff), std::end(diff)));
+    int val = diff[min];
+    for (auto& i : diff) {
+      i -= val;
+    }
+
     if (bandwith.check()) {
       LOG(NOTICE)
         << "Builder Unit - Bandwith: "
@@ -159,6 +170,12 @@ void BuilderUnit::operator()() {
         << "Builder Unit - Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
+
+      int count = 0;
+      for (auto i : diff) {
+        LOG(NOTICE) << "Diff " << count << ": " << i << std::endl;
+        ++count;
+      }
 
       LOG(INFO)
         << "Times:\n"
