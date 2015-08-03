@@ -91,35 +91,19 @@ void BuilderUnit::operator()() {
 
     // Acquire
     t_recv.start();
-
     for (auto&m : iov_map) {
       int old_size = m.second.size();
       if (m.first != m_id) {
         auto conn = connection_ids.find(m.first);
         assert(conn != std::end(connection_ids));
-        std::vector<iovec> vect;
-        while (vect.empty()) {
-          vect = lseb_read(conn->second);
+        std::vector<iovec> vect = lseb_read(conn->second);
+        if (!vect.empty()) {
+          m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
         }
-        m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
-
-        // Release
-        lseb_release(conn->second, m.second);
       } else {
         iovec i;
-        while (!m_ready_local_data.pop(i)) {
-          ;
-        }
-        m.second.push_back(i);
         while (m_ready_local_data.pop(i)) {
           m.second.push_back(i);
-        }
-
-        // Release
-        for (auto& i : m.second) {
-          while (!m_free_local_data.push(i)) {
-            ;
-          }
         }
       }
       if (m.second.size() != old_size) {
@@ -128,14 +112,40 @@ void BuilderUnit::operator()() {
           << m.second.size() - old_size
           << " wr from conn "
           << m.first;
-
-        bandwith.add(iovec_length(m.second));
-        frequency.add(m.second.size() * bulk_size);
-
-        m.second.clear();
       }
     }
     t_recv.pause();
+
+    // -----------------------------------------------------------------------
+    // There should be event building here (for the first min_wrs multievents)
+    // -----------------------------------------------------------------------
+
+    // Release
+    t_rel.start();
+    for (auto& m : iov_map) {
+      if (!m.second.empty()) {
+        bandwith.add(iovec_length(m.second));
+        frequency.add(m.second.size() * bulk_size);
+        if (m.first != m_id) {
+          auto conn = connection_ids.find(m.first);
+          assert(conn != std::end(connection_ids));
+          lseb_release(conn->second, m.second);
+        } else {
+          for (auto& i : m.second) {
+            while (!m_free_local_data.push(i)) {
+              ;
+            }
+          }
+        }
+        LOG(DEBUG)
+          << "Released "
+          << m.second.size()
+          << " wr for conn "
+          << m.first;
+        m.second.clear();
+      }
+    }
+    t_rel.pause();
 
     if (bandwith.check()) {
       LOG(NOTICE)
