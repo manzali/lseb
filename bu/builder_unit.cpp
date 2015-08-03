@@ -87,36 +87,45 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
-  std::vector<int> diff(endpoints.size(), 0);
+  int const mul = m_configuration.get<int>("BU.MUL");
+  assert(mul > 0);
 
   while (true) {
 
+    int min_wrs = tokens;
+
     // Acquire
     t_recv.start();
-    for (auto&m : iov_map) {
-      int old_size = m.second.size();
-      if (m.first != m_id) {
-        auto conn = connection_ids.find(m.first);
-        assert(conn != std::end(connection_ids));
-        std::vector<iovec> vect = lseb_read(conn->second);
-        if (!vect.empty()) {
-          m.second.insert(std::end(m.second), std::begin(vect), std::end(vect));
+    do {
+      min_wrs = tokens;
+      for (auto&m : iov_map) {
+        int old_size = m.second.size();
+        if (m.first != m_id) {
+          auto conn = connection_ids.find(m.first);
+          assert(conn != std::end(connection_ids));
+          std::vector<iovec> vect = lseb_read(conn->second);
+          if (!vect.empty()) {
+            m.second.insert(
+              std::end(m.second),
+              std::begin(vect),
+              std::end(vect));
+          }
+        } else {
+          iovec i;
+          while (m_ready_local_data.pop(i)) {
+            m.second.push_back(i);
+          }
         }
-      } else {
-        iovec i;
-        while (m_ready_local_data.pop(i)) {
-          m.second.push_back(i);
+        if (m.second.size() != old_size) {
+          LOG(DEBUG)
+            << "Read "
+            << m.second.size() - old_size
+            << " wr from conn "
+            << m.first;
         }
+        min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
       }
-      if (m.second.size() != old_size) {
-        LOG(DEBUG)
-          << "Read "
-          << m.second.size() - old_size
-          << " wr from conn "
-          << m.first;
-        diff[m.first] += m.second.size() - old_size;
-      }
-    }
+    } while (min_wrs < mul);
     t_recv.pause();
 
     // -----------------------------------------------------------------------
@@ -124,38 +133,31 @@ void BuilderUnit::operator()() {
     // -----------------------------------------------------------------------
 
     // Release
-    t_rel.start();
-    for (auto& m : iov_map) {
-      if (!m.second.empty()) {
-        bandwith.add(iovec_length(m.second));
-        frequency.add(m.second.size() * bulk_size);
+    if (min_wrs > 0) {
+      t_rel.start();
+      for (auto& m : iov_map) {
+        assert(m.second.size() >= min_wrs);
+        std::vector<iovec> vect(
+          std::begin(m.second),
+          std::begin(m.second) + min_wrs);
         if (m.first != m_id) {
+          bandwith.add(iovec_length(vect));
           auto conn = connection_ids.find(m.first);
           assert(conn != std::end(connection_ids));
-          lseb_release(conn->second, m.second);
+          lseb_release(conn->second, vect);
         } else {
-          for (auto& i : m.second) {
+          for (auto& i : vect) {
             while (!m_free_local_data.push(i)) {
               ;
             }
           }
         }
-        LOG(DEBUG)
-          << "Released "
-          << m.second.size()
-          << " wr for conn "
-          << m.first;
-        m.second.clear();
+        LOG(DEBUG) << "Released " << min_wrs << " wr for conn " << m.first;
+        m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
       }
-    }
-    t_rel.pause();
+      t_rel.pause();
 
-    int min = std::distance(
-      std::begin(diff),
-      std::min_element(std::begin(diff), std::end(diff)));
-    int val = diff[min];
-    for (auto& i : diff) {
-      i -= val;
+      frequency.add(min_wrs * bulk_size * endpoints.size());
     }
 
     if (bandwith.check()) {
@@ -170,12 +172,6 @@ void BuilderUnit::operator()() {
         << "Builder Unit - Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
-
-      int count = 0;
-      for (auto i : diff) {
-        LOG(NOTICE) << "Diff " << count << ": " << i << std::endl;
-        ++count;
-      }
 
       LOG(INFO)
         << "Times:\n"

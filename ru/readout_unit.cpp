@@ -185,7 +185,6 @@ void ReadoutUnit::operator()() {
           iov.iov_len);
         i.iov_len += iov.iov_len;
       }
-      bandwith.add(i.iov_len);
       while (!m_ready_local_data.push(i)) {
         ;
       }
