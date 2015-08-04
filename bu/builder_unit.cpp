@@ -50,8 +50,8 @@ void BuilderUnit::operator()() {
   std::unique_ptr<unsigned char[]> const data_ptr(
     new unsigned char[data_size * (endpoints.size() - 1)]);
 
-  LOG(INFO)
-    << "Allocated "
+  LOG(NOTICE)
+    << "Builder Unit - Allocated "
     << data_size * (endpoints.size() - 1)
     << " bytes of memory";
 
@@ -62,19 +62,26 @@ void BuilderUnit::operator()() {
     endpoints[m_id].port(),
     tokens);
 
-  LOG(NOTICE) << "Waiting for connections...";
+  int next_id = (m_id == 0) ? endpoints.size() - 1 : m_id - 1;
+  std::vector<int> id_sequence(endpoints.size());
+  for (auto& id : id_sequence) {
+    id = next_id;
+    next_id = (next_id != 0) ? next_id - 1 : endpoints.size() - 1;
+  }
+
+  LOG(NOTICE) << "Builder Unit - Waiting for connections...";
   std::map<int, BuConnectionId> connection_ids;
   int count = 0;
-  for (int i = 0; i < endpoints.size(); ++i) {
-    if (i != m_id) {
-      auto p = connection_ids.emplace(i, lseb_accept(socket));
+  for (auto id : id_sequence) {
+    if (id != m_id) {
+      auto p = connection_ids.emplace(id, lseb_accept(socket));
       lseb_register(
         p.first->second,
         data_ptr.get() + count++ * data_size,
         data_size);
     }
   }
-  LOG(NOTICE) << "Connections established";
+  LOG(NOTICE) << "Builder Unit - All connections established";
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);
@@ -85,13 +92,6 @@ void BuilderUnit::operator()() {
   std::map<int, std::vector<iovec> > iov_map;
   for (int i = 0; i < endpoints.size(); ++i) {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
-  }
-
-  int next_id = (m_id == 0) ? endpoints.size() - 1 : m_id - 1;
-  std::vector<int> id_sequence(endpoints.size());
-  for (auto& id : id_sequence) {
-    id = next_id;
-    next_id = (next_id != 0) ? next_id - 1 : endpoints.size() - 1;
   }
 
   while (true) {

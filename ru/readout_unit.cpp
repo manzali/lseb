@@ -79,7 +79,7 @@ void ReadoutUnit::operator()() {
     }
   }
 
-  LOG(NOTICE) << "Waiting for connections...";
+  LOG(NOTICE) << "Readout Unit - Waiting for connections...";
   std::map<int, RuConnectionId> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
@@ -88,7 +88,7 @@ void ReadoutUnit::operator()() {
         lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
     }
   }
-  LOG(NOTICE) << "Connections established";
+  LOG(NOTICE) << "Readout Unit - All connections established";
 
 // Allocate memory
 
@@ -127,7 +127,6 @@ void ReadoutUnit::operator()() {
 
   Timer t_accu;
   Timer t_send;
-  Timer t_spli;
 
   unsigned int const needed_events = bulk_size * endpoints.size();
   unsigned int const needed_multievents = endpoints.size();
@@ -145,12 +144,9 @@ void ReadoutUnit::operator()() {
 
     assert(multievents.size() == needed_multievents);
 
-    t_spli.start();
     std::map<int, std::vector<DataIov> > iov_map = splitter.split(multievents);
-    t_spli.pause();
 
     t_send.start();
-
     for (auto id : id_sequence) {
       auto map_it = iov_map.find(id);
       assert(map_it != std::end(iov_map));
@@ -182,7 +178,6 @@ void ReadoutUnit::operator()() {
           }
         }
       }
-
       LOG(DEBUG)
         << "Written "
         << iov_pair.second.size()
@@ -220,13 +215,9 @@ void ReadoutUnit::operator()() {
         << "%\n"
         << "\tt_send: "
         << t_send.rate()
-        << "%\n"
-        << "\tt_spli: "
-        << t_spli.rate()
         << "%";
       t_accu.reset();
       t_send.reset();
-      t_spli.reset();
     }
   }
 }
