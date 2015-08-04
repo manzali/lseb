@@ -70,19 +70,27 @@ void ReadoutUnit::operator()() {
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
-  int start_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
-  int wrap_id = endpoints.size() - 1;
+  int next_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
+  std::vector<int> id_sequence(endpoints.size());
+  for (auto& id : id_sequence) {
+    id = next_id;
+    if (++next_id == endpoints.size()) {
+      next_id = 0;
+    }
+  }
 
   LOG(NOTICE) << "Waiting for connections...";
   std::map<int, RuConnectionId> connection_ids;
-  for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
-    connection_ids.emplace(
-      i,
-      lseb_connect(endpoints[i].hostname(), endpoints[i].port(), tokens));
+  for (auto id : id_sequence) {
+    if (id != m_id) {
+      connection_ids.emplace(
+        id,
+        lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
+    }
   }
   LOG(NOTICE) << "Connections established";
 
-  // Allocate memory
+// Allocate memory
 
   std::unique_ptr<unsigned char[]> const metadata_ptr(
     new unsigned char[meta_size]);
@@ -146,54 +154,47 @@ void ReadoutUnit::operator()() {
 
     t_send.start();
 
-    for (int i = start_id; i != m_id; i = (i == wrap_id) ? 0 : i + 1) {
-      auto map_it = iov_map.find(i);
+    for (auto id : id_sequence) {
+
+      auto map_it = iov_map.find(id);
       assert(map_it != std::end(iov_map));
       auto& iov_pair = *map_it;
       assert(iov_pair.second.size() == mul);
-      auto it = connection_ids.find(iov_pair.first);
 
-      while (lseb_avail(it->second) < mul) {
-        ;
+      if (id != m_id) {
+        auto it = connection_ids.find(iov_pair.first);
+        assert(it != std::end(connection_ids));
+        while (lseb_avail(it->second) < mul) {
+          ;
+        }
+        size_t bytes = lseb_write(it->second, iov_pair.second);
+        bandwith.add(bytes);
+      } else {
+        for (auto& data_iov : iov_pair.second) {
+          iovec i;
+          while (!m_free_local_data.pop(i)) {
+            ;
+          }
+          i.iov_len = 0;
+          for (auto& iov : data_iov) {
+            memcpy(
+              static_cast<unsigned char*>(i.iov_base) + i.iov_len,
+              iov.iov_base,
+              iov.iov_len);
+            i.iov_len += iov.iov_len;
+          }
+          while (!m_ready_local_data.push(i)) {
+            ;
+          }
+        }
       }
-      // time
-      size_t bytes = lseb_write(it->second, iov_pair.second);
-      // time
+
       LOG(DEBUG)
         << "Written "
         << iov_pair.second.size()
         << " wr to conn "
-        << it->first;
-      bandwith.add(bytes);
+        << id;
     }
-
-    auto it = iov_map.find(m_id);
-    assert(it != std::end(iov_map));
-    auto& iov_pair = *it;
-    assert(iov_pair.second.size() == mul);
-
-    for (auto& data_iov : iov_pair.second) {
-      iovec i;
-      while (!m_free_local_data.pop(i)) {
-        ;
-      }
-      i.iov_len = 0;
-      for (auto& iov : data_iov) {
-        memcpy(
-          static_cast<unsigned char*>(i.iov_base) + i.iov_len,
-          iov.iov_base,
-          iov.iov_len);
-        i.iov_len += iov.iov_len;
-      }
-      while (!m_ready_local_data.push(i)) {
-        ;
-      }
-    }
-    LOG(DEBUG)
-      << "Written "
-      << iov_pair.second.size()
-      << " wr to conn "
-      << m_id;
     t_send.pause();
 
     t_accu.start();

@@ -89,11 +89,21 @@ void BuilderUnit::operator()() {
 
   std::vector<int> diff(endpoints.size(), 0);
 
+  int next_id = (m_id == 0) ? endpoints.size() - 1 : m_id - 1;
+  std::vector<int> id_sequence(endpoints.size());
+  for (auto& id : id_sequence) {
+    id = next_id;
+    next_id = (next_id != 0) ? next_id - 1 : endpoints.size() - 1;
+  }
+
   while (true) {
 
     // Acquire
     t_recv.start();
-    for (auto&m : iov_map) {
+    for (auto id : id_sequence) {
+      auto map_it = iov_map.find(id);
+      assert(map_it != std::end(iov_map));
+      auto& m = *map_it;
       int old_size = m.second.size();
       if (m.first != m_id) {
         auto conn = connection_ids.find(m.first);
@@ -125,7 +135,10 @@ void BuilderUnit::operator()() {
 
     // Release
     t_rel.start();
-    for (auto& m : iov_map) {
+    for (auto id : id_sequence) {
+      auto map_it = iov_map.find(id);
+      assert(map_it != std::end(iov_map));
+      auto& m = *map_it;
       if (!m.second.empty()) {
         frequency.add(m.second.size() * bulk_size);
         if (m.first != m_id) {
