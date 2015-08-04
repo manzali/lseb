@@ -123,7 +123,7 @@ void ReadoutUnit::operator()() {
   Splitter splitter(m_id, endpoints.size(), data_range);
 
   FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0);
+  FrequencyMeter bandwith(5.0); // this timeout is ignored (frequency is used)
 
   Timer t_accu;
   Timer t_send;
@@ -194,19 +194,28 @@ void ReadoutUnit::operator()() {
     t_accu.pause();
 
     frequency.add(multievents.size() * bulk_size);
-
+/*
     if (bandwith.check()) {
       LOG(NOTICE)
         << "Readout Unit - Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
     }
-
+*/
     if (frequency.check()) {
+      /*
       LOG(NOTICE)
         << "Readout Unit - Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
+      */
+
+      LOG(NOTICE)
+        << "Readout Unit - Frequency "
+        << frequency.frequency() / std::mega::num
+        << " MHz - "
+        << bandwith.frequency() / std::giga::num * 8.
+        << "Gb/s";
 
       LOG(INFO)
         << "Times:\n"

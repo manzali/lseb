@@ -84,7 +84,7 @@ void BuilderUnit::operator()() {
   LOG(NOTICE) << "Builder Unit - All connections established";
 
   FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0);
+  FrequencyMeter bandwith(5.0); // this timeout is ignored (frequency is used)
 
   Timer t_recv;
   Timer t_rel;
@@ -169,19 +169,29 @@ void BuilderUnit::operator()() {
 
       frequency.add(min_wrs * bulk_size * endpoints.size());
     }
-
+/*
     if (bandwith.check()) {
       LOG(NOTICE)
         << "Builder Unit - Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";
     }
-
+*/
     if (frequency.check()) {
+
+      /*
       LOG(NOTICE)
         << "Builder Unit - Frequency: "
         << frequency.frequency() / std::mega::num
         << " MHz";
+      */
+
+      LOG(NOTICE)
+        << "Builder Unit - Frequency "
+        << frequency.frequency() / std::mega::num
+        << " MHz - "
+        << bandwith.frequency() / std::giga::num * 8.
+        << "Gb/s";
 
       LOG(INFO)
         << "Times:\n"
