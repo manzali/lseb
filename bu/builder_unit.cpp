@@ -132,7 +132,7 @@ void BuilderUnit::operator()() {
         }
         min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
       }
-    } while (min_wrs != 0);
+    } while (min_wrs == 0);
     t_recv.pause();
 
     // -----------------------------------------------------------------------
