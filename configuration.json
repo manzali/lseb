@@ -16,12 +16,10 @@
   {
 
     "META_BUFFER": "57521880",
-    "DATA_BUFFER": "536870912",
-    "MUL": "4"
+    "DATA_BUFFER": "536870912"
   },
   "BU":
   {
-    "MUL": "4"
   },
   "ENDPOINTS":
   [

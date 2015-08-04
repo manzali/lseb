@@ -87,9 +87,6 @@ void BuilderUnit::operator()() {
     iov_map.insert(std::make_pair(i, std::vector<iovec>()));
   }
 
-  int const mul = m_configuration.get<int>("BU.MUL");
-  assert(mul > 0);
-
   int next_id = (m_id == 0) ? endpoints.size() - 1 : m_id - 1;
   std::vector<int> id_sequence(endpoints.size());
   for (auto& id : id_sequence) {
@@ -135,7 +132,7 @@ void BuilderUnit::operator()() {
         }
         min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
       }
-    } while (min_wrs < mul);
+    } while (min_wrs != 0);
     t_recv.pause();
 
     // -----------------------------------------------------------------------

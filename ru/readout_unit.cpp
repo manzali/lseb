@@ -129,11 +129,8 @@ void ReadoutUnit::operator()() {
   Timer t_send;
   Timer t_spli;
 
-  int const mul = m_configuration.get<int>("RU.MUL");
-  assert(mul > 0);
-
-  unsigned int const needed_events = mul * bulk_size * endpoints.size();
-  unsigned int const needed_multievents = mul * endpoints.size();
+  unsigned int const needed_events = bulk_size * endpoints.size();
+  unsigned int const needed_multievents = endpoints.size();
 
   while (true) {
 
@@ -155,16 +152,13 @@ void ReadoutUnit::operator()() {
     t_send.start();
 
     for (auto id : id_sequence) {
-
       auto map_it = iov_map.find(id);
       assert(map_it != std::end(iov_map));
       auto& iov_pair = *map_it;
-      assert(iov_pair.second.size() == mul);
-
       if (id != m_id) {
         auto it = connection_ids.find(iov_pair.first);
         assert(it != std::end(connection_ids));
-        while (lseb_avail(it->second) < mul) {
+        while (lseb_avail(it->second) < iov_pair.second.size()) {
           ;
         }
         size_t bytes = lseb_write(it->second, iov_pair.second);
