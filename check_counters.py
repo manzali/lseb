@@ -1,7 +1,7 @@
 import subprocess
 import time
 
-subprocess.call(["perfquery", "-x", "-R"])
+subprocess.call(["/usr/sbin/perfquery", "-x", "-R"])
 
 while True:
 
@@ -18,5 +18,5 @@ while True:
 	gb_rcv = rcv * 8 * 4 / 1073741824.0 / 5.0
 
 	print "Xmit: {} Gb/s".format(gb_xmit)
-	print "Rcv: {} Gb/s".format(gb_rcv)
-	print "Tot: {} Gb/s".format(gb_xmit + gb_rcv)
+	print "Rcv:  {} Gb/s".format(gb_rcv)
+	print "Tot:  {} Gb/s".format(gb_xmit + gb_rcv)
