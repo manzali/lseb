@@ -10,6 +10,7 @@
 
 #include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
+#include <netinet/in.h>
 
 #define MAX_BACKLOG 128
 
