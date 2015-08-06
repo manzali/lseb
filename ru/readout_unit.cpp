@@ -108,6 +108,8 @@ void ReadoutUnit::operator()() {
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
 
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
   Accumulator accumulator(metadata_range, data_range, bulk_size);
 
   LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
