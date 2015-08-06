@@ -107,7 +107,6 @@ void ReadoutUnit::operator()() {
       lseb_register(p.first->second, data_ptr.get(), data_size);
       LOG(NOTICE) << "Connection established with Builder Unit " << id;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
 
