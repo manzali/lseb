@@ -74,13 +74,17 @@ void BuilderUnit::operator()() {
   int count = 0;
   for (auto id : id_sequence) {
     if (id != m_id) {
-      LOG(NOTICE) << "Builder Unit - Accepting connection from Readout Unit " << id;
+      LOG(NOTICE)
+        << "Builder Unit - Accepting connection from Readout Unit "
+        << id;
       auto p = connection_ids.emplace(id, lseb_accept(socket));
       lseb_register(
         p.first->second,
         data_ptr.get() + count++ * data_size,
         data_size);
-      LOG(NOTICE) << "Builder Unit - Connection established with Readout Unit " << id;
+      LOG(NOTICE)
+        << "Builder Unit - Connection established with Readout Unit "
+        << id;
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
@@ -92,10 +96,7 @@ void BuilderUnit::operator()() {
   Timer t_check;
   Timer t_rel;
 
-  std::map<int, std::vector<iovec> > iov_map;
-  for (int i = 0; i < endpoints.size(); ++i) {
-    iov_map.insert(std::make_pair(i, std::vector<iovec>()));
-  }
+  std::vector<std::vector<iovec> > data_vect(endpoints.size());
 
   while (true) {
 
@@ -106,34 +107,32 @@ void BuilderUnit::operator()() {
     do {
       min_wrs = tokens;
       for (auto id : id_sequence) {
-        auto map_it = iov_map.find(id);
-        assert(map_it != std::end(iov_map));
-        auto& m = *map_it;
-        int old_size = m.second.size();
-        if (m.first != m_id) {
-          auto conn = connection_ids.find(m.first);
+        auto& iov_vect = data_vect.at(id);
+        int old_size = iov_vect.size();
+        if (id != m_id) {
+          auto conn = connection_ids.find(id);
           assert(conn != std::end(connection_ids));
-          std::vector<iovec> vect = lseb_read(conn->second);
-          if (!vect.empty()) {
-            m.second.insert(
-              std::end(m.second),
-              std::begin(vect),
-              std::end(vect));
+          std::vector<iovec> new_data = lseb_read(conn->second);
+          if (!new_data.empty()) {
+            iov_vect.insert(
+              std::end(iov_vect),
+              std::begin(new_data),
+              std::end(new_data));
           }
         } else {
           iovec i;
           while (m_ready_local_data.pop(i)) {
-            m.second.push_back(i);
+            iov_vect.push_back(i);
           }
         }
-        if (m.second.size() != old_size) {
+        if (iov_vect.size() != old_size) {
           LOG(DEBUG)
             << "Read "
-            << m.second.size() - old_size
+            << iov_vect.size() - old_size
             << " wr from conn "
-            << m.first;
+            << id;
         }
-        min_wrs = (min_wrs < m.second.size()) ? min_wrs : m.second.size();
+        min_wrs = (min_wrs < iov_vect.size()) ? min_wrs : iov_vect.size();
       }
     } while (min_wrs == 0);
     t_recv.pause();
@@ -142,16 +141,14 @@ void BuilderUnit::operator()() {
     // There should be event building here (for the first min_wrs multievents)
     // -----------------------------------------------------------------------
     t_check.start();
-    uint64_t evt_id = pointer_cast<EventHeader>(iov_map[m_id].front().iov_base)
-      ->id;
+    uint64_t evt_id = pointer_cast<EventHeader>(
+      data_vect.at(m_id).front().iov_base)->id;
     for (auto id : id_sequence) {
-      auto map_it = iov_map.find(id);
-      assert(map_it != std::end(iov_map));
       uint64_t current_evt_id = pointer_cast<EventHeader>(
-        map_it->second.front().iov_base)->id;
+        data_vect.at(m_id).front().iov_base)->id;
       assert(evt_id == current_evt_id);
       uint64_t current_flags = pointer_cast<EventHeader>(
-        map_it->second.front().iov_base)->flags;
+        data_vect.at(m_id).front().iov_base)->flags;
       assert(id == current_flags);
     }
     t_check.pause();
@@ -159,16 +156,14 @@ void BuilderUnit::operator()() {
     // Release
     t_rel.start();
     for (auto id : id_sequence) {
-      auto map_it = iov_map.find(id);
-      assert(map_it != std::end(iov_map));
-      auto& m = *map_it;
-      assert(m.second.size() >= min_wrs);
+      auto& iov_vect = data_vect.at(id);
+      assert(iov_vect.size() >= min_wrs);
       std::vector<iovec> vect(
-        std::begin(m.second),
-        std::begin(m.second) + min_wrs);
-      if (m.first != m_id) {
+        std::begin(iov_vect),
+        std::begin(iov_vect) + min_wrs);
+      if (id != m_id) {
         bandwith.add(iovec_length(vect));
-        auto conn = connection_ids.find(m.first);
+        auto conn = connection_ids.find(id);
         assert(conn != std::end(connection_ids));
         lseb_release(conn->second, vect);
       } else {
@@ -178,8 +173,8 @@ void BuilderUnit::operator()() {
           }
         }
       }
-      LOG(DEBUG) << "Released " << min_wrs << " wr for conn " << m.first;
-      m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
+      LOG(DEBUG) << "Released " << min_wrs << " wr for conn " << id;
+      iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + min_wrs);
     }
     t_rel.pause();
     frequency.add(min_wrs * bulk_size * endpoints.size());
