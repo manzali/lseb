@@ -73,6 +73,7 @@ void BuilderUnit::operator()() {
   std::map<int, BuConnectionId> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
+      LOG(NOTICE) << "Accepting connection from Readout Unit " << id;
       connection_ids.emplace(id, lseb_accept(socket));
     }
   }

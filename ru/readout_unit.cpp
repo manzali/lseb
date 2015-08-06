@@ -99,6 +99,7 @@ void ReadoutUnit::operator()() {
   std::map<int, RuConnectionId> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
+      LOG(NOTICE) << "Connecting to Builder Unit " << id;
       connection_ids.emplace(
         id,
         lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
