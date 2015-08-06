@@ -123,7 +123,7 @@ void ReadoutUnit::operator()() {
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
-  Timer t_accu;
+  Timer t_ctrl;
   Timer t_send;
 
   unsigned int const needed_events = bulk_size * endpoints.size();
@@ -131,14 +131,14 @@ void ReadoutUnit::operator()() {
 
   while (true) {
 
-    t_accu.start();
+    t_ctrl.start();
     unsigned int ready_events = 0;
     do {
       ready_events = accumulator.add(controller.read());
     } while (needed_events >= ready_events);
     std::vector<MultiEvent> multievents = accumulator.get_multievents(
       needed_multievents);
-    t_accu.pause();
+    t_ctrl.pause();
 
     // Fill data_vect
     std::vector<DataIov> data_vect;
@@ -180,12 +180,12 @@ void ReadoutUnit::operator()() {
     }
     t_send.pause();
 
-    t_accu.start();
+    t_ctrl.start();
     controller.release(
       MetaDataRange(
         std::begin(multievents.front().first),
         std::end(multievents.back().first)));
-    t_accu.pause();
+    t_ctrl.pause();
 
     frequency.add(multievents.size() * bulk_size);
 
@@ -199,13 +199,13 @@ void ReadoutUnit::operator()() {
 
       LOG(INFO)
         << "Times:\n"
-        << "\tt_accu: "
-        << t_accu.rate()
+        << "\tt_ctrl: "
+        << t_ctrl.rate()
         << "%\n"
         << "\tt_send: "
         << t_send.rate()
         << "%";
-      t_accu.reset();
+      t_ctrl.reset();
       t_send.reset();
     }
   }

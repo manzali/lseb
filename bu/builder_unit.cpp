@@ -87,6 +87,7 @@ void BuilderUnit::operator()() {
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   Timer t_recv;
+  Timer t_check;
   Timer t_rel;
 
   std::map<int, std::vector<iovec> > iov_map;
@@ -138,6 +139,7 @@ void BuilderUnit::operator()() {
     // -----------------------------------------------------------------------
     // There should be event building here (for the first min_wrs multievents)
     // -----------------------------------------------------------------------
+    t_check.start();
     uint64_t evt_id = pointer_cast<EventHeader>(iov_map[m_id].front().iov_base)
       ->id;
     for (auto id : id_sequence) {
@@ -147,6 +149,7 @@ void BuilderUnit::operator()() {
         map_it->second.front().iov_base)->id;
       assert(evt_id == current_evt_id);
     }
+    t_check.pause();
 
     // Release
     t_rel.start();
@@ -189,10 +192,14 @@ void BuilderUnit::operator()() {
         << "\tt_recv: "
         << t_recv.rate()
         << "%\n"
+        << "\tt_check: "
+        << t_check.rate()
+        << "%\n"
         << "\tt_rel: "
         << t_rel.rate()
         << "%";
       t_recv.reset();
+      t_check.reset();
       t_rel.reset();
     }
   }
