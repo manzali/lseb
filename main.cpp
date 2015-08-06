@@ -10,6 +10,7 @@
 
 #include "common/log.hpp"
 #include "common/configuration.h"
+#include "common/tcp_barrier.h"
 
 #include "transport/endpoints.h"
 
@@ -59,9 +60,9 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << configuration << std::endl;
 
-  int const endpoints =
-    get_endpoints(configuration.get_child("ENDPOINTS")).size();
-  if (id < 0 || id >= endpoints) {
+  std::vector<Endpoint> const endpoints = get_endpoints(
+    configuration.get_child("ENDPOINTS"));
+  if (id < 0 || id >= endpoints.size()) {
     LOG(ERROR) << "Wrong ID: " << id;
     return EXIT_FAILURE;
   }
@@ -90,15 +91,20 @@ int main(int argc, char* argv[]) {
   boost::lockfree::spsc_queue<iovec> free_local_data(tokens);
   boost::lockfree::spsc_queue<iovec> ready_local_data(tokens);
 
-  std::unique_ptr<unsigned char[]> const local_data_ptr(
-    new unsigned char[multievent_size * tokens]);
-
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
   std::thread bu_th(bu);
 
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
   std::thread ru_th(ru);
 
+  tcp_barrier(
+    id,
+    endpoints.size(),
+    endpoints[0].hostname(),
+    endpoints[0].port());
+
+  std::unique_ptr<unsigned char[]> const local_data_ptr(
+    new unsigned char[multievent_size * tokens]);
   for (int i = 0; i < tokens; ++i) {
     while (!free_local_data.push( {
       local_data_ptr.get() + i * multievent_size,
