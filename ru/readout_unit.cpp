@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <thread>
 
 #include <cstdlib>
 #include <cassert>
@@ -109,6 +110,8 @@ void ReadoutUnit::operator()() {
     }
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
 
