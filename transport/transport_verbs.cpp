@@ -11,12 +11,12 @@
 #include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
 
-#define MAX_BACKLOG 1
+#define MAX_BACKLOG 128
 
 namespace lseb {
 
 namespace {
-auto retry_wait = std::chrono::milliseconds(500);
+auto retry_wait = std::chrono::milliseconds(100);
 }
 
 RuConnectionId lseb_connect(

@@ -2,7 +2,6 @@
 #include <string>
 #include <algorithm>
 #include <map>
-#include <thread>
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
@@ -75,19 +74,16 @@ void BuilderUnit::operator()() {
   int count = 0;
   for (auto id : id_sequence) {
     if (id != m_id) {
-      LOG(NOTICE) << "Accepting connection from Readout Unit " << id;
+      LOG(NOTICE) << "Builder Unit - Accepting connection from Readout Unit " << id;
       auto p = connection_ids.emplace(id, lseb_accept(socket));
-      LOG(NOTICE) << "Registering memory...";
       lseb_register(
         p.first->second,
         data_ptr.get() + count++ * data_size,
         data_size);
-      LOG(NOTICE) << "Connection established with Readout Unit " << id;
+      LOG(NOTICE) << "Builder Unit - Connection established with Readout Unit " << id;
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
-
-  //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
@@ -154,6 +150,9 @@ void BuilderUnit::operator()() {
       uint64_t current_evt_id = pointer_cast<EventHeader>(
         map_it->second.front().iov_base)->id;
       assert(evt_id == current_evt_id);
+      uint64_t current_flags = pointer_cast<EventHeader>(
+        map_it->second.front().iov_base)->flags;
+      assert(id == current_flags);
     }
     t_check.pause();
 
