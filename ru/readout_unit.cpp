@@ -111,7 +111,7 @@ void ReadoutUnit::operator()() {
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
 

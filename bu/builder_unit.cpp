@@ -87,7 +87,7 @@ void BuilderUnit::operator()() {
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  //std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
