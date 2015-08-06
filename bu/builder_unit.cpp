@@ -71,20 +71,18 @@ void BuilderUnit::operator()() {
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
   std::map<int, BuConnectionId> connection_ids;
+  int count = 0;
   for (auto id : id_sequence) {
     if (id != m_id) {
       LOG(NOTICE) << "Accepting connection from Readout Unit " << id;
-      connection_ids.emplace(id, lseb_accept(socket));
+      auto p = connection_ids.emplace(id, lseb_accept(socket));
+      lseb_register(
+        p.first->second,
+        data_ptr.get() + count++ * data_size,
+        data_size);
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
-
-  LOG(NOTICE) << "Builder Unit - Waiting for memory registration...";
-  int count = 0;
-  for (auto& conn : connection_ids) {
-    lseb_register(conn.second, data_ptr.get() + count++ * data_size, data_size);
-  }
-  LOG(NOTICE) << "Builder Unit - All memory registered";
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)

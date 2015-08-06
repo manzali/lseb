@@ -72,19 +72,19 @@ void ReadoutUnit::operator()() {
 
   // Allocate memory
 
-    std::unique_ptr<unsigned char[]> const metadata_ptr(
-      new unsigned char[meta_size]);
-    std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
+  std::unique_ptr<unsigned char[]> const metadata_ptr(
+    new unsigned char[meta_size]);
+  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
-    MetaDataRange metadata_range(
-      pointer_cast<EventMetaData>(metadata_ptr.get()),
-      pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
-    DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
+  MetaDataRange metadata_range(
+    pointer_cast<EventMetaData>(metadata_ptr.get()),
+    pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
+  DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
-    MetaDataBuffer metadata_buffer(
-      std::begin(metadata_range),
-      std::end(metadata_range));
-    DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
+  MetaDataBuffer metadata_buffer(
+    std::begin(metadata_range),
+    std::end(metadata_range));
+  DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
   int next_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   std::vector<int> id_sequence(endpoints.size());
@@ -100,18 +100,13 @@ void ReadoutUnit::operator()() {
   for (auto id : id_sequence) {
     if (id != m_id) {
       LOG(NOTICE) << "Connecting to Builder Unit " << id;
-      connection_ids.emplace(
+      auto p = connection_ids.emplace(
         id,
         lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
+      lseb_register(p.first->second, data_ptr.get(), data_size);
     }
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
-
-  LOG(NOTICE) << "Readout Unit - Waiting for memory registration...";
-  for (auto& conn : connection_ids) {
-    lseb_register(conn.second, data_ptr.get(), data_size);
-  }
-  LOG(NOTICE) << "Readout Unit - All memory registered";
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
 
