@@ -1,7 +1,6 @@
 #include <memory>
 #include <string>
 #include <map>
-#include <thread>
 
 #include <cstdlib>
 #include <cassert>
@@ -104,7 +103,9 @@ void ReadoutUnit::operator()() {
       auto p = connection_ids.emplace(
         id,
         lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
+      LOG(NOTICE) << "Registering memory...";
       lseb_register(p.first->second, data_ptr.get(), data_size);
+      LOG(NOTICE) << "Connection established with Builder Unit " << id;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }

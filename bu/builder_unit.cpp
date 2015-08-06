@@ -2,7 +2,6 @@
 #include <string>
 #include <algorithm>
 #include <map>
-#include <thread>
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
@@ -77,11 +76,12 @@ void BuilderUnit::operator()() {
     if (id != m_id) {
       LOG(NOTICE) << "Accepting connection from Readout Unit " << id;
       auto p = connection_ids.emplace(id, lseb_accept(socket));
+      LOG(NOTICE) << "Registering memory...";
       lseb_register(
         p.first->second,
         data_ptr.get() + count++ * data_size,
         data_size);
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      LOG(NOTICE) << "Connection established with Readout Unit " << id;
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
