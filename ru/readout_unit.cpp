@@ -86,25 +86,23 @@ void ReadoutUnit::operator()() {
     std::end(metadata_range));
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
-  int next_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
+  int next_id = m_id;
   std::vector<int> id_sequence(endpoints.size());
   for (auto& id : id_sequence) {
+    next_id = (next_id != endpoints.size() - 1) ? next_id + 1 : 0;
     id = next_id;
-    if (++next_id == endpoints.size()) {
-      next_id = 0;
-    }
   }
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
   std::map<int, RuConnectionId> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
-      LOG(NOTICE) << "Readout Unit - Connecting to Builder Unit " << id;
+      LOG(NOTICE) << "Readout Unit - Connecting to bu " << id;
       auto p = connection_ids.emplace(
         id,
         lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
       lseb_register(p.first->second, data_ptr.get(), data_size);
-      LOG(NOTICE) << "Readout Unit - Connection established with Builder Unit " << id;
+      LOG(NOTICE) << "Readout Unit - Connection established with bu " << id;
     }
   }
   LOG(NOTICE) << "Readout Unit - All connections established";

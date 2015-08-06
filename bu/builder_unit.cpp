@@ -74,17 +74,13 @@ void BuilderUnit::operator()() {
   int count = 0;
   for (auto id : id_sequence) {
     if (id != m_id) {
-      LOG(NOTICE)
-        << "Builder Unit - Accepting connection from Readout Unit "
-        << id;
+      LOG(NOTICE) << "Builder Unit - Accepting connection from ru " << id;
       auto p = connection_ids.emplace(id, lseb_accept(socket));
       lseb_register(
         p.first->second,
         data_ptr.get() + count++ * data_size,
         data_size);
-      LOG(NOTICE)
-        << "Builder Unit - Connection established with Readout Unit "
-        << id;
+      LOG(NOTICE) << "Builder Unit - Connection established with ru " << id;
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
