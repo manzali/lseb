@@ -92,6 +92,13 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<unsigned char[]> const local_data_ptr(
     new unsigned char[multievent_size * tokens]);
+
+  BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
+  std::thread bu_th(bu);
+
+  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
+  std::thread ru_th(ru);
+
   for (int i = 0; i < tokens; ++i) {
     while (!free_local_data.push( {
       local_data_ptr.get() + i * multievent_size,
@@ -99,12 +106,6 @@ int main(int argc, char* argv[]) {
       ;
     }
   }
-
-  BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
-  std::thread bu_th(bu);
-
-  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
-  std::thread ru_th(ru);
 
   bu_th.join();
   ru_th.join();
