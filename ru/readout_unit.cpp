@@ -70,6 +70,22 @@ void ReadoutUnit::operator()() {
   assert(
     meta_size % sizeof(EventMetaData) == 0 && "wrong metadata buffer size");
 
+  // Allocate memory
+
+    std::unique_ptr<unsigned char[]> const metadata_ptr(
+      new unsigned char[meta_size]);
+    std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
+
+    MetaDataRange metadata_range(
+      pointer_cast<EventMetaData>(metadata_ptr.get()),
+      pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
+    DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
+
+    MetaDataBuffer metadata_buffer(
+      std::begin(metadata_range),
+      std::end(metadata_range));
+    DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
+
   int next_id = (m_id + 1 == endpoints.size()) ? 0 : m_id + 1;
   std::vector<int> id_sequence(endpoints.size());
   for (auto& id : id_sequence) {
@@ -90,27 +106,13 @@ void ReadoutUnit::operator()() {
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
 
-// Allocate memory
-
-  std::unique_ptr<unsigned char[]> const metadata_ptr(
-    new unsigned char[meta_size]);
-  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
-
-  MetaDataRange metadata_range(
-    pointer_cast<EventMetaData>(metadata_ptr.get()),
-    pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
-  DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
-
-  MetaDataBuffer metadata_buffer(
-    std::begin(metadata_range),
-    std::end(metadata_range));
-  DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
-
-  Accumulator accumulator(metadata_range, data_range, bulk_size);
-
+  LOG(NOTICE) << "Readout Unit - Waiting for memory registration...";
   for (auto& conn : connection_ids) {
     lseb_register(conn.second, data_ptr.get(), data_size);
   }
+  LOG(NOTICE) << "Readout Unit - All memory registered";
+
+  Accumulator accumulator(metadata_range, data_range, bulk_size);
 
   LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
   Generator generator(

@@ -91,18 +91,6 @@ int main(int argc, char* argv[]) {
   boost::lockfree::spsc_queue<iovec> free_local_data(tokens);
   boost::lockfree::spsc_queue<iovec> ready_local_data(tokens);
 
-  BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
-  std::thread bu_th(bu);
-
-  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
-  std::thread ru_th(ru);
-
-  tcp_barrier(
-    id,
-    endpoints.size(),
-    endpoints[0].hostname(),
-    endpoints[0].port());
-
   std::unique_ptr<unsigned char[]> const local_data_ptr(
     new unsigned char[multievent_size * tokens]);
   for (int i = 0; i < tokens; ++i) {
@@ -112,6 +100,18 @@ int main(int argc, char* argv[]) {
       ;
     }
   }
+
+  BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
+  std::thread bu_th(bu);
+/*
+  tcp_barrier(
+    id,
+    endpoints.size(),
+    endpoints[0].hostname(),
+    endpoints[0].port());
+*/
+  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
+  std::thread ru_th(ru);
 
   bu_th.join();
   ru_th.join();
