@@ -2,6 +2,7 @@
 #include <string>
 #include <algorithm>
 #include <map>
+#include <thread>
 
 #include "common/frequency_meter.h"
 #include "common/timer.h"
@@ -80,6 +81,7 @@ void BuilderUnit::operator()() {
         p.first->second,
         data_ptr.get() + count++ * data_size,
         data_size);
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";

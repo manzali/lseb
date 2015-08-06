@@ -106,10 +106,9 @@ void ReadoutUnit::operator()() {
         lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
       lseb_register(p.first->second, data_ptr.get(), data_size);
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
-
-  std::this_thread::sleep_for(std::chrono::seconds(5));
 
   Accumulator accumulator(metadata_range, data_range, bulk_size);
 
