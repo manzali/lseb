@@ -9,7 +9,6 @@ add_library(
   readout_unit.cpp
   controller.cpp
   accumulator.cpp
-  splitter.cpp
 )
 
 target_link_libraries(

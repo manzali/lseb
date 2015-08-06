@@ -1,8 +1,9 @@
 #include <memory>
 #include <string>
+#include <map>
+
 #include <cstdlib>
 #include <cassert>
-#include <algorithm>
 
 #include "common/dataformat.h"
 #include "common/log.hpp"
@@ -16,7 +17,6 @@
 
 #include "ru/controller.h"
 #include "ru/accumulator.h"
-#include "ru/splitter.h"
 #include "ru/readout_unit.h"
 
 #include "transport/transport.h"
@@ -120,10 +120,8 @@ void ReadoutUnit::operator()() {
     m_id);
   Controller controller(generator, metadata_range, generator_frequency);
 
-  Splitter splitter(m_id, endpoints.size(), data_range);
-
   FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0); // this timeout is ignored (frequency is used)
+  FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   Timer t_accu;
   Timer t_send;
@@ -144,45 +142,43 @@ void ReadoutUnit::operator()() {
 
     assert(multievents.size() == needed_multievents);
 
-    std::map<int, std::vector<DataIov> > iov_map = splitter.split(multievents);
+    // Fill data_vect
+    std::vector<DataIov> data_vect;
+    for (auto const& multievent : multievents) {
+      data_vect.emplace_back(create_iovec(multievent.second, data_range));
+    }
+    auto data_vect_it = std::begin(data_vect);
 
     t_send.start();
     for (auto id : id_sequence) {
-      auto map_it = iov_map.find(id);
-      assert(map_it != std::end(iov_map));
-      auto& iov_pair = *map_it;
+      assert(data_vect_it != std::end(data_vect));
+      auto& data_iov = *(data_vect_it++);
       if (id != m_id) {
-        auto it = connection_ids.find(iov_pair.first);
-        assert(it != std::end(connection_ids));
-        while (lseb_avail(it->second) < iov_pair.second.size()) {
+        auto conn_it = connection_ids.find(id);
+        assert(conn_it != std::end(connection_ids));
+        auto& conn = conn_it->second;
+        while (!lseb_avail(conn)) {
           ;
         }
-        size_t bytes = lseb_write(it->second, iov_pair.second);
-        bandwith.add(bytes);
+        bandwith.add(lseb_write(conn, std::vector<DataIov>(1, data_iov)));
       } else {
-        for (auto& data_iov : iov_pair.second) {
-          iovec i;
-          while (!m_free_local_data.pop(i)) {
-            ;
-          }
-          i.iov_len = 0;
-          for (auto& iov : data_iov) {
-            memcpy(
-              static_cast<unsigned char*>(i.iov_base) + i.iov_len,
-              iov.iov_base,
-              iov.iov_len);
-            i.iov_len += iov.iov_len;
-          }
-          while (!m_ready_local_data.push(i)) {
-            ;
-          }
+        iovec i;
+        while (!m_free_local_data.pop(i)) {
+          ;
+        }
+        i.iov_len = 0;
+        for (auto& iov : data_iov) {
+          memcpy(
+            static_cast<unsigned char*>(i.iov_base) + i.iov_len,
+            iov.iov_base,
+            iov.iov_len);
+          i.iov_len += iov.iov_len;
+        }
+        while (!m_ready_local_data.push(i)) {
+          ;
         }
       }
-      LOG(DEBUG)
-        << "Written "
-        << iov_pair.second.size()
-        << " wr to conn "
-        << id;
+      LOG(DEBUG) << "Written " << data_iov.size() << " wr to conn " << id;
     }
     t_send.pause();
 
@@ -194,22 +190,8 @@ void ReadoutUnit::operator()() {
     t_accu.pause();
 
     frequency.add(multievents.size() * bulk_size);
-/*
-    if (bandwith.check()) {
-      LOG(NOTICE)
-        << "Readout Unit - Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
-    }
-*/
-    if (frequency.check()) {
-      /*
-      LOG(NOTICE)
-        << "Readout Unit - Frequency: "
-        << frequency.frequency() / std::mega::num
-        << " MHz";
-      */
 
+    if (frequency.check()) {
       LOG(NOTICE)
         << "Readout Unit - Frequency "
         << frequency.frequency() / std::mega::num
