@@ -84,7 +84,7 @@ void BuilderUnit::operator()() {
   LOG(NOTICE) << "Builder Unit - All connections established";
 
   FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0); // this timeout is ignored (frequency is used)
+  FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   Timer t_recv;
   Timer t_rel;
@@ -138,54 +138,45 @@ void BuilderUnit::operator()() {
     // -----------------------------------------------------------------------
     // There should be event building here (for the first min_wrs multievents)
     // -----------------------------------------------------------------------
+    uint64_t evt_id = pointer_cast<EventHeader>(iov_map[m_id].front().iov_base)
+      ->id;
+    for (auto id : id_sequence) {
+      auto map_it = iov_map.find(id);
+      assert(map_it != std::end(iov_map));
+      uint64_t current_evt_id = pointer_cast<EventHeader>(
+        map_it->second.front().iov_base)->id;
+      assert(evt_id == current_evt_id);
+    }
 
     // Release
-    if (min_wrs > 0) {
-      t_rel.start();
-      for (auto id : id_sequence) {
-        auto map_it = iov_map.find(id);
-        assert(map_it != std::end(iov_map));
-        auto& m = *map_it;
-        assert(m.second.size() >= min_wrs);
-        std::vector<iovec> vect(
-          std::begin(m.second),
-          std::begin(m.second) + min_wrs);
-        if (m.first != m_id) {
-          bandwith.add(iovec_length(vect));
-          auto conn = connection_ids.find(m.first);
-          assert(conn != std::end(connection_ids));
-          lseb_release(conn->second, vect);
-        } else {
-          for (auto& i : vect) {
-            while (!m_free_local_data.push(i)) {
-              ;
-            }
+    t_rel.start();
+    for (auto id : id_sequence) {
+      auto map_it = iov_map.find(id);
+      assert(map_it != std::end(iov_map));
+      auto& m = *map_it;
+      assert(m.second.size() >= min_wrs);
+      std::vector<iovec> vect(
+        std::begin(m.second),
+        std::begin(m.second) + min_wrs);
+      if (m.first != m_id) {
+        bandwith.add(iovec_length(vect));
+        auto conn = connection_ids.find(m.first);
+        assert(conn != std::end(connection_ids));
+        lseb_release(conn->second, vect);
+      } else {
+        for (auto& i : vect) {
+          while (!m_free_local_data.push(i)) {
+            ;
           }
         }
-        LOG(DEBUG) << "Released " << min_wrs << " wr for conn " << m.first;
-        m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
       }
-      t_rel.pause();
+      LOG(DEBUG) << "Released " << min_wrs << " wr for conn " << m.first;
+      m.second.erase(std::begin(m.second), std::begin(m.second) + min_wrs);
+    }
+    t_rel.pause();
+    frequency.add(min_wrs * bulk_size * endpoints.size());
 
-      frequency.add(min_wrs * bulk_size * endpoints.size());
-    }
-/*
-    if (bandwith.check()) {
-      LOG(NOTICE)
-        << "Builder Unit - Bandwith: "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
-    }
-*/
     if (frequency.check()) {
-
-      /*
-      LOG(NOTICE)
-        << "Builder Unit - Frequency: "
-        << frequency.frequency() / std::mega::num
-        << " MHz";
-      */
-
       LOG(NOTICE)
         << "Builder Unit - Frequency "
         << frequency.frequency() / std::mega::num
