@@ -134,6 +134,8 @@ BuConnectionId lseb_accept(BuSocket const& socket) {
     throw std::runtime_error(
       "Error on rdma_get_request: " + std::string(strerror(errno)));
   }
+  sockaddr_in& addr = *((sockaddr_in*) rdma_get_peer_addr(conn.id));
+  std::cout << inet_ntoa(addr.sin_addr) << ":" << addr.sin_port << std::endl;
   return conn;
 }
 

@@ -144,6 +144,7 @@ void BuilderUnit::operator()() {
         data_vect.at(id).front().iov_base)->id;
       uint64_t current_flags = pointer_cast<EventHeader>(
         data_vect.at(id).front().iov_base)->flags;
+      // LOG(NOTICE) << "id = " << id <<" - evt = " << current_evt_id << " - flags = " << current_flags;
       assert(evt_id == current_evt_id);
       assert(id == current_flags);
     }
