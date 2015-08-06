@@ -141,10 +141,10 @@ void BuilderUnit::operator()() {
       data_vect.at(m_id).front().iov_base)->id;
     for (auto id : id_sequence) {
       uint64_t current_evt_id = pointer_cast<EventHeader>(
-        data_vect.at(m_id).front().iov_base)->id;
-      assert(evt_id == current_evt_id);
+        data_vect.at(id).front().iov_base)->id;
       uint64_t current_flags = pointer_cast<EventHeader>(
-        data_vect.at(m_id).front().iov_base)->flags;
+        data_vect.at(id).front().iov_base)->flags;
+      assert(evt_id == current_evt_id);
       assert(id == current_flags);
     }
     t_check.pause();
