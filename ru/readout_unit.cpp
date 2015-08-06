@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <thread>
 
 #include <cstdlib>
 #include <cassert>
