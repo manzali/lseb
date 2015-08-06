@@ -140,19 +140,17 @@ void ReadoutUnit::operator()() {
       needed_multievents);
     t_accu.pause();
 
-    assert(multievents.size() == needed_multievents);
-
     // Fill data_vect
     std::vector<DataIov> data_vect;
     for (auto const& multievent : multievents) {
       data_vect.emplace_back(create_iovec(multievent.second, data_range));
     }
-    auto data_vect_it = std::begin(data_vect);
+
+    assert(data_vect.size() == id_sequence.size());
 
     t_send.start();
     for (auto id : id_sequence) {
-      assert(data_vect_it != std::end(data_vect));
-      auto& data_iov = *(data_vect_it++);
+      auto& data_iov = data_vect.at(id);
       if (id != m_id) {
         auto conn_it = connection_ids.find(id);
         assert(conn_it != std::end(connection_ids));
