@@ -19,17 +19,17 @@ namespace lseb {
 namespace {
 auto retry_wait = std::chrono::milliseconds(500);
 
-void lseb_send_id(RuConnectionId& conn) {
+void lseb_send_id(RuConnectionId& conn, void* buffer) {
   // Send the id with inline flag
+  memcpy(buffer, &conn.id, sizeof(conn.id));
   ibv_sge sge;
-  sge.addr = (uint64_t) (uintptr_t) &conn.id;
+  sge.addr = (uint64_t) (uintptr_t) buffer;
   sge.length = (uint32_t) sizeof(conn.id);
   ibv_send_wr wr;
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
-  wr.send_flags = IBV_SEND_INLINE;
   ibv_send_wr* bad_wr;
   int ret = ibv_post_send(conn.cm_id->qp, &wr, &bad_wr);
   if (ret) {
@@ -120,7 +120,6 @@ RuConnectionId lseb_connect(
     attr.cap.max_send_sge = 2;
     attr.cap.max_recv_wr = 1;
     attr.cap.max_recv_sge = 1;
-    attr.cap.max_inline_data = 16;
     attr.sq_sig_all = 1;
     ret = rdma_create_ep(&conn.cm_id, res, NULL, &attr);
     if (ret) {
@@ -174,7 +173,6 @@ BuSocket lseb_listen(
   attr.cap.max_send_wr = 1;
   attr.cap.max_recv_wr = tokens;
   attr.cap.max_send_sge = attr.cap.max_recv_sge = 1;
-  attr.cap.max_inline_data = 16;
   attr.sq_sig_all = 1;
 
   BuSocket socket;
@@ -220,7 +218,7 @@ void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len) {
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
   }
 
-  lseb_send_id(conn);
+  lseb_send_id(conn, buffer);
 }
 
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
