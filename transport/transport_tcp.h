@@ -43,6 +43,7 @@ BuSocket lseb_listen(
   int tokens);
 
 BuConnectionId lseb_accept(BuSocket const& socket);
+std::string lseb_get_peer_hostname(BuConnectionId const& conn);
 
 void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
@@ -50,7 +51,9 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
 int lseb_avail(RuConnectionId const& conn);
 bool lseb_poll(BuConnectionId const& conn);
 
-ssize_t lseb_write(RuConnectionId const& conn, std::vector<DataIov> const& data_iovecs);
+ssize_t lseb_write(
+  RuConnectionId const& conn,
+  std::vector<DataIov> const& data_iovecs);
 std::vector<iovec> lseb_read(BuConnectionId& conn);
 
 void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits);

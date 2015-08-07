@@ -10,6 +10,7 @@
 
 #include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
+#include <arpa/inet.h>
 
 #define MAX_BACKLOG 128
 
@@ -54,15 +55,15 @@ RuConnectionId lseb_connect(
     attr.cap.max_recv_wr = 1;
     attr.cap.max_recv_sge = 1;
     attr.sq_sig_all = 1;
-    ret = rdma_create_ep(&conn.id, res, NULL, &attr);
+    ret = rdma_create_ep(&conn.cm_id, res, NULL, &attr);
     if (ret) {
       throw std::runtime_error(
         "Error on rdma_create_ep: " + std::string(strerror(errno)));
     }
 
-    ret = rdma_connect(conn.id, NULL);
+    ret = rdma_connect(conn.cm_id, NULL);
     if (ret) {
-      rdma_destroy_ep(conn.id);
+      rdma_destroy_ep(conn.cm_id);
       if (errno == ECONNREFUSED) {
         retry = true;
         std::this_thread::sleep_for(retry_wait);
@@ -111,7 +112,7 @@ BuSocket lseb_listen(
   BuSocket socket;
   socket.tokens = tokens;
 
-  int ret = rdma_create_ep(&socket.id, res, NULL, &attr);
+  int ret = rdma_create_ep(&socket.cm_id, res, NULL, &attr);
   rdma_freeaddrinfo(res);
 
   if (ret) {
@@ -119,7 +120,7 @@ BuSocket lseb_listen(
       "Error on rdma_create_ep: " + std::string(strerror(errno)));
   }
 
-  if (rdma_listen(socket.id, MAX_BACKLOG)) {
+  if (rdma_listen(socket.cm_id, MAX_BACKLOG)) {
     throw std::runtime_error(
       "Error on rdma_listen: " + std::string(strerror(errno)));
   }
@@ -130,15 +131,21 @@ BuSocket lseb_listen(
 BuConnectionId lseb_accept(BuSocket const& socket) {
   BuConnectionId conn;
   conn.wr_vect.resize(socket.tokens, nullptr);
-  if (rdma_get_request(socket.id, &conn.id)) {
+  if (rdma_get_request(socket.id, &conn.cm_id)) {
     throw std::runtime_error(
       "Error on rdma_get_request: " + std::string(strerror(errno)));
   }
+
   return conn;
 }
 
+std::string lseb_get_peer_hostname(BuConnectionId& conn) {
+  sockaddr_in& addr = *((sockaddr_in*) rdma_get_peer_addr(conn.cm_id));
+  return inet_ntoa(addr.sin_addr);
+}
+
 void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
-  conn.mr = rdma_reg_msgs(conn.id, buffer, len);
+  conn.mr = rdma_reg_msgs(conn.cm_id, buffer, len);
   if (!conn.mr) {
     throw std::runtime_error(
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
@@ -146,7 +153,7 @@ void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
 }
 
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
-  conn.mr = rdma_reg_msgs(conn.id, buffer, len);
+  conn.mr = rdma_reg_msgs(conn.cm_id, buffer, len);
   if (!conn.mr) {
     throw std::runtime_error(
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
@@ -162,7 +169,7 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   }
   lseb_release(conn, wrs);
 
-  if (rdma_accept(conn.id, NULL)) {
+  if (rdma_accept(conn.cm_id, NULL)) {
     throw std::runtime_error(
       "Error on rdma_accept: " + std::string(strerror(errno)));
   }
@@ -171,7 +178,7 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
 int lseb_avail(RuConnectionId& conn) {
   if (conn.wr_count) {
     std::vector<ibv_wc> wcs(conn.wr_count);
-    int ret = ibv_poll_cq(conn.id->send_cq, wcs.size(), &wcs.front());
+    int ret = ibv_poll_cq(conn.cm_id->send_cq, wcs.size(), &wcs.front());
     if (ret < 0) {
       throw std::runtime_error(
         "Error on ibv_poll_cq: " + std::string(strerror(ret)));
@@ -225,7 +232,7 @@ size_t lseb_write(
   }
 
   if (!wrs.empty()) {
-    int ret = ibv_post_send(conn.id->qp, &(wrs.front().first), &bad);
+    int ret = ibv_post_send(conn.cm_id->qp, &(wrs.front().first), &bad);
     if (ret) {
       throw std::runtime_error(
         "Error on ibv_post_send: " + std::string(strerror(ret)));
@@ -237,7 +244,7 @@ size_t lseb_write(
 
 std::vector<iovec> lseb_read(BuConnectionId& conn) {
   std::vector<ibv_wc> wcs(conn.wr_count);
-  int ret = ibv_poll_cq(conn.id->recv_cq, wcs.size(), &wcs.front());
+  int ret = ibv_poll_cq(conn.cm_id->recv_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw std::runtime_error(
       "Error on ibv_poll_cq: " + std::string(strerror(ret)));
@@ -287,7 +294,7 @@ void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits) {
 
   ibv_recv_wr* bad;
   if (!wrs.empty()) {
-    int ret = ibv_post_recv(conn.id->qp, &(wrs.front().first), &bad);
+    int ret = ibv_post_recv(conn.cm_id->qp, &(wrs.front().first), &bad);
     if (ret) {
       throw std::runtime_error(
         "Error on ibv_post_recv: " + std::string(strerror(ret)));

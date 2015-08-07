@@ -76,11 +76,10 @@ void BuilderUnit::operator()() {
     if (id != m_id) {
       LOG(NOTICE) << "Builder Unit - Accepting connection from ru " << id;
       auto p = connection_ids.emplace(id, lseb_accept(socket));
-      lseb_register(
-        p.first->second,
-        data_ptr.get() + count++ * data_size,
-        data_size);
+      BuConnectionId& conn = p.first->second;
+      lseb_register(conn, data_ptr.get() + count++ * data_size, data_size);
       LOG(NOTICE) << "Builder Unit - Connection established with ru " << id;
+      LOG(NOTICE) << "IP address " << lseb_get_peer_hostname(conn);
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";

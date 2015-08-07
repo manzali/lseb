@@ -10,7 +10,7 @@
 namespace lseb {
 
 struct RuConnectionId {
-  rdma_cm_id* id;
+  rdma_cm_id* cm_id;
   ibv_mr* mr;
   int tokens;
   int wr_count;
@@ -21,7 +21,7 @@ struct RuConnectionId {
 };
 
 struct BuConnectionId {
-  rdma_cm_id* id;
+  rdma_cm_id* cm_id;
   ibv_mr* mr;
   size_t wr_len;
   std::vector<void*> wr_vect;
@@ -33,7 +33,7 @@ struct BuConnectionId {
 };
 
 struct BuSocket {
-  rdma_cm_id* id;
+  rdma_cm_id* cm_id;
   int tokens;
 };
 
@@ -48,6 +48,7 @@ BuSocket lseb_listen(
   int tokens);
 
 BuConnectionId lseb_accept(BuSocket const& socket);
+std::string lseb_get_peer_hostname(BuConnectionId& conn);
 
 void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
@@ -55,7 +56,9 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
 int lseb_avail(RuConnectionId& conn);
 bool lseb_poll(BuConnectionId& conn);
 
-size_t lseb_write(RuConnectionId& conn, std::vector<DataIov> const& data_iovecs);
+size_t lseb_write(
+  RuConnectionId& conn,
+  std::vector<DataIov> const& data_iovecs);
 std::vector<iovec> lseb_read(BuConnectionId& conn);
 
 void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits);
