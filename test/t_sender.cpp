@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   std::vector<DataIov> data_iovecs;
   data_iovecs.push_back(iov);
 
-  lseb_register(conn, buffer, transfer_size);
+  lseb_register(conn, 0, buffer, transfer_size);
 
   FrequencyMeter bandwith(1.0);
 

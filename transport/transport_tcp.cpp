@@ -121,8 +121,9 @@ std::string lseb_get_peer_hostname(BuConnectionId const& conn) {
   return inet_ntoa(addr.sin_addr);
 }
 
-void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
-  // Useless
+void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len) {
+  conn.id = id;
+  // Useless buffer and len parameters
 }
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.buffer = buffer;

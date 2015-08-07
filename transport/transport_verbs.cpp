@@ -144,7 +144,8 @@ std::string lseb_get_peer_hostname(BuConnectionId& conn) {
   return inet_ntoa(addr.sin_addr);
 }
 
-void lseb_register(RuConnectionId& conn, void* buffer, size_t len) {
+void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len) {
+  conn.id = id;
   conn.mr = rdma_reg_msgs(conn.cm_id, buffer, len);
   if (!conn.mr) {
     throw std::runtime_error(

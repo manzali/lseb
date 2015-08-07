@@ -54,7 +54,7 @@ BuSocket lseb_listen(
 BuConnectionId lseb_accept(BuSocket const& socket);
 std::string lseb_get_peer_hostname(BuConnectionId& conn);
 
-void lseb_register(RuConnectionId& conn, void* buffer, size_t len);
+void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len);
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len);
 
 int lseb_avail(RuConnectionId& conn);

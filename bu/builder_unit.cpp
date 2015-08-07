@@ -58,8 +58,8 @@ void BuilderUnit::operator()() {
   // Connections
 
   BuSocket socket = lseb_listen(
-    endpoints[m_id].hostname(),
-    endpoints[m_id].port(),
+    endpoints.at(m_id).hostname(),
+    endpoints.at(m_id).port(),
     tokens);
 
   int next_id = m_id;

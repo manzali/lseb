@@ -97,12 +97,12 @@ void ReadoutUnit::operator()() {
   std::map<int, RuConnectionId> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
+      Endpoint const& ep = endpoints.at(id);
       auto p = connection_ids.emplace(
         id,
-        lseb_connect(endpoints[id].hostname(), endpoints[id].port(), tokens));
+        lseb_connect(ep.hostname(), ep.port(), tokens));
       RuConnectionId& conn = p.first->second;
-      conn.id = id;
-      lseb_register(conn, data_ptr.get(), data_size);
+      lseb_register(conn, id, data_ptr.get(), data_size);
       LOG(NOTICE)
         << "Readout Unit - Connection established with bu "
         << conn.id;
