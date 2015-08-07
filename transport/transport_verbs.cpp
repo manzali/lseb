@@ -170,7 +170,7 @@ void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len) {
 
   // Wait for completion
   ibv_wc wc;
-  int ret = 0;
+  ret = 0;
   while(ret == 0){
     // sleep ?
     ret = ibv_poll_cq(conn.cm_id->send_cq, 1, &wc);
