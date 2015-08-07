@@ -79,7 +79,7 @@ void BuilderUnit::operator()() {
     LOG(NOTICE)
       << "Builder Unit - Connection established with "
       << lseb_get_peer_hostname(conn)
-      << "(ru "
+      << " (ru "
       << conn.id
       << ")";
   }
