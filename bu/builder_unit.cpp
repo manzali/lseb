@@ -77,24 +77,16 @@ void BuilderUnit::operator()() {
       auto p = connection_ids.emplace(id, lseb_accept(socket));
       BuConnectionId& conn = p.first->second;
       // Check the id
+      lseb_register(conn, data_ptr.get() + count++ * data_size, data_size);
+      conn.id = id; // to be removed
       std::string const hostname = lseb_get_peer_hostname(conn);
-      if(endpoints.at(id).hostname().compare(hostname)){
+      if(endpoints.at(conn.id).hostname().compare(hostname)){
         LOG(WARNING)
           << "Expected "
           << endpoints.at(id).hostname()
           << " but found "
           << hostname;
       }
-      //int new_id = 1;
-
-      //std::swap(connection_ids[new_id], conn);
-
-
-
-
-
-
-      lseb_register(conn, data_ptr.get() + count++ * data_size, data_size);
       LOG(NOTICE) << "Builder Unit - Connection established with ru " << id;
     }
   }

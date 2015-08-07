@@ -10,17 +10,20 @@
 namespace lseb {
 
 struct RuConnectionId {
+  int id;
   rdma_cm_id* cm_id;
   ibv_mr* mr;
   int tokens;
   int wr_count;
   RuConnectionId()
       :
+        id(-1),
         wr_count(0) {
   }
 };
 
 struct BuConnectionId {
+  int id;
   rdma_cm_id* cm_id;
   ibv_mr* mr;
   size_t wr_len;
@@ -28,6 +31,7 @@ struct BuConnectionId {
   int wr_count;
   BuConnectionId()
       :
+        id(-1),
         wr_count(0) {
   }
 };

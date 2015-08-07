@@ -11,19 +11,23 @@
 namespace lseb {
 
 struct RuConnectionId {
+  int id;
   int socket;
   RuConnectionId(int socket)
       :
+        id(-1),
         socket(socket) {
   }
 };
 
 struct BuConnectionId {
+  int id;
   int socket;
   void* buffer;
   size_t len;
   BuConnectionId(int socket)
       :
+        id(-1),
         socket(socket) {
   }
 };
