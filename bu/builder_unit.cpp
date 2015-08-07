@@ -185,11 +185,11 @@ void BuilderUnit::operator()() {
 
     if (frequency.check()) {
       LOG(NOTICE)
-        << "Builder Unit - Frequency "
+        << "Builder Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
         << bandwith.frequency() / std::giga::num * 8.
-        << "Gb/s";
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"

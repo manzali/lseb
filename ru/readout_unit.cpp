@@ -191,11 +191,11 @@ void ReadoutUnit::operator()() {
 
     if (frequency.check()) {
       LOG(NOTICE)
-        << "Readout Unit - Frequency "
+        << "Readout Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
         << bandwith.frequency() / std::giga::num * 8.
-        << "Gb/s";
+        << " Gb/s";
 
       LOG(INFO)
         << "Times:\n"
