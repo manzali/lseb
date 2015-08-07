@@ -302,7 +302,8 @@ size_t lseb_write(
   }
 
   if (!wrs.empty()) {
-    int ret = ibv_post_send(conn.cm_id->qp, &(wrs.front().first), nullptr);
+    ibv_send_wr* bad_wr;
+    int ret = ibv_post_send(conn.cm_id->qp, &(wrs.front().first), &bad_wr);
     if (ret) {
       throw std::runtime_error(
         "Error on ibv_post_send: " + std::string(strerror(ret)));
@@ -363,7 +364,8 @@ void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits) {
   }
 
   if (!wrs.empty()) {
-    int ret = ibv_post_recv(conn.cm_id->qp, &(wrs.front().first), nullptr);
+    ibv_recv_wr* bad_wr;
+    int ret = ibv_post_recv(conn.cm_id->qp, &(wrs.front().first), &bad_wr);
     if (ret) {
       throw std::runtime_error(
         "Error on ibv_post_recv: " + std::string(strerror(ret)));
