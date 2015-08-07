@@ -25,6 +25,7 @@ void lseb_send_id(RuConnectionId& conn, void* buffer) {
   ibv_sge sge;
   sge.addr = (uint64_t) (uintptr_t) buffer;
   sge.length = (uint32_t) sizeof(conn.id);
+  sge.lkey = conn.mr ? conn.mr->lkey : 0;
   ibv_send_wr wr;
   wr.next = nullptr;
   wr.sg_list = &sge;
