@@ -131,7 +131,7 @@ BuSocket lseb_listen(
 BuConnectionId lseb_accept(BuSocket const& socket) {
   BuConnectionId conn;
   conn.wr_vect.resize(socket.tokens, nullptr);
-  if (rdma_get_request(socket.id, &conn.cm_id)) {
+  if (rdma_get_request(socket.cm_id, &conn.cm_id)) {
     throw std::runtime_error(
       "Error on rdma_get_request: " + std::string(strerror(errno)));
   }
