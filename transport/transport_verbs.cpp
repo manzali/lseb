@@ -17,7 +17,71 @@
 namespace lseb {
 
 namespace {
-auto retry_wait = std::chrono::milliseconds(100);
+auto retry_wait = std::chrono::milliseconds(500);
+
+void lseb_send_id(RuConnectionId& conn) {
+  // Send the id with inline flag
+  ibv_sge sge;
+  sge.addr = (uint64_t) (uintptr_t) &conn.id;
+  sge.length = (uint32_t) sizeof(conn.id);
+  ibv_send_wr wr;
+  wr.next = nullptr;
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_SEND;
+  wr.send_flags = IBV_SEND_INLINE;
+  int ret = ibv_post_send(conn.cm_id->qp, &wr, nullptr);
+  if (ret) {
+    throw std::runtime_error(
+      "Error on ibv_post_send: " + std::string(strerror(ret)));
+  }
+
+  // Wait for completion
+  ibv_wc wc;
+  ret = 0;
+  while (ret == 0) {
+    // sleep ?
+    ret = ibv_poll_cq(conn.cm_id->send_cq, 1, &wc);
+    if (ret < 0) {
+      throw std::runtime_error(
+        "Error on ibv_poll_cq: " + std::string(strerror(ret)));
+    }
+  }
+}
+
+void lseb_recv_id(BuConnectionId& conn) {
+  // Wait for completion
+  ibv_wc wc;
+  int ret = 0;
+  while (ret == 0) {
+    // sleep ?
+    ret = ibv_poll_cq(conn.cm_id->recv_cq, 1, &wc);
+    if (ret < 0) {
+      throw std::runtime_error(
+        "Error on ibv_poll_cq: " + std::string(strerror(ret)));
+    }
+  }
+
+  // Set the id
+  conn.id = *(static_cast<int*>(conn.wr_vect[wc.wr_id]));
+
+  // Release the wr
+  ibv_sge sge;
+  sge.addr = (uint64_t) (uintptr_t) conn.wr_vect[wc.wr_id];
+  sge.length = (uint32_t) conn.wr_len;
+  sge.lkey = conn.mr ? conn.mr->lkey : 0;
+  ibv_recv_wr wr;
+  wr.wr_id = wc.wr_id;
+  wr.next = nullptr;
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  ret = ibv_post_recv(conn.cm_id->qp, &wr, nullptr);
+  if (ret) {
+    throw std::runtime_error(
+      "Error on ibv_post_recv: " + std::string(strerror(ret)));
+  }
+}
+
 }
 
 RuConnectionId lseb_connect(
@@ -152,33 +216,7 @@ void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len) {
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
   }
 
-  // Send the id with inline flag
-  ibv_sge sge;
-  sge.addr = (uint64_t) (uintptr_t) &conn.id;
-  sge.length = (uint32_t) sizeof(conn.id);
-  ibv_send_wr wr;
-  wr.next = nullptr;
-  wr.sg_list = &sge;
-  wr.num_sge = 1;
-  wr.opcode = IBV_WR_SEND;
-  wr.send_flags = IBV_SEND_INLINE;
-  int ret = ibv_post_send(conn.cm_id->qp, &wr, nullptr);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on ibv_post_send: " + std::string(strerror(ret)));
-  }
-
-  // Wait for completion
-  ibv_wc wc;
-  ret = 0;
-  while(ret == 0){
-    // sleep ?
-    ret = ibv_poll_cq(conn.cm_id->send_cq, 1, &wc);
-    if (ret < 0) {
-      throw std::runtime_error(
-        "Error on ibv_poll_cq: " + std::string(strerror(ret)));
-    }
-  }
+  lseb_send_id(conn);
 }
 
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
@@ -203,36 +241,7 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
       "Error on rdma_accept: " + std::string(strerror(errno)));
   }
 
-  // Wait for completion
-  ibv_wc wc;
-  int ret = 0;
-  while(ret == 0){
-    // sleep ?
-    ret = ibv_poll_cq(conn.cm_id->recv_cq, 1, &wc);
-    if (ret < 0) {
-      throw std::runtime_error(
-        "Error on ibv_poll_cq: " + std::string(strerror(ret)));
-    }
-  }
-
-  // Set the id
-  conn.id = *(static_cast<int*>(conn.wr_vect[wc.wr_id]));
-
-  // Release the wr
-  ibv_sge sge;
-  sge.addr = (uint64_t) (uintptr_t) conn.wr_vect[wc.wr_id];
-  sge.length = (uint32_t) conn.wr_len;
-  sge.lkey = conn.mr ? conn.mr->lkey : 0;
-  ibv_recv_wr wr;
-  wr.wr_id = wc.wr_id;
-  wr.next = nullptr;
-  wr.sg_list = &sge;
-  wr.num_sge = 1;
-  ret = ibv_post_recv(conn.cm_id->qp, &wr, nullptr);
-  if (ret) {
-    throw std::runtime_error(
-      "Error on ibv_post_recv: " + std::string(strerror(ret)));
-  }
+  lseb_recv_id(conn);
 }
 
 int lseb_avail(RuConnectionId& conn) {
@@ -261,7 +270,6 @@ size_t lseb_write(
 
   size_t bytes_sent = 0;
 
-  ibv_send_wr* bad;
   std::vector<std::pair<ibv_send_wr, std::vector<ibv_sge> > > wrs(
     data_iovecs.size());
 
@@ -292,7 +300,7 @@ size_t lseb_write(
   }
 
   if (!wrs.empty()) {
-    int ret = ibv_post_send(conn.cm_id->qp, &(wrs.front().first), &bad);
+    int ret = ibv_post_send(conn.cm_id->qp, &(wrs.front().first), nullptr);
     if (ret) {
       throw std::runtime_error(
         "Error on ibv_post_send: " + std::string(strerror(ret)));
@@ -352,9 +360,8 @@ void lseb_release(BuConnectionId& conn, std::vector<iovec> const& credits) {
     wr.num_sge = 1;
   }
 
-  ibv_recv_wr* bad;
   if (!wrs.empty()) {
-    int ret = ibv_post_recv(conn.cm_id->qp, &(wrs.front().first), &bad);
+    int ret = ibv_post_recv(conn.cm_id->qp, &(wrs.front().first), nullptr);
     if (ret) {
       throw std::runtime_error(
         "Error on ibv_post_recv: " + std::string(strerror(ret)));
