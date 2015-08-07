@@ -123,11 +123,19 @@ std::string lseb_get_peer_hostname(BuConnectionId const& conn) {
 
 void lseb_register(RuConnectionId& conn, int id, void* buffer, size_t len) {
   conn.id = id;
+  int ret = send(conn.socket, &conn.id, sizeof(conn.id), 0);
+  if (ret == -1) {
+    throw std::runtime_error("Error on send: " + std::string(strerror(errno)));
+  }
   // Useless buffer and len parameters
 }
 void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   conn.buffer = buffer;
   conn.len = len;
+  int ret = recv(conn.socket, &conn.id, sizeof(conn.id), MSG_WAITALL);
+  if (ret == -1) {
+    throw std::runtime_error("Error on recv: " + std::string(strerror(errno)));
+  }
 }
 
 int lseb_avail(RuConnectionId const& conn) {
