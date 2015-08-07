@@ -139,6 +139,11 @@ BuConnectionId lseb_accept(BuSocket const& socket) {
   return conn;
 }
 
+std::string lseb_get_peer_hostname(RuConnectionId& conn) {
+  sockaddr_in& addr = *((sockaddr_in*) rdma_get_peer_addr(conn.cm_id));
+  return inet_ntoa(addr.sin_addr);
+}
+
 std::string lseb_get_peer_hostname(BuConnectionId& conn) {
   sockaddr_in& addr = *((sockaddr_in*) rdma_get_peer_addr(conn.cm_id));
   return inet_ntoa(addr.sin_addr);

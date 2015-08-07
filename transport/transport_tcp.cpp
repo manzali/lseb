@@ -110,6 +110,17 @@ BuConnectionId lseb_accept(BuSocket const& socket) {
   return BuConnectionId(newsockfd);
 }
 
+std::string lseb_get_peer_hostname(RuConnectionId const& conn) {
+  sockaddr_in addr;
+  socklen_t addr_len = sizeof(addr);
+  int ret = getpeername(conn.socket, (sockaddr*) &addr, &addr_len);
+  if (ret == -1) {
+    throw std::runtime_error(
+      "Error on getpeername: " + std::string(strerror(errno)));
+  }
+  return inet_ntoa(addr.sin_addr);
+}
+
 std::string lseb_get_peer_hostname(BuConnectionId const& conn) {
   sockaddr_in addr;
   socklen_t addr_len = sizeof(addr);

@@ -103,7 +103,12 @@ void ReadoutUnit::operator()() {
         lseb_connect(ep.hostname(), ep.port(), tokens));
       RuConnectionId& conn = p.first->second;
       lseb_register(conn, m_id, data_ptr.get(), data_size);
-      LOG(NOTICE) << "Readout Unit - Connection established with bu " << id;
+      LOG(NOTICE)
+        << "Readout Unit - Connection established with "
+        << lseb_get_peer_hostname(conn)
+        << "\t(bu "
+        << id
+        << ")";
     }
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
