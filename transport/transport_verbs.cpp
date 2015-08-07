@@ -76,7 +76,7 @@ void lseb_recv_id(BuConnectionId& conn) {
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
-  ibv_send_wr* bad_wr;
+  ibv_recv_wr* bad_wr;
   ret = ibv_post_recv(conn.cm_id->qp, &wr, &bad_wr);
   if (ret) {
     throw std::runtime_error(
