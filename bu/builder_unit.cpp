@@ -70,6 +70,7 @@ void BuilderUnit::operator()() {
   }
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
+  /*
   std::map<int, BuConnectionId> connection_ids;
   for (int i = 0; i < endpoints.size() - 1; ++i) {
     BuConnectionId conn = lseb_accept(socket);
@@ -82,6 +83,26 @@ void BuilderUnit::operator()() {
       << "(ru "
       << conn.id
       << ")";
+  }
+  */
+  std::map<int, BuConnectionId> connection_ids;
+  int count = 0;
+  for (auto id : id_sequence) {
+    if (id != m_id) {
+      auto p = connection_ids.emplace(id, lseb_accept(socket));
+      BuConnectionId& conn = p.first->second;
+      // Check the id
+      lseb_register(conn, data_ptr.get() + count++ * data_size, data_size);
+      std::string const hostname = lseb_get_peer_hostname(conn);
+      if(conn.id != id){
+        LOG(WARNING)
+          << "Expected id "
+          << id
+          << " but found id "
+          << conn.id;
+      }
+      LOG(NOTICE) << "Builder Unit - Connection established with ru " << id;
+    }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
 
