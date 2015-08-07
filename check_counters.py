@@ -7,7 +7,7 @@ while True:
 
 	time.sleep(5)
 
-	output = subprocess.check_output(["perfquery", "-x", "-r"])
+	output = subprocess.check_output(["/usr/sbin/perfquery", "-x", "-r"])
 	output_list = output.split("\n")
 
 	# Get Xmit and Rcv
