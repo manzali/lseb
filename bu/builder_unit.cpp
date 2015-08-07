@@ -74,12 +74,28 @@ void BuilderUnit::operator()() {
   int count = 0;
   for (auto id : id_sequence) {
     if (id != m_id) {
-      LOG(NOTICE) << "Builder Unit - Accepting connection from ru " << id;
       auto p = connection_ids.emplace(id, lseb_accept(socket));
       BuConnectionId& conn = p.first->second;
+      // Check the id
+      std::string const hostname = lseb_get_peer_hostname(conn);
+      if(endpoints.at(id).hostname().compare(hostname)){
+        LOG(WARNING)
+          << "Expected "
+          << endpoints.at(id).hostname()
+          << " but found "
+          << hostname;
+      }
+      //int new_id = 1;
+
+      //std::swap(connection_ids[new_id], conn);
+
+
+
+
+
+
       lseb_register(conn, data_ptr.get() + count++ * data_size, data_size);
       LOG(NOTICE) << "Builder Unit - Connection established with ru " << id;
-      LOG(NOTICE) << "IP address " << lseb_get_peer_hostname(conn);
     }
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
