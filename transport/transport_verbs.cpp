@@ -30,7 +30,8 @@ void lseb_send_id(RuConnectionId& conn) {
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_INLINE;
-  int ret = ibv_post_send(conn.cm_id->qp, &wr, nullptr);
+  ibv_send_wr* bad_wr;
+  int ret = ibv_post_send(conn.cm_id->qp, &wr, &bad_wr);
   if (ret) {
     throw std::runtime_error(
       "Error on ibv_post_send: " + std::string(strerror(ret)));
@@ -75,7 +76,8 @@ void lseb_recv_id(BuConnectionId& conn) {
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
-  ret = ibv_post_recv(conn.cm_id->qp, &wr, nullptr);
+  ibv_send_wr* bad_wr;
+  ret = ibv_post_recv(conn.cm_id->qp, &wr, &bad_wr);
   if (ret) {
     throw std::runtime_error(
       "Error on ibv_post_recv: " + std::string(strerror(ret)));
