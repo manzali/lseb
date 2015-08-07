@@ -99,10 +99,10 @@ void ReadoutUnit::operator()() {
     if (id != m_id) {
       Endpoint const& ep = endpoints.at(id);
       auto p = connection_ids.emplace(
-        m_id,
+        id,
         lseb_connect(ep.hostname(), ep.port(), tokens));
       RuConnectionId& conn = p.first->second;
-      lseb_register(conn, id, data_ptr.get(), data_size);
+      lseb_register(conn, m_id, data_ptr.get(), data_size);
       LOG(NOTICE)
         << "Readout Unit - Connection established with bu "
         << conn.id;
