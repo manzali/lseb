@@ -99,7 +99,7 @@ void ReadoutUnit::operator()() {
     if (id != m_id) {
       Endpoint const& ep = endpoints.at(id);
       auto p = connection_ids.emplace(
-        id,
+        m_id,
         lseb_connect(ep.hostname(), ep.port(), tokens));
       RuConnectionId& conn = p.first->second;
       lseb_register(conn, id, data_ptr.get(), data_size);
