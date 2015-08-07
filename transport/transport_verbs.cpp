@@ -222,6 +222,7 @@ void lseb_register(BuConnectionId& conn, void* buffer, size_t len) {
   ibv_sge sge;
   sge.addr = (uint64_t) (uintptr_t) conn.wr_vect[wc.wr_id];
   sge.length = (uint32_t) conn.wr_len;
+  sge.lkey = conn.mr ? conn.mr->lkey : 0;
   ibv_recv_wr wr;
   wr.wr_id = wc.wr_id;
   wr.next = nullptr;
