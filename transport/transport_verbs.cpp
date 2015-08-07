@@ -120,6 +120,7 @@ RuConnectionId lseb_connect(
     attr.cap.max_send_sge = 2;
     attr.cap.max_recv_wr = 1;
     attr.cap.max_recv_sge = 1;
+    attr.cap.max_inline_data = sizeof(conn.id);
     attr.sq_sig_all = 1;
     ret = rdma_create_ep(&conn.cm_id, res, NULL, &attr);
     if (ret) {
