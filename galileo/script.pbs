@@ -3,7 +3,7 @@
 ##PBS -M matteo.manzali@cnaf.infn.it
 ##PBS -m e
 
-#PBS -l nodes=4:ppn=4,walltime=1:30:00
+#PBS -l nodes=64:ppn=4,walltime=2:30:00
 #PBS -A INF14_LHCb_0
 
 #PBS -N test
@@ -28,6 +28,12 @@ done < ${PBS_NODEFILE}
 # Store unique hostnames into file
 echo ${array[@]} | tr [:space:] '\n' | awk '!a[$0]++' > $hostnames
 
+# Kill previous processes (if any)
+while read line; do
+  cmd="killall -q lseb; killall -q python;"
+  ssh -n $line $cmd
+done < $hostnames
+
 # Find ib0 ip form hostnames
 cmd="/usr/sbin/ifconfig ib0 | sed -n 2p | grep -Po '(?<=inet )[^ ]*'"
 endpoints=
@@ -51,6 +57,7 @@ while read line; do
   i=$(($i+1))
 done < $hostnames
 
+# Run python script
 i=0
 while read line; do
   cmd="python ${HOME}/lseb/check_counters.py"
@@ -58,9 +65,10 @@ while read line; do
   i=$(($i+1))
 done < $hostnames
 
-sleep 120
+sleep 6000
 
+# Kill processes
 while read line; do
-  cmd="killall lseb; killall python;"
+  cmd="killall -q lseb; killall -q python;"
   ssh -n $line $cmd
 done < $hostnames
