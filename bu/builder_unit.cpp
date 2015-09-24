@@ -43,45 +43,36 @@ void BuilderUnit::operator()() {
   std::vector<Endpoint> const endpoints = get_endpoints(
     m_configuration.get_child("ENDPOINTS"));
 
-  size_t const data_size = max_fragment_size * bulk_size * tokens;
-
   // Allocate memory
 
-  std::unique_ptr<unsigned char[]> const data_ptr(
-    new unsigned char[data_size * (endpoints.size() - 1)]);
-
-  LOG(NOTICE)
-    << "Builder Unit - Allocated "
-    << data_size * (endpoints.size() - 1)
-    << " bytes of memory";
+  size_t const data_size = max_fragment_size * bulk_size * tokens * (endpoints
+    .size() - 1);
+  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
+  LOG(NOTICE) << "Builder Unit - Allocated " << data_size << " bytes of memory";
 
   // Connections
 
-  BuSocket socket = lseb_listen(
-    endpoints.at(m_id).hostname(),
-    endpoints.at(m_id).port(),
-    tokens);
-
-  int next_id = m_id;
-  std::vector<int> id_sequence(endpoints.size());
-  for (auto& id : id_sequence) {
-    next_id = (next_id != 0) ? next_id - 1 : endpoints.size() - 1;
-    id = next_id;
-  }
+  Acceptor<RecvSocket> acceptor;
+  acceptor.register_memory(data_ptr.get(), data_size, tokens);
+  acceptor.listen(endpoints.at(m_id).hostname(), endpoints.at(m_id).port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
-  std::map<int, BuConnectionId> connection_ids;
+
+  size_t const chunk_size = max_fragment_size * bulk_size;
+
+  std::vector<RecvSocket> connection_ids;
   for (int i = 0; i < endpoints.size() - 1; ++i) {
-    BuConnectionId conn = lseb_accept(socket);
-    lseb_register(conn, data_ptr.get() + i * data_size, data_size);
-    auto p = connection_ids.emplace(conn.id, conn);
-    assert(p.second && "connection id already present");
-    LOG(NOTICE)
-      << "Builder Unit - Connection established with "
-      << lseb_get_peer_hostname(conn)
-      << "\t(ru "
-      << conn.id
-      << ")";
+    connection_ids.push_back(acceptor.accept());
+    RecvSocket& conn = connection_ids.back();
+
+    std::vector<iovec> iov_vect;
+    for (int j = 0; j < tokens; ++j) {
+      iov_vect.push_back(
+        { data_ptr.get() + i * chunk_size * tokens + j * chunk_size, chunk_size });
+    }
+    conn.release(iov_vect);
+
+    LOG(NOTICE) << "Builder Unit - Connection established";
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
 
@@ -93,6 +84,7 @@ void BuilderUnit::operator()() {
   Timer t_rel;
 
   std::vector<std::vector<iovec> > data_vect(endpoints.size());
+  // The local data is in the last position of data_vect
 
   while (true) {
 
@@ -102,13 +94,15 @@ void BuilderUnit::operator()() {
     t_recv.start();
     do {
       min_wrs = tokens;
-      for (auto id : id_sequence) {
-        auto& iov_vect = data_vect.at(id);
+
+      for (int i = 0; i < endpoints.size(); ++i) {
+
+        auto& iov_vect = data_vect[i];
         int old_size = iov_vect.size();
-        if (id != m_id) {
-          auto conn = connection_ids.find(id);
-          assert(conn != std::end(connection_ids));
-          std::vector<iovec> new_data = lseb_read(conn->second);
+
+        if (i != endpoints.size() - 1) {
+          auto& conn = connection_ids[i];
+          std::vector<iovec> new_data = conn.read_all();
           if (!new_data.empty()) {
             iov_vect.insert(
               std::end(iov_vect),
@@ -122,11 +116,7 @@ void BuilderUnit::operator()() {
           }
         }
         if (iov_vect.size() != old_size) {
-          LOG(DEBUG)
-            << "Read "
-            << iov_vect.size() - old_size
-            << " wr from conn "
-            << id;
+          LOG(DEBUG) << "Read " << iov_vect.size() - old_size << " wr";
         }
         min_wrs = (min_wrs < iov_vect.size()) ? min_wrs : iov_vect.size();
       }
@@ -138,39 +128,40 @@ void BuilderUnit::operator()() {
     // -----------------------------------------------------------------------
     t_check.start();
     uint64_t evt_id = pointer_cast<EventHeader>(
-      data_vect.at(m_id).front().iov_base)->id;
-    for (auto id : id_sequence) {
-      uint64_t current_evt_id = pointer_cast<EventHeader>(
-        data_vect.at(id).front().iov_base)->id;
-      uint64_t current_flags = pointer_cast<EventHeader>(
-        data_vect.at(id).front().iov_base)->flags;
-      // LOG(NOTICE) << "id = " << id <<" - evt = " << current_evt_id << " - flags = " << current_flags;
-      assert(evt_id == current_evt_id);
-      assert(id == current_flags);
+      data_vect[m_id].front().iov_base)->id;
+    for (auto& data : data_vect) {
+      uint64_t current = pointer_cast<EventHeader>(data.front().iov_base)->id;
+      assert(evt_id == current);
     }
     t_check.pause();
 
     // Release
     t_rel.start();
-    for (auto id : id_sequence) {
-      auto& iov_vect = data_vect.at(id);
+
+    for (int i = 0; i < endpoints.size(); ++i) {
+
+      auto& iov_vect = data_vect[i];
       assert(iov_vect.size() >= min_wrs);
-      std::vector<iovec> vect(
+      std::vector<iovec> sub_vect(
         std::begin(iov_vect),
         std::begin(iov_vect) + min_wrs);
-      if (id != m_id) {
-        bandwith.add(iovec_length(vect));
-        auto conn = connection_ids.find(id);
-        assert(conn != std::end(connection_ids));
-        lseb_release(conn->second, vect);
+
+      if (i != endpoints.size() - 1) {
+        bandwith.add(iovec_length(sub_vect));
+        auto& conn = connection_ids[i];
+        // Reset len of iovec
+        for(auto& iov : sub_vect){
+          iov.iov_len = chunk_size;
+        }
+        conn.release(sub_vect);
       } else {
-        for (auto& i : vect) {
+        for (auto& i : sub_vect) {
           while (!m_free_local_data.push(i)) {
             ;
           }
         }
       }
-      LOG(DEBUG) << "Released " << min_wrs << " wr for conn " << id;
+      LOG(DEBUG) << "Released " << min_wrs << " wr";
       iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + min_wrs);
     }
     t_rel.pause();

@@ -1,6 +1,7 @@
 
 include_directories(
   ${LSEB_SOURCE_DIR}
+  ${Boost_INCLUDE_DIRS}
 )
 
 add_library(
@@ -16,4 +17,5 @@ add_library(
 target_link_libraries(
   generator
   length_generator
+  ${Boost_LIBRARIES}
 )

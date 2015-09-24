@@ -2,11 +2,17 @@ if(TRANSPORT STREQUAL "TCP")
 
 include_directories(
   ${LSEB_SOURCE_DIR}
+  ${Boost_INCLUDE_DIRS}
 )
 
 add_library(
   transport
-  transport_tcp.cpp
+  tcp/socket_tcp.cpp
+)
+
+target_link_libraries(
+  transport
+  ${Boost_LIBRARIES}
 )
 
 
@@ -22,7 +28,7 @@ include_directories(
 
 add_library(
   transport
-  transport_verbs.cpp
+  verbs/socket_verbs.cpp
 )
 
 target_link_libraries(

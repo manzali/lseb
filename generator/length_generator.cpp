@@ -1,13 +1,10 @@
 #include "generator/length_generator.h"
 
+#include <boost/algorithm/clamp.hpp>
+
 #include <cassert>
 
 namespace lseb {
-
-template<typename T>
-T fitToRange(T val, T min, T max) {
-  return std::max(min, std::min(val, max));
-}
 
 LengthGenerator::LengthGenerator(
   size_t mean,
@@ -23,7 +20,7 @@ LengthGenerator::LengthGenerator(
 }
 
 size_t LengthGenerator::generate() {
-  return fitToRange(
+  return boost::algorithm::clamp(
     static_cast<size_t>(m_distribution(m_generator)),
     m_min,
     m_max);
