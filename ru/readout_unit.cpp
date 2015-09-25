@@ -1,6 +1,9 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <thread>
+#include <chrono>
+#include <algorithm>
 
 #include <cstdlib>
 #include <cassert>
@@ -86,27 +89,37 @@ void ReadoutUnit::operator()() {
     std::end(metadata_range));
   DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
 
-  int next_id = m_id;
+  int first_id = (m_id != endpoints.size() - 1) ? m_id + 1 : 0;
   std::vector<int> id_sequence(endpoints.size());
-  for (auto& id : id_sequence) {
-    next_id = (next_id != endpoints.size() - 1) ? next_id + 1 : 0;
-    id = next_id;
-  }
+  std::iota(std::begin(id_sequence), std::end(id_sequence), 0);
+  std::rotate(
+    std::begin(id_sequence),
+    std::begin(id_sequence) + first_id,
+    std::end(id_sequence));
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
-  std::map<int, RuConnectionId> connection_ids;
+
+  Connector<SendSocket> connector;
+  connector.register_memory(data_ptr.get(), data_size, tokens);
+
+  std::map<int, SendSocket> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
       Endpoint const& ep = endpoints.at(id);
-      auto p = connection_ids.emplace(
-        id,
-        lseb_connect(ep.hostname(), ep.port(), tokens));
-      RuConnectionId& conn = p.first->second;
-      lseb_register(conn, m_id, data_ptr.get(), data_size);
+
+      bool connected = false;
+      while (!connected) {
+        try {
+          connection_ids.emplace(
+            std::make_pair(id, connector.connect(ep.hostname(), ep.port())));
+          connected = true;
+        } catch (std::exception& e) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+      }
+
       LOG(NOTICE)
-        << "Readout Unit - Connection established with "
-        << lseb_get_peer_hostname(conn)
-        << "\t(bu "
+        << "Readout Unit - Connection established with bu "
         << id
         << ")";
     }
@@ -127,6 +140,7 @@ void ReadoutUnit::operator()() {
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   Timer t_ctrl;
+  Timer t_avail;
   Timer t_send;
 
   unsigned int const needed_events = bulk_size * endpoints.size();
@@ -158,10 +172,12 @@ void ReadoutUnit::operator()() {
         auto conn_it = connection_ids.find(id);
         assert(conn_it != std::end(connection_ids));
         auto& conn = conn_it->second;
-        while (!lseb_avail(conn)) {
+        t_avail.start();
+        while (!conn.available()) {
           ;
         }
-        bandwith.add(lseb_write(conn, std::vector<DataIov>(1, data_iov)));
+        t_avail.pause();
+        bandwith.add(conn.write(data_iov));
       } else {
         iovec i;
         while (!m_free_local_data.pop(i)) {
@@ -205,10 +221,14 @@ void ReadoutUnit::operator()() {
         << "\tt_ctrl: "
         << t_ctrl.rate()
         << "%\n"
+        << "\tt_avail: "
+        << t_avail.rate()
+        << "%\n"
         << "\tt_send: "
         << t_send.rate()
         << "%";
       t_ctrl.reset();
+      t_avail.reset();
       t_send.reset();
     }
   }

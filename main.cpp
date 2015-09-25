@@ -10,7 +10,6 @@
 
 #include "common/log.hpp"
 #include "common/configuration.h"
-#include "common/tcp_barrier.h"
 
 #include "transport/endpoints.h"
 
