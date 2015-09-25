@@ -140,6 +140,7 @@ void ReadoutUnit::operator()() {
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   Timer t_ctrl;
+  Timer t_avail;
   Timer t_send;
 
   unsigned int const needed_events = bulk_size * endpoints.size();
@@ -171,11 +172,11 @@ void ReadoutUnit::operator()() {
         auto conn_it = connection_ids.find(id);
         assert(conn_it != std::end(connection_ids));
         auto& conn = conn_it->second;
-
+        t_avail.start();
         while (!conn.available()) {
           ;
         }
-
+        t_avail.pause();
         bandwith.add(conn.write(data_iov));
       } else {
         iovec i;
@@ -220,10 +221,14 @@ void ReadoutUnit::operator()() {
         << "\tt_ctrl: "
         << t_ctrl.rate()
         << "%\n"
+        << "\tt_avail: "
+        << t_avail.rate()
+        << "%\n"
         << "\tt_send: "
         << t_send.rate()
         << "%";
       t_ctrl.reset();
+      t_avail.reset();
       t_send.reset();
     }
   }

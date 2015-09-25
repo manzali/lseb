@@ -161,15 +161,16 @@ void RecvSocket::release(std::vector<iovec> const& iov_vect) {
   std::vector<std::pair<ibv_recv_wr, ibv_sge> > wrs(iov_vect.size());
 
   for (int i = 0; i < wrs.size(); ++i) {
+    iovec& iov = iov_vect[i];
     ibv_sge& sge = wrs[i].second;
-    sge.addr = (uint64_t) (uintptr_t) iov_vect[i].iov_base;
-    sge.length = (uint32_t) iov_vect[i].iov_len;
+    sge.addr = (uint64_t) (uintptr_t) iov.iov_base;
+    sge.length = (uint32_t) iov.iov_len;
     sge.lkey = m_mr->lkey;
 
     ibv_recv_wr& wr = wrs[i].first;
-    wr.wr_id = (uint64_t) (uintptr_t) iov_vect[i].iov_base;
+    wr.wr_id = (uint64_t) (uintptr_t) iov.iov_base;
     wr.next = (i + 1 == wrs.size()) ? nullptr : &(wrs[i + 1].first);
-    wr.sg_list = &(wrs[i].second);
+    wr.sg_list = &sge;
     wr.num_sge = 1;
   }
 
