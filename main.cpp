@@ -10,6 +10,7 @@
 
 #include "common/log.hpp"
 #include "common/configuration.h"
+#include "common/dataformat.h"
 
 #include "transport/endpoints.h"
 
@@ -68,7 +69,7 @@ int main(int argc, char* argv[]) {
 
   int const max_fragment_size = configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
-  if (max_fragment_size <= 0) {
+  if (max_fragment_size <= 0 || max_fragment_size % sizeof(EventHeader)) {
     LOG(ERROR) << "Wrong MAX_FRAGMENT_SIZE: " << max_fragment_size;
     return EXIT_FAILURE;
   }
@@ -102,13 +103,7 @@ int main(int argc, char* argv[]) {
 
   BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
   std::thread bu_th(bu);
-/*
-  tcp_barrier(
-    id,
-    endpoints.size(),
-    endpoints[0].hostname(),
-    endpoints[0].port());
-*/
+
   ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
   std::thread ru_th(ru);
 
