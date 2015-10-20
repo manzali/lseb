@@ -14,6 +14,8 @@ namespace lseb {
 
 template<typename T>
 class Acceptor {
+  static_assert(std::is_base_of<Socket, T>::value, "Wrong template");
+
   void* m_buffer;
   size_t m_size;
   int m_credits;
@@ -47,20 +49,13 @@ class Acceptor {
   }
 
  public:
-  Acceptor()
+  Acceptor(void* buffer, size_t size, int credits)
       :
-        m_buffer(nullptr),
-        m_size(0),
-        m_credits(0),
+        m_buffer(buffer),
+        m_size(size),
+        m_credits(credits),
         m_cm_id(nullptr),
         m_mr(nullptr) {
-    static_assert(std::is_base_of<Socket, T>::value, "Wrong template");
-  }
-
-  void register_memory(void* buffer, size_t size, int credits) {
-    m_buffer = buffer;
-    m_size = size;
-    m_credits = credits;
   }
 
   void listen(std::string const& hostname, std::string const& port) {

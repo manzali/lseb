@@ -15,24 +15,27 @@ class Socket {
 };
 
 class SendSocket : public Socket {
-  std::unique_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
-
- public:
-  SendSocket(std::unique_ptr<boost::asio::ip::tcp::socket> socket_ptr);
-  int available();
-  size_t write(DataIov const& data);
-  size_t write_all(std::vector<DataIov> const& data_vect);
-};
-
-class RecvSocket : public Socket {
-  std::unique_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
+  std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
   std::vector<iovec> m_iov_vect;
 
  public:
-  RecvSocket(std::unique_ptr<boost::asio::ip::tcp::socket> socket_ptr);
-  iovec read();
-  std::vector<iovec> read_all();
-  void release(std::vector<iovec> const& iov_vect);
+  SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr);
+  std::vector<iovec> pop_completed();
+  size_t post_write(iovec const& iov);
+  int pending();
+};
+
+class RecvSocket : public Socket {
+  std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
+  std::vector<iovec> m_iov_vect;
+
+  iovec read_iov();
+
+ public:
+  RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr);
+  std::vector<iovec> pop_completed();
+  void post_read(iovec const& iov);
+  void post_read(std::vector<iovec> const& iov_vect);
 };
 
 }

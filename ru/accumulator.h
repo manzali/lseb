@@ -1,25 +1,34 @@
 #ifndef RU_ACCUMULATOR_H
 #define RU_ACCUMULATOR_H
 
+#include <deque>
+
 #include "common/dataformat.h"
+
+#include "ru/controller.h"
 
 namespace lseb {
 
 class Accumulator {
+  Controller m_controller;
   MetaDataRange m_metadata_range;
-  MetaDataRange::iterator m_current_metadata;
   DataRange m_data_range;
-  DataRange::iterator m_current_data;
-  unsigned int m_events_in_multievent;
-  unsigned int m_generated_events;
+  MetaDataRange::iterator m_current_metadata;
+  int m_events_in_multievent;
+  int m_required_multievents;
+  int m_generated_events;
+  std::deque<std::pair<void*, bool> > m_iov_multievents;
+  MetaDataRange::iterator m_release_metadata;
 
  public:
   Accumulator(
+    Controller const& controller,
     MetaDataRange const& metadata_range,
     DataRange const& data_range,
-    unsigned int events_in_multievent);
-  unsigned int add(MetaDataRange const& metadata_range);
-  std::vector<MultiEvent> get_multievents(int n);
+    int events_in_multievent,
+    int required_multievents);
+  std::vector<iovec> get_multievents();
+  void release_multievents(std::vector<iovec> const& iov_vect);
 
 };
 

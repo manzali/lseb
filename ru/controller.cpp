@@ -4,6 +4,7 @@
 #include<thread>
 
 #include "common/utility.h"
+#include "common/log.hpp"
 
 namespace lseb {
 
@@ -26,7 +27,7 @@ MetaDataRange Controller::read() {
     std::chrono::high_resolution_clock::now() - m_start_time).count();
 
   std::this_thread::sleep_for(
-    std::chrono::nanoseconds(std::mega::num / m_generator_frequency));
+    std::chrono::microseconds(std::mega::num / m_generator_frequency));
 
   size_t const events_to_generate = elapsed_seconds * m_generator_frequency;
   assert(events_to_generate >= m_generated_events);

@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <numeric>
 #include <random>
+#include <algorithm>
 
 #include <cassert>
 
@@ -53,6 +54,22 @@ typename R::iterator advance_in_range(
   auto const offset =
     (std::distance(std::begin(range), current) + advance) % size;
   return std::begin(range) + offset + (offset < 0 ? size : 0);
+}
+
+template<typename R, typename T, typename BinaryOperation>
+typename R::iterator find_in_range(R sub_range, T range, BinaryOperation op) {
+  if (std::begin(sub_range) < std::end(sub_range)) {
+    return std::find_if(std::begin(sub_range), std::end(sub_range), op);
+  } else {
+    typename R::iterator it = std::find_if(
+      std::begin(sub_range),
+      std::end(range),
+      op);
+    return
+        (it == std::end(range)) ?
+          std::find_if(std::begin(range), std::end(sub_range), op) :
+          it;
+  }
 }
 
 template<typename R, typename T, typename InitType, typename BinaryOperation>
@@ -133,6 +150,14 @@ class Buffer {
         m_next_write(begin) {
     assert(m_begin < m_end);
   }
+  Buffer(const_iterator begin, const_iterator end)
+      :
+        m_begin(const_cast<iterator>(begin)),
+        m_end(const_cast<iterator>(end)),
+        m_next_read(const_cast<iterator>(begin)),
+        m_next_write(const_cast<iterator>(begin)) {
+    assert(m_begin < m_end);
+  }
   iterator begin() {
     return m_begin;
   }
@@ -171,31 +196,6 @@ Iter select_randomly(Iter start, Iter end) {
   static std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
   return std::next(start, dis(gen));
-}
-
-using DataIov = std::vector<iovec>;
-
-template<typename R, typename T>
-DataIov create_iovec(R sub_range, T range) {
-  DataIov iov;
-  size_t const size = sizeof(typename T::value_type);
-  if (std::begin(sub_range) <= std::end(sub_range)) {
-    size_t len =
-      std::distance(std::begin(sub_range), std::end(sub_range)) * size;
-    if (len) {
-      iov.push_back( { std::begin(sub_range), len });
-    }
-  } else {
-    size_t len = std::distance(std::begin(sub_range), std::end(range)) * size;
-    if (len) {
-      iov.push_back( { std::begin(sub_range), len });
-    }
-    len = std::distance(std::begin(range), std::end(sub_range)) * size;
-    if (len) {
-      iov.push_back( { std::begin(range), len });
-    }
-  }
-  return iov;
 }
 
 inline size_t iovec_length(std::vector<iovec> const& iov) {
