@@ -7,6 +7,28 @@ include_directories(
 )
 
 add_executable(
+  t_client
+  t_client.cpp
+)
+
+target_link_libraries(
+  t_client
+  transport
+  ${Boost_LIBRARIES}
+)
+
+add_executable(
+  t_server
+  t_server.cpp
+)
+
+target_link_libraries(
+  t_server
+  transport
+  ${Boost_LIBRARIES}
+)
+
+add_executable(
   t_length_generator
   t_length_generator.cpp
 )

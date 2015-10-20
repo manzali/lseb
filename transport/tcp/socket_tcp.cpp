@@ -6,23 +6,20 @@
 
 namespace lseb {
 
-SendSocket::SendSocket(std::unique_ptr<boost::asio::ip::tcp::socket> socket_ptr)
+SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)) {
 
 }
 
-int SendSocket::available() {
-  return 1;
+std::vector<iovec> SendSocket::pop_completed() {
+  std::vector<iovec> vect(m_iov_vect);
+  m_iov_vect.clear();
+  return vect;
 }
 
-size_t SendSocket::write(DataIov const& data) {
-  size_t bytes = 0;
-  std::vector<boost::asio::const_buffer> buffers;
-  for (auto& iov : data) {
-    bytes += iov.iov_len;
-    buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
-  }
+size_t SendSocket::post_write(iovec const& iov) {
+  size_t bytes = iov.iov_len;
   boost::system::error_code error;
   boost::asio::write(
     *m_socket_ptr,
@@ -33,6 +30,8 @@ size_t SendSocket::write(DataIov const& data) {
     std::cout << "error on write 1\n";
     throw boost::system::system_error(error);
   }
+  std::vector<boost::asio::const_buffer> buffers;
+  buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
   boost::asio::write(
     *m_socket_ptr,
     buffers,
@@ -42,24 +41,21 @@ size_t SendSocket::write(DataIov const& data) {
     std::cout << "error on write 2\n";
     throw boost::system::system_error(error);
   }
+  m_iov_vect.push_back(iov);
   return bytes;
 }
 
-size_t SendSocket::write_all(std::vector<DataIov> const& data_vect) {
-  size_t bytes = 0;
-  for (auto& data : data_vect) {
-    bytes += write(data);
-  }
-  return bytes;
+int SendSocket::pending() {
+  return m_iov_vect.size();
 }
 
-RecvSocket::RecvSocket(std::unique_ptr<boost::asio::ip::tcp::socket> socket_ptr)
+RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)) {
 
 }
 
-iovec RecvSocket::read() {
+iovec RecvSocket::read_iov() {
   assert(m_iov_vect.size());
   iovec iov = m_iov_vect.back();
   m_iov_vect.pop_back();
@@ -87,20 +83,22 @@ iovec RecvSocket::read() {
   return iov;
 }
 
-std::vector<iovec> RecvSocket::read_all() {
+std::vector<iovec> RecvSocket::pop_completed() {
   std::vector<iovec> iov_vect;
   boost::asio::socket_base::bytes_readable command(true);
   m_socket_ptr->io_control(command);
-  size_t bytes_readable = command.get();
-  while (bytes_readable && m_iov_vect.size()) {
-    iov_vect.push_back(read());
+  while (command.get() && !m_iov_vect.empty()) {
+    iov_vect.push_back(read_iov());
     m_socket_ptr->io_control(command);
-    bytes_readable = command.get();
   }
   return iov_vect;
 }
 
-void RecvSocket::release(std::vector<iovec> const& iov_vect) {
+void RecvSocket::post_read(iovec const& iov) {
+  m_iov_vect.push_back(iov);
+}
+
+void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
   m_iov_vect.insert(m_iov_vect.end(), iov_vect.begin(), iov_vect.end());
 }
 

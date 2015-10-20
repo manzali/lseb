@@ -11,14 +11,13 @@ namespace lseb {
 class Generator {
   LengthGenerator m_length_generator;
   MetaDataBuffer m_metadata_buffer;
-  DataBuffer m_data_buffer;
   size_t m_id;
 
  public:
   Generator(
     LengthGenerator const& length_generator,
-    MetaDataBuffer const& metadata_buffer,
-    DataBuffer const& data_buffer,
+    MetaDataRange const& metadata_range,
+    DataRange const& data_range,
     size_t id);
   void releaseEvents(size_t n_events);
   size_t generateEvents(size_t n_events);

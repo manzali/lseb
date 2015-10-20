@@ -6,13 +6,15 @@
 #include <boost/lockfree/spsc_queue.hpp>
 
 #include "common/configuration.h"
+#include "transport/transport.h"
 
 namespace lseb {
 
 class BuilderUnit {
   Configuration m_configuration;
-  boost::lockfree::spsc_queue<iovec>& m_free_local_data;
-  boost::lockfree::spsc_queue<iovec>& m_ready_local_data;
+  boost::lockfree::spsc_queue<iovec>& m_free_local_queue;
+  boost::lockfree::spsc_queue<iovec>& m_ready_local_queue;
+  std::vector<RecvSocket> m_connection_ids;
   int m_id;
 
  public:

@@ -22,10 +22,20 @@
 #include "ru/accumulator.h"
 #include "ru/readout_unit.h"
 
-#include "transport/transport.h"
 #include "transport/endpoints.h"
 
 namespace lseb {
+
+std::vector<int> create_sequence(int id, int total) {
+  int first_id = (id != total - 1) ? id + 1 : 0;
+  std::vector<int> sequence(total);
+  std::iota(std::begin(sequence), std::end(sequence), 0);
+  std::rotate(
+    std::begin(sequence),
+    std::begin(sequence) + first_id,
+    std::end(sequence));
+  return sequence;
+}
 
 ReadoutUnit::ReadoutUnit(
   Configuration const& configuration,
@@ -34,9 +44,30 @@ ReadoutUnit::ReadoutUnit(
   boost::lockfree::spsc_queue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
-      m_free_local_data(free_local_data),
-      m_ready_local_data(ready_local_data),
+      m_free_local_queue(free_local_data),
+      m_ready_local_queue(ready_local_data),
       m_id(id) {
+}
+
+size_t ReadoutUnit::remote_write(int id, iovec const& iov) {
+  auto conn_it = m_connection_ids.find(id);
+  assert(conn_it != std::end(m_connection_ids));
+  auto& conn = conn_it->second;
+  return conn.post_write(iov);
+}
+
+size_t ReadoutUnit::local_write(iovec const& iov) {
+  iovec i;
+  while (!m_free_local_queue.pop(i)) {
+    ;
+  }
+  memcpy(static_cast<unsigned char*>(i.iov_base), iov.iov_base, iov.iov_len);
+  i.iov_len = iov.iov_len;
+  while (!m_ready_local_queue.push(i)) {
+    ;
+  }
+  m_local_data.push_back(iov);
+  return i.iov_len;
 }
 
 void ReadoutUnit::operator()() {
@@ -53,7 +84,7 @@ void ReadoutUnit::operator()() {
 
   int const max_fragment_size = m_configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
-  assert(max_fragment_size > 0);
+  assert(max_fragment_size >= sizeof(EventHeader));
 
   int const bulk_size = m_configuration.get<int>("GENERAL.BULKED_EVENTS");
   assert(bulk_size > 0);
@@ -84,40 +115,27 @@ void ReadoutUnit::operator()() {
     pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
-  MetaDataBuffer metadata_buffer(
-    std::begin(metadata_range),
-    std::end(metadata_range));
-  DataBuffer data_buffer(std::begin(data_range), std::end(data_range));
+  int const required_multievents = endpoints.size();
 
-  int first_id = (m_id != endpoints.size() - 1) ? m_id + 1 : 0;
-  std::vector<int> id_sequence(endpoints.size());
-  std::iota(std::begin(id_sequence), std::end(id_sequence), 0);
-  std::rotate(
-    std::begin(id_sequence),
-    std::begin(id_sequence) + first_id,
-    std::end(id_sequence));
+  std::vector<int> id_sequence = create_sequence(m_id, required_multievents);
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
-  Connector<SendSocket> connector;
-  connector.register_memory(data_ptr.get(), data_size, tokens);
+  Connector<SendSocket> connector(data_ptr.get(), data_size, tokens);
 
-  std::map<int, SendSocket> connection_ids;
   for (auto id : id_sequence) {
     if (id != m_id) {
       Endpoint const& ep = endpoints.at(id);
-
       bool connected = false;
       while (!connected) {
         try {
-          connection_ids.emplace(
+          m_connection_ids.emplace(
             std::make_pair(id, connector.connect(ep.hostname(), ep.port())));
           connected = true;
         } catch (std::exception& e) {
           std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
       }
-
       LOG(NOTICE)
         << "Readout Unit - Connection established with bu "
         << id
@@ -126,87 +144,87 @@ void ReadoutUnit::operator()() {
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
 
-  Accumulator accumulator(metadata_range, data_range, bulk_size);
-
-  LengthGenerator payload_size_generator(mean, stddev, max_fragment_size);
-  Generator generator(
-    payload_size_generator,
-    metadata_buffer,
-    data_buffer,
-    m_id);
+  LengthGenerator payload_size_generator(
+    mean,
+    stddev,
+    max_fragment_size - sizeof(EventHeader));
+  Generator generator(payload_size_generator, metadata_range, data_range, m_id);
   Controller controller(generator, metadata_range, generator_frequency);
+  Accumulator accumulator(
+    controller,
+    metadata_range,
+    data_range,
+    bulk_size,
+    endpoints.size());
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   Timer t_ctrl;
-  Timer t_avail;
   Timer t_send;
-
-  unsigned int const needed_events = bulk_size * endpoints.size();
-  unsigned int const needed_multievents = endpoints.size();
+  Timer t_release;
 
   while (true) {
 
-    t_ctrl.start();
-    unsigned int ready_events = 0;
-    do {
-      ready_events = accumulator.add(controller.read());
-    } while (needed_events >= ready_events);
-    std::vector<MultiEvent> multievents = accumulator.get_multievents(
-      needed_multievents);
-    t_ctrl.pause();
-
-    // Fill data_vect
-    std::vector<DataIov> data_vect;
-    for (auto const& multievent : multievents) {
-      data_vect.emplace_back(create_iovec(multievent.second, data_range));
-    }
-
-    assert(data_vect.size() == id_sequence.size());
-
-    t_send.start();
+    // Release
+    t_release.start();
+    std::vector<iovec> iov_to_release;
     for (auto id : id_sequence) {
-      auto& data_iov = data_vect.at(id);
-      if (id != m_id) {
-        auto conn_it = connection_ids.find(id);
-        assert(conn_it != std::end(connection_ids));
-        auto& conn = conn_it->second;
-        t_avail.start();
-        while (!conn.available()) {
-          ;
+      bool available = false;
+      do {
+        std::vector<iovec> partial;
+        if (id != m_id) {
+          auto conn_it = m_connection_ids.find(id);
+          assert(conn_it != std::end(m_connection_ids));
+          auto& conn = conn_it->second;
+          partial = conn.pop_completed();
+          available = (tokens - conn.pending() != 0);
+        } else {
+          partial = m_local_data;
+          m_local_data.clear();
+          available = true;
         }
-        t_avail.pause();
-        bandwith.add(conn.write(data_iov));
-      } else {
-        iovec i;
-        while (!m_free_local_data.pop(i)) {
-          ;
+        if (!partial.empty()) {
+          iov_to_release.insert(
+            std::end(iov_to_release),
+            std::begin(partial),
+            std::end(partial));
+          LOG(DEBUG)
+            << "Readout Unit - Completed "
+            << partial.size()
+            << " iov to conn "
+            << id;
         }
-        i.iov_len = 0;
-        for (auto& iov : data_iov) {
-          memcpy(
-            static_cast<unsigned char*>(i.iov_base) + i.iov_len,
-            iov.iov_base,
-            iov.iov_len);
-          i.iov_len += iov.iov_len;
-        }
-        while (!m_ready_local_data.push(i)) {
-          ;
-        }
-      }
-      LOG(DEBUG) << "Written " << data_iov.size() << " wr to conn " << id;
+      } while (!available);
     }
-    t_send.pause();
+    if (!iov_to_release.empty()) {
+      accumulator.release_multievents(iov_to_release);
+    }
+    t_release.pause();
 
+    // Acquire
     t_ctrl.start();
-    controller.release(
-      MetaDataRange(
-        std::begin(multievents.front().first),
-        std::end(multievents.back().first)));
+    std::vector<iovec> iov_to_send = accumulator.get_multievents();
     t_ctrl.pause();
 
-    frequency.add(multievents.size() * bulk_size);
+    // Send
+    if (!iov_to_send.empty()) {
+      assert(iov_to_send.size() == required_multievents);
+      t_send.start();
+      for (auto id : id_sequence) {
+        auto& iov = iov_to_send.at(id);
+        assert(iov.iov_len <= max_fragment_size * bulk_size);
+        if (id != m_id) {
+          size_t bytes = remote_write(id, iov);
+          bandwith.add(bytes);
+        } else {
+          local_write(iov);
+        }
+        LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
+      }
+      t_send.pause();
+      frequency.add(required_multievents * bulk_size);
+    }
 
     if (frequency.check()) {
       LOG(NOTICE)
@@ -221,14 +239,14 @@ void ReadoutUnit::operator()() {
         << "\tt_ctrl: "
         << t_ctrl.rate()
         << "%\n"
-        << "\tt_avail: "
-        << t_avail.rate()
+        << "\tt_release: "
+        << t_release.rate()
         << "%\n"
         << "\tt_send: "
         << t_send.rate()
         << "%";
       t_ctrl.reset();
-      t_avail.reset();
+      t_release.reset();
       t_send.reset();
     }
   }

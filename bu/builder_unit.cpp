@@ -10,7 +10,6 @@
 #include "common/dataformat.h"
 
 #include "transport/endpoints.h"
-#include "transport/transport.h"
 
 #include "bu/builder_unit.h"
 
@@ -23,8 +22,8 @@ BuilderUnit::BuilderUnit(
   boost::lockfree::spsc_queue<iovec>& ready_local_data)
     :
       m_configuration(configuration),
-      m_free_local_data(free_local_data),
-      m_ready_local_data(ready_local_data),
+      m_free_local_queue(free_local_data),
+      m_ready_local_queue(ready_local_data),
       m_id(id) {
 }
 
@@ -32,7 +31,7 @@ void BuilderUnit::operator()() {
 
   int const max_fragment_size = m_configuration.get<int>(
     "GENERAL.MAX_FRAGMENT_SIZE");
-  assert(max_fragment_size > 0);
+  assert(max_fragment_size >= sizeof(EventHeader));
 
   int const bulk_size = m_configuration.get<int>("GENERAL.BULKED_EVENTS");
   assert(bulk_size > 0);
@@ -52,25 +51,23 @@ void BuilderUnit::operator()() {
 
   // Connections
 
-  Acceptor<RecvSocket> acceptor;
-  acceptor.register_memory(data_ptr.get(), data_size, tokens);
+  Acceptor<RecvSocket> acceptor(data_ptr.get(), data_size, tokens);
   acceptor.listen(endpoints.at(m_id).hostname(), endpoints.at(m_id).port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
 
   size_t const chunk_size = max_fragment_size * bulk_size;
 
-  std::vector<RecvSocket> connection_ids;
   for (int i = 0; i < endpoints.size() - 1; ++i) {
-    connection_ids.push_back(acceptor.accept());
-    RecvSocket& conn = connection_ids.back();
+    m_connection_ids.push_back(acceptor.accept());
+    RecvSocket& conn = m_connection_ids.back();
 
     std::vector<iovec> iov_vect;
     for (int j = 0; j < tokens; ++j) {
       iov_vect.push_back(
         { data_ptr.get() + i * chunk_size * tokens + j * chunk_size, chunk_size });
     }
-    conn.release(iov_vect);
+    conn.post_read(iov_vect);
 
     LOG(NOTICE) << "Builder Unit - Connection established";
   }
@@ -101,8 +98,8 @@ void BuilderUnit::operator()() {
         int old_size = iov_vect.size();
 
         if (i != endpoints.size() - 1) {
-          auto& conn = connection_ids[i];
-          std::vector<iovec> new_data = conn.read_all();
+          auto& conn = m_connection_ids[i];
+          std::vector<iovec> new_data = conn.pop_completed();
           if (!new_data.empty()) {
             iov_vect.insert(
               std::end(iov_vect),
@@ -110,13 +107,16 @@ void BuilderUnit::operator()() {
               std::end(new_data));
           }
         } else {
-          iovec i;
-          while (m_ready_local_data.pop(i)) {
-            iov_vect.push_back(i);
+          iovec iov;
+          while (m_ready_local_queue.pop(iov)) {
+            iov_vect.push_back(iov);
           }
         }
         if (iov_vect.size() != old_size) {
-          LOG(DEBUG) << "Read " << iov_vect.size() - old_size << " wr";
+          LOG(DEBUG)
+            << "Builder Unit - Read "
+            << iov_vect.size() - old_size
+            << " wr";
         }
         min_wrs = (min_wrs < iov_vect.size()) ? min_wrs : iov_vect.size();
       }
@@ -127,11 +127,16 @@ void BuilderUnit::operator()() {
     // There should be event building here (for the first min_wrs multievents)
     // -----------------------------------------------------------------------
     t_check.start();
-    uint64_t evt_id = pointer_cast<EventHeader>(
+
+    uint64_t local_evt_id = pointer_cast<EventHeader>(
       data_vect[m_id].front().iov_base)->id;
     for (auto& data : data_vect) {
-      uint64_t current = pointer_cast<EventHeader>(data.front().iov_base)->id;
-      assert(evt_id == current);
+      uint64_t id = pointer_cast<EventHeader>(data.front().iov_base)->id;
+      uint64_t flags = pointer_cast<EventHeader>(data.front().iov_base)->flags;
+      uint64_t length = pointer_cast<EventHeader>(data.front().iov_base)->length;
+      assert(id == local_evt_id);
+      assert(flags < endpoints.size());
+      assert(length != 0);
     }
     t_check.pause();
 
@@ -148,20 +153,20 @@ void BuilderUnit::operator()() {
 
       if (i != endpoints.size() - 1) {
         bandwith.add(iovec_length(sub_vect));
-        auto& conn = connection_ids[i];
+        auto& conn = m_connection_ids[i];
         // Reset len of iovec
-        for(auto& iov : sub_vect){
+        for (auto& iov : sub_vect) {
           iov.iov_len = chunk_size;
         }
-        conn.release(sub_vect);
+        conn.post_read(sub_vect);
       } else {
         for (auto& i : sub_vect) {
-          while (!m_free_local_data.push(i)) {
+          while (!m_free_local_queue.push(i)) {
             ;
           }
         }
       }
-      LOG(DEBUG) << "Released " << min_wrs << " wr";
+      LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wr";
       iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + min_wrs);
     }
     t_rel.pause();
