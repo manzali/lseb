@@ -8,13 +8,12 @@
   },
   "GENERAL":
   {
-    "MAX_FRAGMENT_SIZE": "250",
+    "MAX_FRAGMENT_SIZE": "240",
     "BULKED_EVENTS": "600",
     "TOKENS": "20"
   },
   "RU":
   {
-
     "META_BUFFER": "57521880",
     "DATA_BUFFER": "536870912"
   },
