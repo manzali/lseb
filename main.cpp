@@ -80,20 +80,20 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  int const tokens = configuration.get<int>("GENERAL.TOKENS");
-  if (tokens <= 0) {
-    LOG(ERROR) << "Wrong TOKENS: " << tokens;
+  int const credits = configuration.get<int>("GENERAL.CREDITS");
+  if (credits <= 0) {
+    LOG(ERROR) << "Wrong CREDITS: " << credits;
     return EXIT_FAILURE;
   }
 
   size_t const multievent_size = max_fragment_size * bulk_size;
 
-  boost::lockfree::spsc_queue<iovec> free_local_data(tokens);
-  boost::lockfree::spsc_queue<iovec> ready_local_data(tokens);
+  boost::lockfree::spsc_queue<iovec> free_local_data(credits);
+  boost::lockfree::spsc_queue<iovec> ready_local_data(credits);
 
   std::unique_ptr<unsigned char[]> const local_data_ptr(
-    new unsigned char[multievent_size * tokens]);
-  for (int i = 0; i < tokens; ++i) {
+    new unsigned char[multievent_size * credits]);
+  for (int i = 0; i < credits; ++i) {
     while (!free_local_data.push( {
       local_data_ptr.get() + i * multievent_size,
       0 })) {

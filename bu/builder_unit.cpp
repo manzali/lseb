@@ -36,22 +36,22 @@ void BuilderUnit::operator()() {
   int const bulk_size = m_configuration.get<int>("GENERAL.BULKED_EVENTS");
   assert(bulk_size > 0);
 
-  int const tokens = m_configuration.get<int>("GENERAL.TOKENS");
-  assert(tokens > 0);
+  int const credits = m_configuration.get<int>("GENERAL.CREDITS");
+  assert(credits > 0);
 
   std::vector<Endpoint> const endpoints = get_endpoints(
     m_configuration.get_child("ENDPOINTS"));
 
   // Allocate memory
 
-  size_t const data_size = max_fragment_size * bulk_size * tokens * (endpoints
+  size_t const data_size = max_fragment_size * bulk_size * credits * (endpoints
     .size() - 1);
   std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
   LOG(NOTICE) << "Builder Unit - Allocated " << data_size << " bytes of memory";
 
   // Connections
 
-  Acceptor<RecvSocket> acceptor(data_ptr.get(), data_size, tokens);
+  Acceptor<RecvSocket> acceptor(data_ptr.get(), data_size, credits);
   acceptor.listen(endpoints.at(m_id).hostname(), endpoints.at(m_id).port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
@@ -63,9 +63,9 @@ void BuilderUnit::operator()() {
     RecvSocket& conn = m_connection_ids.back();
 
     std::vector<iovec> iov_vect;
-    for (int j = 0; j < tokens; ++j) {
+    for (int j = 0; j < credits; ++j) {
       iov_vect.push_back(
-        { data_ptr.get() + i * chunk_size * tokens + j * chunk_size, chunk_size });
+        { data_ptr.get() + i * chunk_size * credits + j * chunk_size, chunk_size });
     }
     conn.post_read(iov_vect);
 
@@ -85,12 +85,12 @@ void BuilderUnit::operator()() {
 
   while (true) {
 
-    int min_wrs = tokens;
+    int min_wrs = credits;
 
     // Acquire
     t_recv.start();
     do {
-      min_wrs = tokens;
+      min_wrs = credits;
 
       for (int i = 0; i < endpoints.size(); ++i) {
 

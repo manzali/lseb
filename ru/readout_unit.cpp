@@ -89,8 +89,8 @@ void ReadoutUnit::operator()() {
   int const bulk_size = m_configuration.get<int>("GENERAL.BULKED_EVENTS");
   assert(bulk_size > 0);
 
-  int const tokens = m_configuration.get<int>("GENERAL.TOKENS");
-  assert(tokens > 0);
+  int const credits = m_configuration.get<int>("GENERAL.CREDITS");
+  assert(credits > 0);
 
   int const meta_size = m_configuration.get<int>("RU.META_BUFFER");
   assert(meta_size > 0);
@@ -121,7 +121,7 @@ void ReadoutUnit::operator()() {
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
-  Connector<SendSocket> connector(data_ptr.get(), data_size, tokens);
+  Connector<SendSocket> connector(data_ptr.get(), data_size, credits);
 
   for (auto id : id_sequence) {
     if (id != m_id) {
@@ -178,7 +178,7 @@ void ReadoutUnit::operator()() {
           assert(conn_it != std::end(m_connection_ids));
           auto& conn = conn_it->second;
           partial = conn.pop_completed();
-          available = (tokens - conn.pending() != 0);
+          available = (credits - conn.pending() != 0);
         } else {
           partial = m_local_data;
           m_local_data.clear();
