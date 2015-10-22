@@ -69,12 +69,12 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(5.0);
 
   while (true) {
-    if (pool.available()) {
-      bandwith.add(socket.post_write(pool.alloc()));
-    }
     std::vector<iovec> vect = socket.pop_completed();
     for (auto const& iov : vect) {
       pool.free(iov);
+    }
+    if (socket.pending() != credits) {
+      bandwith.add(socket.post_write(pool.alloc()));
     }
     if (bandwith.check()) {
       std::cout

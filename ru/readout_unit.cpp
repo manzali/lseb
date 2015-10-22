@@ -103,15 +103,16 @@ void ReadoutUnit::operator()() {
           assert(conn_it != std::end(m_connection_ids));
           auto& conn = conn_it->second;
           partial = conn.pop_completed();
-          available = (m_credits - conn.pending() != 0);
+          available = (conn.pending() != m_credits);
         } else {
           iovec iov;
-          while(m_free_local_queue.pop(iov)){
+          while (m_free_local_queue.pop(iov)) {
             partial.push_back(iov);
             --m_pending_local_iov;
-            assert(m_pending_local_iov >= 0);
+            assert(
+              m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
           }
-          available = (m_credits - m_pending_local_iov != 0);
+          available = (m_pending_local_iov != m_credits);
         }
         if (!partial.empty()) {
           iov_to_release.insert(
@@ -153,7 +154,7 @@ void ReadoutUnit::operator()() {
             ;
           }
           ++m_pending_local_iov;
-          assert(m_pending_local_iov <= m_credits);
+          assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
         LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
       }

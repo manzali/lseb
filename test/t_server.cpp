@@ -77,10 +77,12 @@ int main(int argc, char* argv[]) {
 
   while (true) {
     std::vector<iovec> vect_read = socket.pop_completed();
-    bandwith.add(iovec_length(vect_read));
-    socket.post_read(vect_read);
-    for (auto const& iov : vect_read) {
-      pool.free(iov);
+    if (!vect_read.empty()) {
+      bandwith.add(iovec_length(vect_read));
+      socket.post_read(vect_read);
+      for (auto const& iov : vect_read) {
+        pool.free(iov);
+      }
     }
     if (bandwith.check()) {
       std::cout
