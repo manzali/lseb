@@ -69,11 +69,9 @@ int main(int argc, char* argv[]) {
 
   FrequencyMeter bandwith(5.0);
 
-  std::vector<iovec> vect;
   for (int i = 0; i < credits; ++i) {
-    vect.push_back(pool.alloc());
+    socket.post_read(pool.alloc());
   }
-  socket.post_read(vect);
 
   while (true) {
     std::vector<iovec> vect = socket.pop_completed();
