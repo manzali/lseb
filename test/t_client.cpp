@@ -70,11 +70,11 @@ int main(int argc, char* argv[]) {
 
   while (true) {
     std::vector<iovec> vect = socket.pop_completed();
-    if (!vect.empty()) {
-      bandwith.add(iovec_length(vect));
-      for (auto& iov : vect) {
-        bandwith.add(socket.post_write(iov));
-      }
+    for (auto& iov : vect) {
+      pool.free(iov);
+    }
+    if (socket.pending() != credits) {
+      bandwith.add(socket.post_write(pool.alloc()));
     }
     if (bandwith.check()) {
       std::cout
