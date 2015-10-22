@@ -46,6 +46,10 @@ class MemoryPool {
     return m_pool.size();
   }
 
+  bool empty() {
+    return m_pool.empty();
+  }
+
   MemoryPool(const MemoryPool&) = delete;            // disable copying
   MemoryPool& operator=(const MemoryPool&) = delete;  // disable assignment
 };
