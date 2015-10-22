@@ -96,8 +96,7 @@ std::vector<iovec> RecvSocket::pop_completed() {
 }
 
 void RecvSocket::post_read(iovec const& iov) {
-  std::vector<iovec> iov_vect(1, iov);
-  post_read(iov_vect);
+  post_read(std::vector<iovec>(1, iov));
 }
 
 void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
