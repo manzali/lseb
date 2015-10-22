@@ -8,7 +8,8 @@ SendSocket::SendSocket(rdma_cm_id* cm_id, ibv_mr* mr, int credits)
     :
       m_cm_id(cm_id),
       m_mr(mr),
-      m_credits(credits) {
+      m_credits(credits),
+      m_counter(0) {
 }
 
 std::vector<iovec> SendSocket::pop_completed() {
@@ -28,7 +29,7 @@ std::vector<iovec> SendSocket::pop_completed() {
           ibv_wc_status_str(wcs_it->status)));
     }
     --m_counter;
-    vect.push_back( {(void*) wcs_it->wr_id, wcs_it->byte_len} );
+    vect.push_back( { (void*) wcs_it->wr_id, wcs_it->byte_len });
   }
 
   return vect;
