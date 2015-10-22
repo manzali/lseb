@@ -5,24 +5,30 @@
 
 #include <boost/lockfree/spsc_queue.hpp>
 
-#include "common/configuration.h"
 #include "transport/transport.h"
+#include "transport/endpoints.h"
 
 namespace lseb {
 
 class BuilderUnit {
-  Configuration m_configuration;
   boost::lockfree::spsc_queue<iovec>& m_free_local_queue;
   boost::lockfree::spsc_queue<iovec>& m_ready_local_queue;
+  std::vector<Endpoint> m_endpoints;
   std::vector<RecvSocket> m_connection_ids;
+  int m_bulk_size;
+  int m_credits;
+  int m_max_fragment_size;
   int m_id;
 
  public:
   BuilderUnit(
-    Configuration const& configuration,
-    int id,
     boost::lockfree::spsc_queue<iovec>& free_local_data,
-    boost::lockfree::spsc_queue<iovec>& ready_local_data);
+    boost::lockfree::spsc_queue<iovec>& ready_local_data,
+    std::vector<Endpoint> const& endpoints,
+    int bulk_size,
+    int credits,
+    int max_fragment_size,
+    int id);
   void operator()();
 };
 

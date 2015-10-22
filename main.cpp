@@ -60,6 +60,8 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << configuration << std::endl;
 
+  /************ Read configuration *****************/
+
   std::vector<Endpoint> const endpoints = get_endpoints(
     configuration.get_child("ENDPOINTS"));
   if (id < 0 || id >= endpoints.size()) {
@@ -86,25 +88,67 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  size_t const multievent_size = max_fragment_size * bulk_size;
+  /************** Memory allocation ******************/
+
+  int const meta_size = sizeof(EventMetaData) * bulk_size * credits;
+  int const data_size = max_fragment_size * bulk_size * credits;
+
+  std::unique_ptr<unsigned char[]> const metadata_ptr(
+    new unsigned char[meta_size]);
+  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
+
+  MetaDataRange metadata_range(
+    pointer_cast<EventMetaData>(metadata_ptr.get()),
+    pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
+  DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
+
+  /********* Generator, Controller and Accumulator **********/
+
+  int const generator_frequency = configuration.get<int>("GENERATOR.FREQUENCY");
+  assert(generator_frequency > 0);
+
+  int const mean = configuration.get<int>("GENERATOR.MEAN");
+  assert(mean > 0);
+
+  int const stddev = configuration.get<int>("GENERATOR.STD_DEV");
+  assert(stddev >= 0);
+
+  LengthGenerator payload_size_generator(
+    mean,
+    stddev,
+    max_fragment_size - sizeof(EventHeader));
+  Generator generator(payload_size_generator, metadata_range, data_range, id);
+  Controller controller(generator, metadata_range, generator_frequency);
+  Accumulator accumulator(
+    controller,
+    metadata_range,
+    data_range,
+    bulk_size,
+    endpoints.size());
+
+  /**************** Builder Unit and Readout Unit *****************/
 
   boost::lockfree::spsc_queue<iovec> free_local_data(credits);
   boost::lockfree::spsc_queue<iovec> ready_local_data(credits);
 
-  std::unique_ptr<unsigned char[]> const local_data_ptr(
-    new unsigned char[multievent_size * credits]);
-  for (int i = 0; i < credits; ++i) {
-    while (!free_local_data.push( {
-      local_data_ptr.get() + i * multievent_size,
-      0 })) {
-      ;
-    }
-  }
-
-  BuilderUnit bu(configuration, id, free_local_data, ready_local_data);
+  BuilderUnit bu(
+    free_local_data,
+    ready_local_data,
+    endpoints,
+    bulk_size,
+    credits,
+    max_fragment_size,
+    id);
   std::thread bu_th(bu);
 
-  ReadoutUnit ru(configuration, id, free_local_data, ready_local_data);
+  ReadoutUnit ru(
+    accumulator,
+    free_local_data,
+    ready_local_data,
+    endpoints,
+    bulk_size,
+    credits,
+    id);
   std::thread ru_th(ru);
 
   bu_th.join();

@@ -29,7 +29,9 @@ class Accumulator {
     int required_multievents);
   std::vector<iovec> get_multievents();
   void release_multievents(std::vector<iovec> const& iov_vect);
-
+  DataRange data_range() {
+    return m_data_range;
+  }
 };
 
 }

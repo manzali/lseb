@@ -8,6 +8,8 @@
 
 #include <cassert>
 
+#include "common/configuration.h"
+
 namespace lseb {
 
 class Endpoint {
