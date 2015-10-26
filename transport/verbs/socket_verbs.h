@@ -10,14 +10,7 @@
 
 namespace lseb {
 
-class Socket {
- public:
-  Socket() {
-
-  }
-};
-
-class SendSocket : public Socket {
+class SendSocket {
   rdma_cm_id* m_cm_id;
   ibv_mr* m_mr;
   int m_credits;
@@ -41,7 +34,7 @@ class SendSocket : public Socket {
   }
 };
 
-class RecvSocket : public Socket {
+class RecvSocket {
   rdma_cm_id* m_cm_id;
   ibv_mr* m_mr;
   int m_credits;

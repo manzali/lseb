@@ -13,7 +13,6 @@ namespace lseb {
 
 template<typename T>
 class Connector {
-  static_assert(std::is_base_of<Socket, T>::value, "Wrong template");
 
   boost::asio::io_service m_io_service;
 

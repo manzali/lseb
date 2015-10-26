@@ -13,7 +13,6 @@ namespace lseb {
 
 template<typename T>
 class Acceptor {
-  static_assert(std::is_base_of<Socket, T>::value, "Wrong template");
 
   boost::asio::io_service m_io_service;
   boost::asio::ip::tcp::acceptor m_acceptor;

@@ -7,14 +7,7 @@
 
 namespace lseb {
 
-class Socket {
- public:
-  Socket() {
-
-  }
-};
-
-class SendSocket : public Socket {
+class SendSocket {
   std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
   std::vector<iovec> m_iov_vect;
 
@@ -25,7 +18,7 @@ class SendSocket : public Socket {
   int pending();
 };
 
-class RecvSocket : public Socket {
+class RecvSocket {
   std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
   std::vector<iovec> m_iov_vect;
 

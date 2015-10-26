@@ -14,7 +14,6 @@ namespace lseb {
 
 template<typename T>
 class Connector {
-  static_assert(std::is_base_of<Socket, T>::value, "Wrong template");
 
   void* m_buffer;
   size_t m_size;
