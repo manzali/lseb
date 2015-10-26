@@ -66,12 +66,20 @@ int SendSocket::pending() {
   return m_counter;
 }
 
-RecvSocket::RecvSocket(rdma_cm_id* cm_id, ibv_mr* mr, int credits)
+RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
     :
       m_cm_id(cm_id),
-      m_mr(mr),
+      m_mr(nullptr),
       m_credits(credits),
       m_init(false) {
+}
+
+void RecvSocket::register_memory(void* buffer, size_t size) {
+  m_mr = rdma_reg_msgs(m_cm_id, m_buffer, m_size);
+  if (!m_mr) {
+    throw std::runtime_error(
+      "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
+  }
 }
 
 std::vector<iovec> RecvSocket::pop_completed() {

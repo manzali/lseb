@@ -41,7 +41,8 @@ class RecvSocket {
   bool m_init;
 
  public:
-  RecvSocket(rdma_cm_id* cm_id, ibv_mr* mr, int credits);
+  RecvSocket(rdma_cm_id* cm_id, int credits);
+  void register_memory(void* buffer, size_t size);
   std::vector<iovec> pop_completed();
   void post_read(iovec const& iov);
   void post_read(std::vector<iovec> const& iov_vect);

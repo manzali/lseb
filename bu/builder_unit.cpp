@@ -41,7 +41,7 @@ void BuilderUnit::operator()() {
 
   // Connections
 
-  Acceptor<RecvSocket> acceptor(data_ptr.get(), data_size, m_credits);
+  Acceptor<RecvSocket> acceptor(m_credits);
   acceptor.listen(m_endpoints.at(m_id).hostname(), m_endpoints.at(m_id).port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
@@ -52,12 +52,12 @@ void BuilderUnit::operator()() {
     m_connection_ids.push_back(acceptor.accept());
     RecvSocket& conn = m_connection_ids.back();
 
+    unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
+    conn.register_memory(base_data_ptr, chunk_size * m_credits);
+
     std::vector<iovec> iov_vect;
     for (int j = 0; j < m_credits; ++j) {
-      iov_vect.push_back(
-        {
-          data_ptr.get() + i * chunk_size * m_credits + j * chunk_size,
-          chunk_size });
+      iov_vect.push_back( { base_data_ptr + j * chunk_size, chunk_size });
     }
     conn.post_read(iov_vect);
 

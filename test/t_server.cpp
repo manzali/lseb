@@ -58,13 +58,11 @@ int main(int argc, char* argv[]) {
 
   MemoryPool pool(buffer_ptr.get(), chunk_size, credits);
 
-  Acceptor<RecvSocket> acceptor(
-    buffer_ptr.get(),
-    chunk_size * credits,
-    credits);
+  Acceptor<RecvSocket> acceptor(credits);
 
   acceptor.listen(server, port);
   RecvSocket socket = acceptor.accept();
+  socket.register_memory(buffer_ptr.get(), chunk_size * credits);
   std::cout << "Accepted connection" << std::endl;
 
   FrequencyMeter bandwith(5.0);
@@ -75,7 +73,7 @@ int main(int argc, char* argv[]) {
 
   while (true) {
     std::vector<iovec> vect = socket.pop_completed();
-    for(auto& iov : vect){
+    for (auto& iov : vect) {
       pool.free(iov);
     }
     bandwith.add(iovec_length(vect));

@@ -48,13 +48,10 @@ class Acceptor {
   }
 
  public:
-  Acceptor(void* buffer, size_t size, int credits)
+  Acceptor(int credits)
       :
-        m_buffer(buffer),
-        m_size(size),
         m_credits(credits),
-        m_cm_id(nullptr),
-        m_mr(nullptr) {
+        m_cm_id(nullptr) {
   }
 
   void listen(std::string const& hostname, std::string const& port) {
@@ -72,12 +69,6 @@ class Acceptor {
       throw std::runtime_error(
         "Error on rdma_listen: " + std::string(strerror(errno)));
     }
-
-    m_mr = rdma_reg_msgs(m_cm_id, m_buffer, m_size);
-    if (!m_mr) {
-      throw std::runtime_error(
-        "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
-    }
   }
 
   T accept() {
@@ -86,7 +77,7 @@ class Acceptor {
       throw std::runtime_error(
         "Error on rdma_get_request: " + std::string(strerror(errno)));
     }
-    return T(new_cm_id, m_mr, m_credits);
+    return T(new_cm_id, m_credits);
   }
 
 };

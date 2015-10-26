@@ -18,7 +18,7 @@ class Acceptor {
   boost::asio::ip::tcp::acceptor m_acceptor;
 
  public:
-  Acceptor(void* buffer, size_t size, int credits)
+  Acceptor(int credits)
       :
         m_io_service(),
         m_acceptor(m_io_service) {

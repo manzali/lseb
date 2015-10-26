@@ -52,7 +52,9 @@ int SendSocket::pending() {
 RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)) {
+}
 
+void RecvSocket::register_memory(void* buffer, size_t size) {
 }
 
 iovec RecvSocket::read_iov() {

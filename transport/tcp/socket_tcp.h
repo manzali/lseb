@@ -26,6 +26,7 @@ class RecvSocket {
 
  public:
   RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr);
+  void register_memory(void* buffer, size_t size);
   std::vector<iovec> pop_completed();
   void post_read(iovec const& iov);
   void post_read(std::vector<iovec> const& iov_vect);
