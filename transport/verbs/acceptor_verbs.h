@@ -15,11 +15,8 @@ namespace lseb {
 template<typename T>
 class Acceptor {
 
-  void* m_buffer;
-  size_t m_size;
   int m_credits;
   rdma_cm_id* m_cm_id;
-  ibv_mr* m_mr;
 
  private:
 

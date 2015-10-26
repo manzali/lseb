@@ -15,10 +15,7 @@ namespace lseb {
 template<typename T>
 class Connector {
 
-  void* m_buffer;
-  size_t m_size;
   int m_credits;
-  ibv_mr* m_mr;
 
  private:
 
@@ -46,12 +43,9 @@ class Connector {
   }
 
  public:
-  Connector(void* buffer, size_t size, int credits)
+  Connector(int credits)
       :
-        m_buffer(buffer),
-        m_size(size),
-        m_credits(credits),
-        m_mr(nullptr) {
+        m_credits(credits) {
   }
 
   T connect(std::string const& hostname, std::string const& port) {
@@ -77,15 +71,7 @@ class Connector {
       }
     }
 
-    if (!m_mr) {
-      m_mr = rdma_reg_msgs(cm_id, m_buffer, m_size);
-      if (!m_mr) {
-        throw std::runtime_error(
-          "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
-      }
-    }
-
-    return T(cm_id, m_mr, m_credits);
+    return T(cm_id, m_credits);
   }
 };
 

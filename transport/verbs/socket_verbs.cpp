@@ -4,12 +4,20 @@
 
 namespace lseb {
 
-SendSocket::SendSocket(rdma_cm_id* cm_id, ibv_mr* mr, int credits)
+SendSocket::SendSocket(rdma_cm_id* cm_id, int credits)
     :
       m_cm_id(cm_id),
-      m_mr(mr),
+      m_mr(nullptr),
       m_credits(credits),
       m_counter(0) {
+}
+
+void SendSocket::register_memory(void* buffer, size_t size){
+  m_mr = rdma_reg_msgs(m_cm_id, buffer, size);
+  if (!m_mr) {
+    throw std::runtime_error(
+      "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
+  }
 }
 
 std::vector<iovec> SendSocket::pop_completed() {

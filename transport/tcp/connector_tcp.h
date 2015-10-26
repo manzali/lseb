@@ -17,7 +17,7 @@ class Connector {
   boost::asio::io_service m_io_service;
 
  public:
-  Connector(void* buffer, size_t size, int credits) {
+  Connector(int credits) {
   }
 
   T connect(std::string const& hostname, std::string const& port) {

@@ -56,10 +56,7 @@ void ReadoutUnit::operator()() {
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
   DataRange const data_range = m_accumulator.data_range();
-  Connector<SendSocket> connector(
-    (void*) std::begin(data_range),
-    std::distance(std::begin(data_range), std::end(data_range)),
-    m_credits);
+  Connector<SendSocket> connector(m_credits);
 
   for (auto id : id_sequence) {
     if (id != m_id) {
@@ -67,8 +64,12 @@ void ReadoutUnit::operator()() {
       bool connected = false;
       while (!connected) {
         try {
-          m_connection_ids.emplace(
+          auto ret = m_connection_ids.emplace(
             std::make_pair(id, connector.connect(ep.hostname(), ep.port())));
+          assert(ret.second && "Connection already present");
+          ret.first->second.register_memory(
+            (void*) std::begin(data_range),
+            std::distance(std::begin(data_range), std::end(data_range)));
           connected = true;
         } catch (std::exception& e) {
           std::this_thread::sleep_for(std::chrono::milliseconds(500));

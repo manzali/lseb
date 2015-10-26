@@ -58,13 +58,10 @@ int main(int argc, char* argv[]) {
 
   MemoryPool pool(buffer_ptr.get(), chunk_size, credits);
 
-  Connector<SendSocket> connector(
-    buffer_ptr.get(),
-    chunk_size * credits,
-    credits);
-
-  std::cout << "Connecting to " << server << " on port " << port << std::endl;
+  Connector<SendSocket> connector(credits);
   SendSocket socket = connector.connect(server, port);
+  socket.register_memory(buffer_ptr.get(), chunk_size * credits);
+  std::cout << "Connected to " << server << " on port " << port << std::endl;
 
   FrequencyMeter bandwith(5.0);
 

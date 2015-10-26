@@ -9,7 +9,9 @@ namespace lseb {
 SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)) {
+}
 
+void SendSocket::register_memory(void* buffer, size_t size) {
 }
 
 std::vector<iovec> SendSocket::pop_completed() {
