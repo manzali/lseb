@@ -75,7 +75,7 @@ RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
 }
 
 void RecvSocket::register_memory(void* buffer, size_t size) {
-  m_mr = rdma_reg_msgs(m_cm_id, m_buffer, m_size);
+  m_mr = rdma_reg_msgs(m_cm_id, buffer, size);
   if (!m_mr) {
     throw std::runtime_error(
       "Error on rdma_reg_msgs: " + std::string(strerror(errno)));
