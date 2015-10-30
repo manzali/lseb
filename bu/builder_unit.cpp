@@ -154,14 +154,14 @@ void BuilderUnit::operator()() {
     t_recv.start();
     int min_wrs = m_credits;
     do {
-      int min_wrs = m_credits;
+      min_wrs = m_credits;
       for (int i = 0; i < m_endpoints.size(); ++i) {
         int read_wrs = read_data(i);
         if (read_wrs) {
           LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
         }
-        auto& iov_vect = m_data_vect[i];
-        min_wrs = (min_wrs < iov_vect.size()) ? min_wrs : iov_vect.size();
+        int const xxx = m_data_vect[i].size();
+        min_wrs = (min_wrs < xxx) ? min_wrs : xxx;
       }
     } while (min_wrs == 0);
     t_recv.pause();
