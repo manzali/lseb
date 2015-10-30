@@ -47,22 +47,20 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  std::cout
-    << "Allocating "
-    << chunk_size * credits
-    << " bytes of memory"
-    << std::endl;
+  size_t const buffer_size = chunk_size * credits;
+
+  std::cout << "Allocating " << buffer_size << " bytes of memory" << std::endl;
 
   std::unique_ptr<unsigned char[]> const buffer_ptr(
-    new unsigned char[chunk_size * credits]);
+    new unsigned char[buffer_size]);
 
-  MemoryPool pool(buffer_ptr.get(), chunk_size, credits);
+  MemoryPool pool(buffer_ptr.get(), buffer_size, chunk_size);
 
   Acceptor<RecvSocket> acceptor(credits);
 
   acceptor.listen(server, port);
   RecvSocket socket = acceptor.accept();
-  socket.register_memory(buffer_ptr.get(), chunk_size * credits);
+  socket.register_memory(buffer_ptr.get(), buffer_size);
   std::cout << "Accepted connection" << std::endl;
 
   FrequencyMeter bandwith(5.0);

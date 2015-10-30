@@ -15,11 +15,11 @@ class MemoryPool {
   std::vector<iovec> m_pool;
 
  public:
-  MemoryPool(unsigned char* buffer, size_t chunk_len, int credits)
+  MemoryPool(unsigned char* buffer, size_t buffer_len, size_t chunk_len)
       :
         m_buffer(buffer),
         m_chunk_len(chunk_len),
-        m_buffer_len(m_chunk_len * credits) {
+        m_buffer_len(buffer_len) {
     assert(m_chunk_len <= m_buffer_len && "Wrong sizes");
     size_t const end_len = m_buffer_len - m_chunk_len;
     for (size_t cur_len = 0; cur_len <= end_len; cur_len += m_chunk_len) {
