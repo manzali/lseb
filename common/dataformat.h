@@ -4,6 +4,7 @@
 #include <cstdint> // uint64_t
 
 #include "common/utility.h"
+#include "common/range.h"
 
 namespace lseb {
 
