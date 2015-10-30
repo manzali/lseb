@@ -86,6 +86,10 @@ size_t BuilderUnit::release_data(int id, int n){
   std::vector<iovec> sub_vect(
     std::begin(iov_vect),
     std::begin(iov_vect) + n);
+  // Erase iovec
+  iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + n);
+  size_t const bytes = iovec_length(sub_vect);
+  // Release iovec
   if (id != m_endpoints.size() - 1) {
     auto& conn = m_connection_ids[id];
     // Reset len of iovec
@@ -100,8 +104,7 @@ size_t BuilderUnit::release_data(int id, int n){
       }
     }
   }
-  iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + n);
-  return iovec_length(sub_vect);
+  return bytes;
 }
 
 void BuilderUnit::operator()() {
