@@ -15,10 +15,15 @@ class BuilderUnit {
   boost::lockfree::spsc_queue<iovec>& m_ready_local_queue;
   std::vector<Endpoint> m_endpoints;
   std::vector<RecvSocket> m_connection_ids;
+  std::vector<std::vector<iovec> > m_data_vect;
   int m_bulk_size;
   int m_credits;
   int m_max_fragment_size;
   int m_id;
+
+  int read_data(int id);
+  bool check_data();
+  size_t release_data(int id, int n);
 
  public:
   BuilderUnit(
