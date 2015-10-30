@@ -34,7 +34,7 @@ BuilderUnit::BuilderUnit(
 int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
   int const old_size = iov_vect.size();
-  if (id != m_id) {
+  if (id != m_endpoints.size() - 1) {
     auto& conn = m_connection_ids[id];
     std::vector<iovec> new_data = conn.pop_completed();
     if (!new_data.empty()) {
@@ -86,7 +86,7 @@ size_t BuilderUnit::release_data(int id, int n){
   std::vector<iovec> sub_vect(
     std::begin(iov_vect),
     std::begin(iov_vect) + n);
-  if (id != m_id) {
+  if (id != m_endpoints.size() - 1) {
     auto& conn = m_connection_ids[id];
     // Reset len of iovec
     for (auto& iov : sub_vect) {
@@ -176,7 +176,7 @@ void BuilderUnit::operator()() {
     t_rel.start();
     for (int i = 0; i < m_endpoints.size(); ++i) {
       size_t const bytes = release_data(i, min_wrs);
-      if (i != m_id) {
+      if (i != m_endpoints.size() - 1) {
         bandwith.add(bytes);
       }
       LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";
