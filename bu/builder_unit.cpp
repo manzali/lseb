@@ -175,7 +175,10 @@ void BuilderUnit::operator()() {
     // Release
     t_rel.start();
     for (int i = 0; i < m_endpoints.size(); ++i) {
-      bandwith.add(release_data(i, min_wrs));
+      size_t const bytes = release_data(i, min_wrs);
+      if (i != m_id) {
+        bandwith.add(bytes);
+      }
       LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";
     }
     t_rel.pause();
