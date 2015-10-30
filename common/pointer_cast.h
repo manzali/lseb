@@ -1,7 +1,6 @@
 #ifndef COMMON_POINTER_CAST_H
 #define COMMON_POINTER_CAST_H
 
-#include <iterator>
 #include <type_traits>
 
 #include <cassert>

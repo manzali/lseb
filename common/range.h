@@ -13,8 +13,20 @@
 
 namespace lseb {
 
+namespace {
+
+template<typename R, typename T>
+void validate_subrange(R sub_range, T range) {
+  assert(std::begin(range) <= std::end(range));
+  assert(std::begin(sub_range) >= std::begin(range) && std::begin(sub_range) <= std::end(range));
+  assert(std::end(sub_range) >= std::begin(range) && std::end(sub_range) <= std::end(range));
+}
+
+}
+
 template<typename R, typename T>
 size_t distance_in_range(R sub_range, T range) {
+  validate_subrange(sub_range, range);
   auto const d = std::distance(std::begin(sub_range), std::end(sub_range));
   return d < 0 ? d + std::distance(std::begin(range), std::end(range)) : d;
 }
@@ -24,7 +36,6 @@ typename R::iterator advance_in_range(
   typename R::iterator current,
   ssize_t advance,
   R& range) {
-  assert(std::begin(range) < std::end(range));
   assert(std::begin(range) <= current && current < std::end(range));
   auto const size = std::distance(std::begin(range), std::end(range));
   auto const offset =
@@ -34,6 +45,7 @@ typename R::iterator advance_in_range(
 
 template<typename R, typename T, typename BinaryOperation>
 typename R::iterator find_in_range(R sub_range, T range, BinaryOperation op) {
+  validate_subrange(sub_range, range);
   if (std::begin(sub_range) < std::end(sub_range)) {
     return std::find_if(std::begin(sub_range), std::end(sub_range), op);
   } else {
@@ -54,6 +66,7 @@ InitType accumulate_in_range(
   T range,
   InitType init,
   BinaryOperation op) {
+  validate_subrange(sub_range, range);
   if (std::begin(sub_range) < std::end(sub_range)) {
     return std::accumulate(std::begin(sub_range), std::end(sub_range), init, op);
   } else {
