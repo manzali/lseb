@@ -34,7 +34,7 @@ BuilderUnit::BuilderUnit(
 int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
   int const old_size = iov_vect.size();
-  if (id != m_endpoints.size() - 1) {
+  if (id != m_id) {
     auto& conn = m_connection_ids[id];
     std::vector<iovec> new_data = conn.pop_completed();
     if (!new_data.empty()) {
@@ -86,7 +86,7 @@ size_t BuilderUnit::release_data(int id, int n){
   std::vector<iovec> sub_vect(
     std::begin(iov_vect),
     std::begin(iov_vect) + n);
-  if (id != m_endpoints.size() - 1) {
+  if (id != m_id) {
     auto& conn = m_connection_ids[id];
     // Reset len of iovec
     for (auto& iov : sub_vect) {
