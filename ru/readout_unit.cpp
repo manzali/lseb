@@ -98,31 +98,31 @@ void ReadoutUnit::operator()() {
     for (auto id : id_sequence) {
       bool available = false;
       do {
-        std::vector<iovec> partial;
+        std::vector<iovec> completed_iov;
         if (id != m_id) {
           auto conn_it = m_connection_ids.find(id);
           assert(conn_it != std::end(m_connection_ids));
           auto& conn = conn_it->second;
-          partial = conn.pop_completed();
+          completed_iov = conn.pop_completed();
           available = (conn.pending() != m_credits);
         } else {
           iovec iov;
           while (m_free_local_queue.pop(iov)) {
-            partial.push_back(iov);
+            completed_iov.push_back(iov);
             --m_pending_local_iov;
             assert(
               m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
           }
           available = (m_pending_local_iov != m_credits);
         }
-        if (!partial.empty()) {
+        if (!completed_iov.empty()) {
           iov_to_release.insert(
             std::end(iov_to_release),
-            std::begin(partial),
-            std::end(partial));
+            std::begin(completed_iov),
+            std::end(completed_iov));
           LOG(DEBUG)
             << "Readout Unit - Completed "
-            << partial.size()
+            << completed_iov.size()
             << " iov to conn "
             << id;
         }

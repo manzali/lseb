@@ -163,8 +163,8 @@ void BuilderUnit::operator()() {
         if (read_wrs) {
           LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
         }
-        int const xxx = m_data_vect[i].size();
-        min_wrs = (min_wrs < xxx) ? min_wrs : xxx;
+        int const current_wrs = m_data_vect[i].size();
+        min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
       }
     } while (min_wrs == 0);
     t_recv.pause();
