@@ -7,7 +7,7 @@
 
 /*
  * numactl --cpunodebind=0 --membind=0 ./a.out
- * numactl --cpunodebind=0 --membind=1/a.out
+ * numactl --cpunodebind=0 --membind=1 ./a.out
  */
 
 size_t const B = 1024 * 1024 * 1024;
