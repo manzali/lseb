@@ -76,7 +76,9 @@ void ReadoutUnit::operator()() {
         }
       }
       LOG(NOTICE)
-        << "Readout Unit - Connection established with bu "
+        << "Readout Unit - Connection established with ip "
+        << m_connection_ids.find(id)->second.peer_hostname()
+        << "(bu"
         << id
         << ")";
     }
