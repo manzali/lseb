@@ -13,6 +13,23 @@
 
 namespace lseb {
 
+namespace {
+
+int find_endpoint_id(
+  std::vector<Endpoint> const& endpoints,
+  std::string const& address) {
+  auto it = std::find_if(
+    std::begin(endpoints),
+    std::end(endpoints),
+    [&address](Endpoint const& ep) {return ep.hostname() == address;});
+  return
+      (it == std::end(endpoints)) ?
+        -1 :
+        std::distance(std::begin(endpoints), it);
+}
+
+}
+
 BuilderUnit::BuilderUnit(
   boost::lockfree::spsc_queue<iovec>& free_local_data,
   boost::lockfree::spsc_queue<iovec>& ready_local_data,
