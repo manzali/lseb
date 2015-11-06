@@ -7,27 +7,11 @@
 #include "common/timer.h"
 #include "common/log.hpp"
 #include "common/dataformat.h"
+#include "common/utility.h"
 
 #include "bu/builder_unit.h"
 
 namespace lseb {
-
-namespace {
-
-int find_endpoint_id(
-  std::vector<Endpoint> const& endpoints,
-  std::string const& address) {
-  auto it = std::find_if(
-    std::begin(endpoints),
-    std::end(endpoints),
-    [&address](Endpoint const& ep) {return ep.hostname() == address;});
-  return
-      (it == std::end(endpoints)) ?
-        -1 :
-        std::distance(std::begin(endpoints), it);
-}
-
-}
 
 BuilderUnit::BuilderUnit(
   boost::lockfree::spsc_queue<iovec>& free_local_data,
@@ -124,6 +108,8 @@ size_t BuilderUnit::release_data(int id, int n) {
 
 void BuilderUnit::operator()() {
 
+  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
+
   // Allocate memory
 
   size_t const data_size =
@@ -177,12 +163,12 @@ void BuilderUnit::operator()() {
     int min_wrs = m_credits;
     do {
       min_wrs = m_credits;
-      for (int i = 0; i < m_endpoints.size(); ++i) {
-        int read_wrs = read_data(i);
+      for (auto id : id_sequence) {
+        int read_wrs = read_data(id);
         if (read_wrs) {
           LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
         }
-        int const current_wrs = m_data_vect[i].size();
+        int const current_wrs = m_data_vect[id].size();
         min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
       }
     } while (min_wrs == 0);
@@ -196,9 +182,9 @@ void BuilderUnit::operator()() {
 
     // Release
     t_rel.start();
-    for (int i = 0; i < m_endpoints.size(); ++i) {
-      size_t const bytes = release_data(i, min_wrs);
-      if (i != m_endpoints.size() - 1) {
+    for (auto id : id_sequence) {
+      size_t const bytes = release_data(id, min_wrs);
+      if (id != m_endpoints.size() - 1) {
         bandwith.add(bytes);
       }
       LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";

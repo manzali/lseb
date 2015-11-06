@@ -18,17 +18,6 @@
 
 namespace lseb {
 
-std::vector<int> create_sequence(int id, int total) {
-  int first_id = (id != total - 1) ? id + 1 : 0;
-  std::vector<int> sequence(total);
-  std::iota(std::begin(sequence), std::end(sequence), 0);
-  std::rotate(
-    std::begin(sequence),
-    std::begin(sequence) + first_id,
-    std::end(sequence));
-  return sequence;
-}
-
 ReadoutUnit::ReadoutUnit(
   Accumulator& accumulator,
   boost::lockfree::spsc_queue<iovec>& free_local_data,

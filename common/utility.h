@@ -105,6 +105,30 @@ inline size_t iovec_length(std::vector<iovec> const& iov) {
       return partial + v.iov_len;});
 }
 
+std::vector<int> create_sequence(int id, int total) {
+  int first_id = (id != total - 1) ? id + 1 : 0;
+  std::vector<int> sequence(total);
+  std::iota(std::begin(sequence), std::end(sequence), 0);
+  std::rotate(
+    std::begin(sequence),
+    std::begin(sequence) + first_id,
+    std::end(sequence));
+  return sequence;
+}
+
+int find_endpoint_id(
+  std::vector<Endpoint> const& endpoints,
+  std::string const& address) {
+  auto it = std::find_if(
+    std::begin(endpoints),
+    std::end(endpoints),
+    [&address](Endpoint const& ep) {return ep.hostname() == address;});
+  return
+      (it == std::end(endpoints)) ?
+        -1 :
+        std::distance(std::begin(endpoints), it);
+}
+
 }
 
 #endif
