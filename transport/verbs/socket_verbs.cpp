@@ -76,13 +76,6 @@ int SendSocket::pending() {
   return m_counter;
 }
 
-std::string SendSocket::peer_hostname() {
-  char str[INET_ADDRSTRLEN];
-  auto addr = reinterpret_cast<sockaddr_in*>(rdma_get_peer_addr(m_cm_id));
-  inet_ntop(AF_INET, &(addr->sin_addr), str, INET_ADDRSTRLEN);
-  return str;
-}
-
 RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
     :
       m_cm_id(cm_id),

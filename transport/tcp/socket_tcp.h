@@ -17,7 +17,6 @@ class SendSocket {
   std::vector<iovec> pop_completed();
   size_t post_write(iovec const& iov);
   int pending();
-  std::string peer_hostname();
 };
 
 class RecvSocket {

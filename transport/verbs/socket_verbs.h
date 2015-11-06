@@ -22,7 +22,6 @@ class SendSocket {
   std::vector<iovec> pop_completed();
   size_t post_write(iovec const& iov);
   int pending();
-  std::string peer_hostname();
 
   static ibv_qp_init_attr create_qp_attr(int credits) {
     ibv_qp_init_attr attr;

@@ -51,10 +51,6 @@ int SendSocket::pending() {
   return m_iov_vect.size();
 }
 
-std::string SendSocket::peer_hostname() {
-  return m_socket_ptr->remote_endpoint().address().to_string();
-}
-
 RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)) {
