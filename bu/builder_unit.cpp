@@ -144,10 +144,13 @@ void BuilderUnit::operator()() {
   size_t const chunk_size = m_max_fragment_size * m_bulk_size;
 
   for (int i = 0; i < m_endpoints.size() - 1; ++i) {
-    RecvSocket conn = acceptor.accept();
-    int id = find_endpoint_id(m_endpoints, conn.peer_hostname());
+
+    auto p = m_connection_ids.emplace(std::make_pair(m_id, acceptor.accept()));
+    int id = find_endpoint_id(m_endpoints, p.first->second.peer_hostname());
     assert(id != -1 && "Address not found in endpoints list.");
-    m_connection_ids.emplace(std::make_pair(id, conn));
+    m_connection_ids.emplace(std::make_pair(id, p.first->second));
+    m_connection_ids.erase(p.first);
+    auto& conn = m_connection_ids.at(id);
 
     unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);
