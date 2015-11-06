@@ -50,7 +50,7 @@ size_t SendSocket::post_write(iovec const& iov) {
   size_t bytes_sent = iov.iov_len;
   ibv_sge sge;
   sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
-  sge.length = reinterpret_cast<uint32_t>(iov.iov_len);
+  sge.length = iov.iov_len;
   sge.lkey = m_mr->lkey;
 
   ibv_send_wr wr;
@@ -115,7 +115,7 @@ std::vector<iovec> RecvSocket::pop_completed() {
           ibv_wc_status_str(it->status)));
     }
     iov_vect.push_back(
-      { reinterpret_cast<void*>(wcs_it->wr_id), it->byte_len });
+      { reinterpret_cast<void*>(it->wr_id), it->byte_len });
   }
 
   return iov_vect;
@@ -133,7 +133,7 @@ void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
     iovec const& iov = iov_vect[i];
     ibv_sge& sge = wrs[i].second;
     sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
-    sge.length = reinterpret_cast<uint32_t>(iov.iov_len);
+    sge.length = iov.iov_len;
     sge.lkey = m_mr->lkey;
 
     ibv_recv_wr& wr = wrs[i].first;
