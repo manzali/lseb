@@ -1,6 +1,8 @@
 #ifndef RU_READOUT_UNIT_H
 #define RU_READOUT_UNIT_H
 
+#include <map>
+
 #include <sys/uio.h>
 
 #include <boost/lockfree/spsc_queue.hpp>

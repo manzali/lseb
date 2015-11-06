@@ -78,7 +78,7 @@ void ReadoutUnit::operator()() {
       LOG(NOTICE)
         << "Readout Unit - Connection established with ip "
         << ep.hostname()
-        << " (bu"
+        << " (bu "
         << id
         << ")";
     }
@@ -102,9 +102,7 @@ void ReadoutUnit::operator()() {
       do {
         std::vector<iovec> completed_iov;
         if (id != m_id) {
-          auto conn_it = m_connection_ids.find(id);
-          assert(conn_it != std::end(m_connection_ids));
-          auto& conn = conn_it->second;
+          auto& conn = m_connection_ids[id];
           completed_iov = conn.pop_completed();
           available = (conn.pending() != m_credits);
         } else {
@@ -147,9 +145,7 @@ void ReadoutUnit::operator()() {
       for (auto id : id_sequence) {
         auto& iov = iov_to_send.at(id);
         if (id != m_id) {
-          auto conn_it = m_connection_ids.find(id);
-          assert(conn_it != std::end(m_connection_ids));
-          auto& conn = conn_it->second;
+          auto& conn = m_connection_ids[id];
           assert(m_credits - conn.pending() != 0);
           bandwith.add(conn.post_write(iov));
         } else {
