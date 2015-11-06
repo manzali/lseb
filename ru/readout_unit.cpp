@@ -102,7 +102,7 @@ void ReadoutUnit::operator()() {
       do {
         std::vector<iovec> completed_iov;
         if (id != m_id) {
-          auto& conn = m_connection_ids[id];
+          auto& conn = m_connection_ids.at(id);
           completed_iov = conn.pop_completed();
           available = (conn.pending() != m_credits);
         } else {
@@ -145,7 +145,7 @@ void ReadoutUnit::operator()() {
       for (auto id : id_sequence) {
         auto& iov = iov_to_send.at(id);
         if (id != m_id) {
-          auto& conn = m_connection_ids[id];
+          auto& conn = m_connection_ids.at(id);
           assert(m_credits - conn.pending() != 0);
           bandwith.add(conn.post_write(iov));
         } else {
