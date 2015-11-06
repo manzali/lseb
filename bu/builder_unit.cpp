@@ -138,7 +138,9 @@ void BuilderUnit::operator()() {
     }
     conn.post_read(iov_vect);
 
-    LOG(NOTICE) << "Builder Unit - Connection established";
+    LOG(NOTICE)
+      << "Builder Unit - Connection established with ip "
+      << conn.peer_hostname();
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
 
