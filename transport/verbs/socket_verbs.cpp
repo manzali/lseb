@@ -13,7 +13,7 @@ SendSocket::SendSocket(rdma_cm_id* cm_id, int credits)
       m_counter(0) {
 }
 
-void SendSocket::register_memory(void* buffer, size_t size){
+void SendSocket::register_memory(void* buffer, size_t size) {
   m_mr = rdma_reg_msgs(m_cm_id, buffer, size);
   if (!m_mr) {
     throw std::runtime_error(
@@ -38,7 +38,8 @@ std::vector<iovec> SendSocket::pop_completed() {
           ibv_wc_status_str(wcs_it->status)));
     }
     --m_counter;
-    vect.push_back( { (void*) wcs_it->wr_id, wcs_it->byte_len });
+    vect.push_back(
+      { reinterpret_cast<void*>(wcs_it->wr_id), wcs_it->byte_len });
   }
 
   return vect;
@@ -48,12 +49,12 @@ size_t SendSocket::post_write(iovec const& iov) {
 
   size_t bytes_sent = iov.iov_len;
   ibv_sge sge;
-  sge.addr = (uint64_t) (uintptr_t) iov.iov_base;
-  sge.length = (uint32_t) iov.iov_len;
+  sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
+  sge.length = reinterpret_cast<uint32_t>(iov.iov_len);
   sge.lkey = m_mr->lkey;
 
   ibv_send_wr wr;
-  wr.wr_id = (uint64_t) (uintptr_t) iov.iov_base;
+  wr.wr_id = reinterpret_cast<uint64_t>(iov.iov_base);
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
@@ -113,7 +114,8 @@ std::vector<iovec> RecvSocket::pop_completed() {
         "Error status in wc of recv_cq: " + std::string(
           ibv_wc_status_str(it->status)));
     }
-    iov_vect.push_back( { (void*) it->wr_id, it->byte_len });
+    iov_vect.push_back(
+      { reinterpret_cast<void*>(wcs_it->wr_id), it->byte_len });
   }
 
   return iov_vect;
@@ -130,12 +132,12 @@ void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
   for (int i = 0; i < wrs.size(); ++i) {
     iovec const& iov = iov_vect[i];
     ibv_sge& sge = wrs[i].second;
-    sge.addr = (uint64_t) (uintptr_t) iov.iov_base;
-    sge.length = (uint32_t) iov.iov_len;
+    sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
+    sge.length = reinterpret_cast<uint32_t>(iov.iov_len);
     sge.lkey = m_mr->lkey;
 
     ibv_recv_wr& wr = wrs[i].first;
-    wr.wr_id = (uint64_t) (uintptr_t) iov.iov_base;
+    wr.wr_id = reinterpret_cast<uint64_t>(iov.iov_base);
     wr.next = (i + 1 == wrs.size()) ? nullptr : &(wrs[i + 1].first);
     wr.sg_list = &sge;
     wr.num_sge = 1;
