@@ -1,6 +1,7 @@
 #include "transport/verbs/socket_verbs.h"
 
 #include <stdexcept>
+#include <arpa/inet.h>
 
 namespace lseb {
 
@@ -75,8 +76,10 @@ int SendSocket::pending() {
 }
 
 std::string SendSocket::peer_hostname() {
-  sockaddr_in const& addr = *((sockaddr_in*) rdma_get_peer_addr(m_cm_id));
-  return inet_ntoa(addr.sin_addr);
+  char str[INET_ADDRSTRLEN];
+  auto addr = reinterpret_cast<sockaddr_in*>(rdma_get_peer_addr(m_cm_id));
+  inet_ntop(AF_INET, &(addr->sin_addr), str, INET_ADDRSTRLEN);
+  return str;
 }
 
 RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
@@ -157,8 +160,10 @@ void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
 }
 
 std::string RecvSocket::peer_hostname() {
-  sockaddr_in const& addr = *((sockaddr_in*) rdma_get_peer_addr(m_cm_id));
-  return inet_ntoa(addr.sin_addr);
+  char str[INET_ADDRSTRLEN];
+  auto addr = reinterpret_cast<sockaddr_in*>(rdma_get_peer_addr(m_cm_id));
+  inet_ntop(AF_INET, &(addr->sin_addr), str, INET_ADDRSTRLEN);
+  return str;
 }
 
 }
