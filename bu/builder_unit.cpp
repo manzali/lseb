@@ -12,6 +12,23 @@
 
 namespace lseb {
 
+namespace {
+
+int find_endpoint_id(
+  std::vector<Endpoint> const& endpoints,
+  std::string const& address) {
+  auto it = std::find_if(
+    std::begin(endpoints),
+    std::end(endpoints),
+    [&address](Endpoint const& ep) {return ep.hostname() == address;});
+  return
+      (it == std::end(endpoints)) ?
+        -1 :
+        std::distance(std::begin(endpoints), it);
+}
+
+}
+
 BuilderUnit::BuilderUnit(
   boost::lockfree::spsc_queue<iovec>& free_local_data,
   boost::lockfree::spsc_queue<iovec>& ready_local_data,
@@ -35,7 +52,7 @@ int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
   int const old_size = iov_vect.size();
   if (id != m_endpoints.size() - 1) {
-    auto& conn = m_connection_ids[id];
+    auto& conn = m_connection_ids.at(id);
     std::vector<iovec> new_data = conn.pop_completed();
     if (!new_data.empty()) {
       iov_vect.insert(
@@ -80,21 +97,19 @@ bool BuilderUnit::check_data() {
   return true;
 }
 
-size_t BuilderUnit::release_data(int id, int n){
+size_t BuilderUnit::release_data(int id, int n) {
   auto& iov_vect = m_data_vect[id];
   assert(iov_vect.size() >= n);
-  std::vector<iovec> sub_vect(
-    std::begin(iov_vect),
-    std::begin(iov_vect) + n);
+  std::vector<iovec> sub_vect(std::begin(iov_vect), std::begin(iov_vect) + n);
   // Erase iovec
   iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + n);
   size_t const bytes = iovec_length(sub_vect);
   // Release iovec
   if (id != m_endpoints.size() - 1) {
-    auto& conn = m_connection_ids[id];
+    auto& conn = m_connection_ids.at(id);
     // Reset len of iovec
     for (auto& iov : sub_vect) {
-      iov.iov_len = m_max_fragment_size * m_bulk_size; // chunk size
+      iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
     }
     conn.post_read(sub_vect);
   } else {
@@ -119,15 +134,17 @@ void BuilderUnit::operator()() {
   // Connections
 
   Acceptor<RecvSocket> acceptor(m_credits);
-  acceptor.listen(m_endpoints.at(m_id).hostname(), m_endpoints.at(m_id).port());
+  acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
 
   size_t const chunk_size = m_max_fragment_size * m_bulk_size;
 
   for (int i = 0; i < m_endpoints.size() - 1; ++i) {
-    m_connection_ids.push_back(acceptor.accept());
-    RecvSocket& conn = m_connection_ids.back();
+    RecvSocket conn = acceptor.accept();
+    int id = find_endpoint_id(m_endpoints, conn.peer_hostname());
+    assert(id != -1 && "Address not found in endpoints list.");
+    m_connection_ids.emplace(std::make_pair(id, conn));
 
     unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);

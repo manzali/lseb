@@ -60,7 +60,7 @@ void ReadoutUnit::operator()() {
 
   for (auto id : id_sequence) {
     if (id != m_id) {
-      Endpoint const& ep = m_endpoints.at(id);
+      Endpoint const& ep = m_endpoints[id];
       bool connected = false;
       while (!connected) {
         try {
@@ -143,7 +143,7 @@ void ReadoutUnit::operator()() {
       assert(iov_to_send.size() == required_multievents);
       t_send.start();
       for (auto id : id_sequence) {
-        auto& iov = iov_to_send.at(id);
+        auto& iov = iov_to_send[id];
         if (id != m_id) {
           auto& conn = m_connection_ids.at(id);
           assert(m_credits - conn.pending() != 0);
