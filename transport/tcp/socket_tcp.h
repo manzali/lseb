@@ -17,12 +17,14 @@ class SendSocket {
   std::vector<iovec> pop_completed();
   size_t post_write(iovec const& iov);
   int pending();
+  std::string peer_hostname();
 };
 
 class RecvSocket {
   std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
   std::vector<iovec> m_iov_vect;
 
+ private:
   iovec read_iov();
 
  public:
@@ -31,6 +33,7 @@ class RecvSocket {
   std::vector<iovec> pop_completed();
   void post_read(iovec const& iov);
   void post_read(std::vector<iovec> const& iov_vect);
+  std::string peer_hostname();
 };
 
 }

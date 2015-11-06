@@ -74,6 +74,11 @@ int SendSocket::pending() {
   return m_counter;
 }
 
+std::string SendSocket::peer_hostname() {
+  sockaddr_in const& addr = *((sockaddr_in*) rdma_get_peer_addr(m_cm_id));
+  return inet_ntoa(addr.sin_addr);
+}
+
 RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
     :
       m_cm_id(cm_id),
@@ -149,6 +154,11 @@ void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
     }
     m_init = true;
   }
+}
+
+std::string RecvSocket::peer_hostname() {
+  sockaddr_in const& addr = *((sockaddr_in*) rdma_get_peer_addr(m_cm_id));
+  return inet_ntoa(addr.sin_addr);
 }
 
 }

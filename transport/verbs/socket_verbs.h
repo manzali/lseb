@@ -22,6 +22,8 @@ class SendSocket {
   std::vector<iovec> pop_completed();
   size_t post_write(iovec const& iov);
   int pending();
+  std::string peer_hostname();
+
   static ibv_qp_init_attr create_qp_attr(int credits) {
     ibv_qp_init_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -47,6 +49,7 @@ class RecvSocket {
   std::vector<iovec> pop_completed();
   void post_read(iovec const& iov);
   void post_read(std::vector<iovec> const& iov_vect);
+  std::string peer_hostname();
 
   static ibv_qp_init_attr create_qp_attr(int credits) {
     ibv_qp_init_attr attr;
