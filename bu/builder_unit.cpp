@@ -145,9 +145,11 @@ void BuilderUnit::operator()() {
 
   for (int i = 0; i < m_endpoints.size() - 1; ++i) {
 
+    // Create a temporary entry in the map with the local id
     auto p = m_connection_ids.emplace(std::make_pair(m_id, acceptor.accept()));
     int id = find_endpoint_id(m_endpoints, p.first->second.peer_hostname());
     assert(id != -1 && "Address not found in endpoints list.");
+    // Insert the real id and delete the local one
     m_connection_ids.emplace(std::make_pair(id, p.first->second));
     m_connection_ids.erase(p.first);
     auto& conn = m_connection_ids.at(id);

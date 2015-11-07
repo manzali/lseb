@@ -53,12 +53,13 @@ void ReadoutUnit::operator()() {
       bool connected = false;
       while (!connected) {
         try {
-          auto ret = m_connection_ids.emplace(
-            std::make_pair(id, connector.connect(ep.hostname(), ep.port())));
-          assert(ret.second && "Connection already present");
-          ret.first->second.register_memory(
+          SendSocket socket = connector.connect(ep.hostname(), ep.port());
+          socket.register_memory(
             (void*) std::begin(data_range),
             std::distance(std::begin(data_range), std::end(data_range)));
+          auto ret = m_connection_ids.emplace(
+            std::make_pair(id, std::unique_ptr<SendSocket>(&socket)));
+          assert(ret.second && "Connection already present");
           connected = true;
         } catch (std::exception& e) {
           std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -91,7 +92,7 @@ void ReadoutUnit::operator()() {
       do {
         std::vector<iovec> completed_iov;
         if (id != m_id) {
-          auto& conn = m_connection_ids.at(id);
+          auto& conn = *(m_connection_ids.at(id));
           completed_iov = conn.pop_completed();
           available = (conn.pending() != m_credits);
         } else {
@@ -134,7 +135,7 @@ void ReadoutUnit::operator()() {
       for (auto id : id_sequence) {
         auto& iov = iov_to_send[id];
         if (id != m_id) {
-          auto& conn = m_connection_ids.at(id);
+          auto& conn = *(m_connection_ids.at(id));
           assert(m_credits - conn.pending() != 0);
           bandwith.add(conn.post_write(iov));
         } else {

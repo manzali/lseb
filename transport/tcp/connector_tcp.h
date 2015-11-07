@@ -34,7 +34,7 @@ class Connector {
       if (error == boost::asio::error::connection_refused) {
         throw boost::system::system_error(error);  // Connection refused
       } else {
-        iterator++;
+        ++iterator;
       }
     }
     if (error) {

@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
     bulk_size,
     credits,
     id);
-  std::thread ru_th(ru);
+  std::thread ru_th(&ReadoutUnit::operator(), &ru);
 
   bu_th.join();
   ru_th.join();
