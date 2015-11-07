@@ -59,24 +59,24 @@ int main(int argc, char* argv[]) {
   Acceptor<RecvSocket> acceptor(credits);
 
   acceptor.listen(server, port);
-  RecvSocket socket = acceptor.accept();
-  socket.register_memory(buffer_ptr.get(), buffer_size);
+  std::unique_ptr<RecvSocket> socket = acceptor.accept();
+  socket->register_memory(buffer_ptr.get(), buffer_size);
   std::cout << "Accepted connection" << std::endl;
 
   FrequencyMeter bandwith(5.0);
 
   while (!pool.empty()) {
-    socket.post_read(pool.alloc());
+    socket->post_read(pool.alloc());
   }
 
   while (true) {
-    std::vector<iovec> vect = socket.pop_completed();
+    std::vector<iovec> vect = socket->pop_completed();
     for (auto& iov : vect) {
       pool.free(iov);
     }
     bandwith.add(iovec_length(vect));
     while (!pool.empty()) {
-      socket.post_read(pool.alloc());
+      socket->post_read(pool.alloc());
     }
     if (bandwith.check()) {
       std::cout

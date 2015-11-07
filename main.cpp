@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
     credits,
     max_fragment_size,
     id);
-  std::thread bu_th(bu);
+  std::thread bu_th(&BuilderUnit::operator(), &bu);
 
   ReadoutUnit ru(
     accumulator,

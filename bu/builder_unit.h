@@ -16,7 +16,7 @@ class BuilderUnit {
   boost::lockfree::spsc_queue<iovec>& m_free_local_queue;
   boost::lockfree::spsc_queue<iovec>& m_ready_local_queue;
   std::vector<Endpoint> m_endpoints;
-  std::map<int, RecvSocket> m_connection_ids;
+  std::map<int, std::unique_ptr<RecvSocket> > m_connection_ids;
   std::vector<std::vector<iovec> > m_data_vect;
   int m_bulk_size;
   int m_credits;

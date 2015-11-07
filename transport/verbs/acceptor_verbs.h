@@ -68,13 +68,14 @@ class Acceptor {
     }
   }
 
-  T accept() {
+  std::unique_ptr<T> accept() {
     rdma_cm_id* new_cm_id;
     if (rdma_get_request(m_cm_id, &new_cm_id)) {
       throw std::runtime_error(
         "Error on rdma_get_request: " + std::string(strerror(errno)));
     }
-    return T(new_cm_id, m_credits);
+    std::unique_ptr<T> socket(new T(new_cm_id, m_credits));
+    return socket;
   }
 
 };

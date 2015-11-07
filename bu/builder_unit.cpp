@@ -53,7 +53,7 @@ int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
   int const old_size = iov_vect.size();
   if (id != m_id) {
-    auto& conn = m_connection_ids.at(id);
+    auto& conn = *(m_connection_ids.at(id));
     std::vector<iovec> new_data = conn.pop_completed();
     if (!new_data.empty()) {
       iov_vect.insert(
@@ -107,7 +107,7 @@ size_t BuilderUnit::release_data(int id, int n) {
   size_t const bytes = iovec_length(sub_vect);
   // Release iovec
   if (id != m_id) {
-    auto& conn = m_connection_ids.at(id);
+    auto& conn = *(m_connection_ids.at(id));
     // Reset len of iovec
     for (auto& iov : sub_vect) {
       iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
@@ -146,13 +146,14 @@ void BuilderUnit::operator()() {
   for (int i = 0; i < m_endpoints.size() - 1; ++i) {
 
     // Create a temporary entry in the map with the local id
-    auto p = m_connection_ids.emplace(std::make_pair(m_id, acceptor.accept()));
-    int id = find_endpoint_id(m_endpoints, p.first->second.peer_hostname());
+    auto p = m_connection_ids.emplace(
+      std::make_pair(m_id, std::unique_ptr<RecvSocket>(acceptor.accept())));
+    int id = find_endpoint_id(m_endpoints, p.first->second->peer_hostname());
     assert(id != -1 && "Address not found in endpoints list.");
     // Insert the real id and delete the local one
-    m_connection_ids.emplace(std::make_pair(id, p.first->second));
+    m_connection_ids.emplace(std::make_pair(id, std::move(p.first->second)));
     m_connection_ids.erase(p.first);
-    auto& conn = m_connection_ids.at(id);
+    auto& conn = *(m_connection_ids.at(id));
 
     unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);

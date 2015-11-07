@@ -33,11 +33,12 @@ class Acceptor {
     m_acceptor.listen();
   }
 
-  T accept() {
+  std::unique_ptr<T> accept() {
     std::unique_ptr<boost::asio::ip::tcp::socket> socket_ptr(
       new boost::asio::ip::tcp::socket(m_io_service));
     m_acceptor.accept(*socket_ptr);
-    return T(std::move(socket_ptr));
+    std::unique_ptr<T> socket(new T(std::move(socket_ptr)));
+    return socket;
   }
 
 };
