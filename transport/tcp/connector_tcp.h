@@ -20,7 +20,7 @@ class Connector {
   Connector(int credits) {
   }
 
-  T connect(std::string const& hostname, std::string const& port) {
+  std::unique_ptr<T> connect(std::string const& hostname, std::string const& port) {
     boost::asio::ip::tcp::resolver resolver(m_io_service);
     boost::asio::ip::tcp::resolver::query query(hostname, port);
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
@@ -40,7 +40,8 @@ class Connector {
     if (error) {
       throw boost::system::system_error(error);
     }
-    return T(std::move(socket_ptr));
+    std::unique_ptr<T> socket(new T(std::move(socket_ptr)));
+    return socket;
   }
 };
 

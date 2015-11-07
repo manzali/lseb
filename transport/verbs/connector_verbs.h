@@ -48,7 +48,7 @@ class Connector {
         m_credits(credits) {
   }
 
-  T connect(std::string const& hostname, std::string const& port) {
+  std::unique_ptr<T> connect(std::string const& hostname, std::string const& port) {
     auto res = create_addr_info(hostname, port);
     auto attr = T::create_qp_attr(m_credits);
     rdma_cm_id* cm_id;
@@ -70,8 +70,8 @@ class Connector {
           "Error on rdma_connect: " + std::string(strerror(errno)));
       }
     }
-
-    return T(cm_id, m_credits);
+    std::unique_ptr<T> socket(new T(cm_id, m_credits));
+    return socket;
   }
 };
 

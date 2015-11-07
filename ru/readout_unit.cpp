@@ -53,13 +53,12 @@ void ReadoutUnit::operator()() {
       bool connected = false;
       while (!connected) {
         try {
-          SendSocket socket = connector.connect(ep.hostname(), ep.port());
-          socket.register_memory(
+          auto ret = m_connection_ids.emplace(
+            std::make_pair(id, connector.connect(ep.hostname(), ep.port())));
+          assert(ret.second && "Connection already present");
+          ret.first->second->register_memory(
             (void*) std::begin(data_range),
             std::distance(std::begin(data_range), std::end(data_range)));
-          auto ret = m_connection_ids.emplace(
-            std::make_pair(id, std::unique_ptr<SendSocket>(&socket)));
-          assert(ret.second && "Connection already present");
           connected = true;
         } catch (std::exception& e) {
           std::this_thread::sleep_for(std::chrono::milliseconds(500));
