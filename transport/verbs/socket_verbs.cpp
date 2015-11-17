@@ -24,7 +24,7 @@ void SendSocket::register_memory(void* buffer, size_t size) {
 std::vector<void*> SendSocket::pop_completed() {
 
   std::vector<ibv_wc> wcs(m_credits);
-  std::vector<iovec> vect;
+  std::vector<void*> vect;
   int ret = ibv_poll_cq(m_cm_id->send_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw std::runtime_error(
