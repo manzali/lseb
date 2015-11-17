@@ -14,8 +14,11 @@ SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
 void SendSocket::register_memory(void* buffer, size_t size) {
 }
 
-std::vector<iovec> SendSocket::pop_completed() {
-  std::vector<iovec> vect(m_iov_vect);
+std::vector<void*> SendSocket::pop_completed() {
+  std::vector<void*> vect;
+  for(auto const& iov : m_iov_vect){
+    vect.push_back(iov.iov_base);
+  }
   m_iov_vect.clear();
   return vect;
 }
