@@ -69,7 +69,9 @@ int main(int argc, char* argv[]) {
       pool.free(iov);
     }
     if (socket->pending() != credits) {
-      bandwith.add(socket->post_write(pool.alloc()));
+      iovec iov = pool.alloc();
+      iov.iov_len = chunk_size;
+      bandwith.add(socket->post_write(iov));
     }
     if (bandwith.check()) {
       std::cout
