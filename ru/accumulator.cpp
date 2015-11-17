@@ -80,14 +80,14 @@ std::vector<iovec> Accumulator::get_multievents() {
   return iov_vect;
 }
 
-void Accumulator::release_multievents(std::vector<iovec> const& iov_vect) {
+void Accumulator::release_multievents(std::vector<void*> const& vect) {
 // Update flag of m_iov_multievents
-  for (auto& iov : iov_vect) {
+  for (auto& v : vect) {
     auto it =
       std::find_if(
         std::begin(m_iov_multievents),
         std::end(m_iov_multievents),
-        [&iov] (std::pair<void*, bool> const& p) {return p.first == iov.iov_base;});
+        [&v] (std::pair<void*, bool> const& p) {return p.first == v;});
     assert(it != std::end(m_iov_multievents));
     assert(it->second == false);
     it->second = true;

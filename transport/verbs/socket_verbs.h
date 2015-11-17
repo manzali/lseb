@@ -19,7 +19,7 @@ class SendSocket {
  public:
   SendSocket(rdma_cm_id* cm_id, int credits);
   void register_memory(void* buffer, size_t size);
-  std::vector<iovec> pop_completed();
+  std::vector<void*> pop_completed();
   size_t post_write(iovec const& iov);
   int pending();
 

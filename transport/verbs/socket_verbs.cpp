@@ -21,7 +21,7 @@ void SendSocket::register_memory(void* buffer, size_t size) {
   }
 }
 
-std::vector<iovec> SendSocket::pop_completed() {
+std::vector<void*> SendSocket::pop_completed() {
 
   std::vector<ibv_wc> wcs(m_credits);
   std::vector<iovec> vect;
@@ -38,8 +38,7 @@ std::vector<iovec> SendSocket::pop_completed() {
           ibv_wc_status_str(wcs_it->status)));
     }
     --m_counter;
-    vect.push_back(
-      { reinterpret_cast<void*>(wcs_it->wr_id), wcs_it->byte_len });
+    vect.push_back(reinterpret_cast<void*>(wcs_it->wr_id));
   }
 
   return vect;
