@@ -120,7 +120,6 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     t_release.pause();
 
     if (all_conn_avail) {
-
       // Acquire
       t_ctrl.start();
       std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
@@ -149,7 +148,6 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
         t_send.pause();
         frequency.add(required_multievents * m_bulk_size);
       }
-
     }
 
     if (frequency.check()) {

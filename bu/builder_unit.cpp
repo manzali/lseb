@@ -177,43 +177,40 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   Timer t_check;
   Timer t_rel;
 
-  // The local data is in the last position of m_data_vect
-
   while (!(*stop)) {
 
     // Acquire
     t_recv.start();
     int min_wrs = m_credits;
-    do {
-      min_wrs = m_credits;
-      for (auto id : id_sequence) {
-        int read_wrs = read_data(id);
-        if (read_wrs) {
-          LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
-        }
-        int const current_wrs = m_data_vect[id].size();
-        min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
+    for (auto id : id_sequence) {
+      int read_wrs = read_data(id);
+      if (read_wrs) {
+        LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
       }
-    } while (min_wrs == 0 && !(*stop));
+      int const current_wrs = m_data_vect[id].size();
+      min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
+    }
     t_recv.pause();
 
-    t_check.start();
-    if (!check_data()) {
-      throw std::runtime_error("Error checking data");
-    }
-    t_check.pause();
-
-    // Release
-    t_rel.start();
-    for (auto id : id_sequence) {
-      size_t const bytes = release_data(id, min_wrs);
-      if (id != m_endpoints.size() - 1) {
-        bandwith.add(bytes);
+    if (min_wrs) {
+      t_check.start();
+      if (!check_data()) {
+        throw std::runtime_error("Error checking data");
       }
-      LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";
+      t_check.pause();
+
+      // Release
+      t_rel.start();
+      for (auto id : id_sequence) {
+        size_t const bytes = release_data(id, min_wrs);
+        if (id != m_endpoints.size() - 1) {
+          bandwith.add(bytes);
+        }
+        LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";
+      }
+      t_rel.pause();
+      frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
     }
-    t_rel.pause();
-    frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
 
     if (frequency.check()) {
       LOG(NOTICE)
