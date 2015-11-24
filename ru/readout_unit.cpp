@@ -86,7 +86,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     // Release
     t_release.start();
     std::vector<void*> wr_to_release;
-    bool available = false;
+    bool available = true;
     for (auto id : id_sequence) {
       std::vector<void*> completed_wr;
       if (id != m_id) {
