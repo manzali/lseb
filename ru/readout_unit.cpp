@@ -86,13 +86,13 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     // Release
     t_release.start();
     std::vector<void*> wr_to_release;
-    bool available = true;
+    bool all_conn_avail = true;
     for (auto id : id_sequence) {
       std::vector<void*> completed_wr;
       if (id != m_id) {
         auto& conn = *(m_connection_ids.at(id));
         completed_wr = conn.pop_completed();
-        available = (conn.pending() != m_credits) && available;
+        all_conn_avail = (conn.pending() != m_credits) && all_conn_avail;
       } else {
         iovec iov;
         while (m_free_local_queue.pop(iov)) {
@@ -100,7 +100,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
           --m_pending_local_iov;
           assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
-        available = (m_pending_local_iov != m_credits) && available;
+        all_conn_avail = (m_pending_local_iov != m_credits) && all_conn_avail;
       }
       if (!completed_wr.empty()) {
         wr_to_release.insert(
@@ -119,7 +119,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     }
     t_release.pause();
 
-    if (available) {
+    if (all_conn_avail) {
 
       // Acquire
       t_ctrl.start();
