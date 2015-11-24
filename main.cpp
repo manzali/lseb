@@ -1,4 +1,6 @@
 #include <thread>
+#include <iostream>
+#include <fstream>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/program_options.hpp>
@@ -53,6 +55,14 @@ int main(int argc, char* argv[]) {
   }
 
   Configuration configuration = read_configuration(f);
+
+  /*
+  std::ofstream log_file("/tmp/tridas_log.txt");
+  Log::init(
+    "LSEB",
+    Log::FromString(configuration.get<std::string>("LOG_LEVEL")),
+    log_file);
+*/
 
   Log::init(
     "LSEB",
@@ -139,7 +149,6 @@ int main(int argc, char* argv[]) {
     credits,
     max_fragment_size,
     id);
-  std::thread bu_th(&BuilderUnit::operator(), &bu);
 
   ReadoutUnit ru(
     accumulator,
@@ -149,7 +158,26 @@ int main(int argc, char* argv[]) {
     bulk_size,
     credits,
     id);
-  std::thread ru_th(&ReadoutUnit::operator(), &ru);
+
+  std::shared_ptr<std::atomic<bool> > stop(new std::atomic<bool>(false));
+
+  sigset_t set;
+  sigfillset(&set);  // mask all signals
+  pthread_sigmask(SIG_SETMASK, &set, NULL);  // set mask
+
+  std::thread bu_th(&BuilderUnit::operator(), &bu, stop);
+  std::thread ru_th(&ReadoutUnit::operator(), &ru, stop);
+
+  sigemptyset(&set);
+  sigaddset(&set, SIGINT);
+  sigaddset(&set, SIGTERM);
+
+  int sig_caught;
+  sigwait(&set, &sig_caught);
+
+  std::cout << "Received signal " << sig_caught << std::endl;
+
+  *stop = true;
 
   bu_th.join();
   ru_th.join();

@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
       pool.free(iov);
     }
     bandwith.add(iovec_length(vect));
-    while (!pool.empty()) {
+    if (!pool.empty()) {
       socket->post_read(pool.alloc());
     }
     if (bandwith.check()) {

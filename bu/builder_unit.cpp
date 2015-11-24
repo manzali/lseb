@@ -123,7 +123,7 @@ size_t BuilderUnit::release_data(int id, int n) {
   return bytes;
 }
 
-void BuilderUnit::operator()() {
+void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
 
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
@@ -179,7 +179,7 @@ void BuilderUnit::operator()() {
 
   // The local data is in the last position of m_data_vect
 
-  while (true) {
+  while (!(*stop)) {
 
     // Acquire
     t_recv.start();
@@ -194,7 +194,7 @@ void BuilderUnit::operator()() {
         int const current_wrs = m_data_vect[id].size();
         min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
       }
-    } while (min_wrs == 0);
+    } while (min_wrs == 0 && !(*stop));
     t_recv.pause();
 
     t_check.start();
@@ -239,5 +239,7 @@ void BuilderUnit::operator()() {
       t_rel.reset();
     }
   }
+
+  LOG(INFO) << "Readout Unit: exiting";
 }
 }

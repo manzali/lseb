@@ -37,7 +37,7 @@ ReadoutUnit::ReadoutUnit(
       m_pending_local_iov(0) {
 }
 
-void ReadoutUnit::operator()() {
+void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
 
   int const required_multievents = m_endpoints.size();
   std::vector<int> id_sequence = create_sequence(m_id, required_multievents);
@@ -81,7 +81,7 @@ void ReadoutUnit::operator()() {
   Timer t_send;
   Timer t_release;
 
-  while (true) {
+  while (!(*stop)) {
 
     // Release
     t_release.start();
@@ -115,7 +115,7 @@ void ReadoutUnit::operator()() {
             << " iov to conn "
             << id;
         }
-      } while (!available);
+      } while (!available && !(*stop));
     }
     if (!wr_to_release.empty()) {
       m_accumulator.release_multievents(wr_to_release);
@@ -174,6 +174,8 @@ void ReadoutUnit::operator()() {
       t_send.reset();
     }
   }
+
+  LOG(INFO) << "Readout Unit: exiting";
 }
 
 }
