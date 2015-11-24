@@ -6,6 +6,7 @@
 #include <boost/program_options.hpp>
 
 #include <cassert>
+#include <signal.h>
 
 #include "bu/builder_unit.h"
 #include "ru/readout_unit.h"
