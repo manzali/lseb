@@ -14,7 +14,6 @@
 #include "common/log.hpp"
 #include "common/utility.h"
 #include "common/frequency_meter.h"
-#include "common/timer.h"
 
 namespace lseb {
 
@@ -77,14 +76,17 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
-  Timer t_ctrl;
-  Timer t_send;
-  Timer t_release;
+  std::chrono::high_resolution_clock::time_point t_tot =
+    std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point t_start;
+  double active_time = 0;
 
   while (!(*stop)) {
 
+    bool active_flag = false;
+    t_start = std::chrono::high_resolution_clock::now();
+
     // Release
-    t_release.start();
     std::vector<void*> wr_to_release;
     bool all_conn_avail = true;
     for (auto id : id_sequence) {
@@ -103,6 +105,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
         all_conn_avail = (m_pending_local_iov != m_credits) && all_conn_avail;
       }
       if (!completed_wr.empty()) {
+        active_flag = true;
         wr_to_release.insert(
           std::end(wr_to_release),
           std::begin(completed_wr),
@@ -117,18 +120,15 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     if (!wr_to_release.empty()) {
       m_accumulator.release_multievents(wr_to_release);
     }
-    t_release.pause();
 
     if (all_conn_avail) {
       // Acquire
-      t_ctrl.start();
       std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
-      t_ctrl.pause();
 
       // Send
       if (!iov_to_send.empty()) {
+        active_flag = true;
         assert(iov_to_send.size() == required_multievents);
-        t_send.start();
         for (auto id : id_sequence) {
           auto& iov = iov_to_send[id];
           if (id != m_id) {
@@ -145,33 +145,30 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
           }
           LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
         }
-        t_send.pause();
         frequency.add(required_multievents * m_bulk_size);
       }
     }
 
+    if(active_flag){
+      active_time += std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - t_start).count();
+    }
+
     if (frequency.check()) {
+
+      double tot_time = std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - t_tot).count();
+
       LOG(NOTICE)
         << "Readout Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
         << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
-
-      LOG(INFO)
-        << "Times:\n"
-        << "\tt_ctrl: "
-        << t_ctrl.rate()
-        << "%\n"
-        << "\tt_release: "
-        << t_release.rate()
-        << "%\n"
-        << "\tt_send: "
-        << t_send.rate()
-        << "%";
-      t_ctrl.reset();
-      t_release.reset();
-      t_send.reset();
+        << " Gb/s - "
+        << active_time / tot_time * 100.
+        << " %";
+      active_time = 0;
+      t_tot = std::chrono::high_resolution_clock::now();
     }
   }
 

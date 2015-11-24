@@ -4,7 +4,6 @@
 #include <map>
 
 #include "common/frequency_meter.h"
-#include "common/timer.h"
 #include "common/log.hpp"
 #include "common/dataformat.h"
 #include "common/utility.h"
@@ -173,34 +172,34 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
-  Timer t_recv;
-  Timer t_check;
-  Timer t_rel;
+  std::chrono::high_resolution_clock::time_point t_tot =
+    std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point t_active;
+  double active_time = 0;
 
   while (!(*stop)) {
 
+    bool active_flag = false;
+    t_active = std::chrono::high_resolution_clock::now();
+
     // Acquire
-    t_recv.start();
     int min_wrs = m_credits;
     for (auto id : id_sequence) {
       int read_wrs = read_data(id);
       if (read_wrs) {
         LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
+        active_flag = true;
       }
       int const current_wrs = m_data_vect[id].size();
       min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
     }
-    t_recv.pause();
 
     if (min_wrs) {
-      t_check.start();
       if (!check_data()) {
         throw std::runtime_error("Error checking data");
       }
-      t_check.pause();
 
       // Release
-      t_rel.start();
       for (auto id : id_sequence) {
         size_t const bytes = release_data(id, min_wrs);
         if (id != m_endpoints.size() - 1) {
@@ -208,32 +207,29 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
         }
         LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";
       }
-      t_rel.pause();
       frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
     }
 
+    if (active_flag) {
+      active_time += std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - t_active).count();
+    }
+
     if (frequency.check()) {
+
+      double tot_time = std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - t_tot).count();
+
       LOG(NOTICE)
         << "Builder Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
         << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
-
-      LOG(INFO)
-        << "Times:\n"
-        << "\tt_recv: "
-        << t_recv.rate()
-        << "%\n"
-        << "\tt_check: "
-        << t_check.rate()
-        << "%\n"
-        << "\tt_rel: "
-        << t_rel.rate()
-        << "%";
-      t_recv.reset();
-      t_check.reset();
-      t_rel.reset();
+        << " Gb/s - "
+        << active_time / tot_time * 100.
+        << " %";
+      active_time = 0;
+      t_tot = std::chrono::high_resolution_clock::now();
     }
   }
 
