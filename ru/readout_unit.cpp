@@ -86,68 +86,70 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     // Release
     t_release.start();
     std::vector<void*> wr_to_release;
+    bool available = false;
     for (auto id : id_sequence) {
-      bool available = false;
-      do {
-        std::vector<void*> completed_wr;
-        if (id != m_id) {
-          auto& conn = *(m_connection_ids.at(id));
-          completed_wr = conn.pop_completed();
-          available = (conn.pending() != m_credits);
-        } else {
-          iovec iov;
-          while (m_free_local_queue.pop(iov)) {
-            completed_wr.push_back(iov.iov_base);
-            --m_pending_local_iov;
-            assert(
-              m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
-          }
-          available = (m_pending_local_iov != m_credits);
+      std::vector<void*> completed_wr;
+      if (id != m_id) {
+        auto& conn = *(m_connection_ids.at(id));
+        completed_wr = conn.pop_completed();
+        available = (conn.pending() != m_credits) && available;
+      } else {
+        iovec iov;
+        while (m_free_local_queue.pop(iov)) {
+          completed_wr.push_back(iov.iov_base);
+          --m_pending_local_iov;
+          assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
-        if (!completed_wr.empty()) {
-          wr_to_release.insert(
-            std::end(wr_to_release),
-            std::begin(completed_wr),
-            std::end(completed_wr));
-          LOG(DEBUG)
-            << "Readout Unit - Completed "
-            << completed_wr.size()
-            << " iov to conn "
-            << id;
-        }
-      } while (!available && !(*stop));
+        available = (m_pending_local_iov != m_credits) && available;
+      }
+      if (!completed_wr.empty()) {
+        wr_to_release.insert(
+          std::end(wr_to_release),
+          std::begin(completed_wr),
+          std::end(completed_wr));
+        LOG(DEBUG)
+          << "Readout Unit - Completed "
+          << completed_wr.size()
+          << " iov to conn "
+          << id;
+      }
     }
     if (!wr_to_release.empty()) {
       m_accumulator.release_multievents(wr_to_release);
     }
     t_release.pause();
 
-    // Acquire
-    t_ctrl.start();
-    std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
-    t_ctrl.pause();
+    if (available) {
 
-    // Send
-    if (!iov_to_send.empty()) {
-      assert(iov_to_send.size() == required_multievents);
-      t_send.start();
-      for (auto id : id_sequence) {
-        auto& iov = iov_to_send[id];
-        if (id != m_id) {
-          auto& conn = *(m_connection_ids.at(id));
-          assert(m_credits - conn.pending() != 0);
-          bandwith.add(conn.post_write(iov));
-        } else {
-          while (!m_ready_local_queue.push(iov)) {
-            ;
+      // Acquire
+      t_ctrl.start();
+      std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
+      t_ctrl.pause();
+
+      // Send
+      if (!iov_to_send.empty()) {
+        assert(iov_to_send.size() == required_multievents);
+        t_send.start();
+        for (auto id : id_sequence) {
+          auto& iov = iov_to_send[id];
+          if (id != m_id) {
+            auto& conn = *(m_connection_ids.at(id));
+            assert(m_credits - conn.pending() != 0);
+            bandwith.add(conn.post_write(iov));
+          } else {
+            while (!m_ready_local_queue.push(iov)) {
+              ;
+            }
+            ++m_pending_local_iov;
+            assert(
+              m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
           }
-          ++m_pending_local_iov;
-          assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
+          LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
         }
-        LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
+        t_send.pause();
+        frequency.add(required_multievents * m_bulk_size);
       }
-      t_send.pause();
-      frequency.add(required_multievents * m_bulk_size);
+
     }
 
     if (frequency.check()) {
