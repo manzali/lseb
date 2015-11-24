@@ -14,7 +14,6 @@
 #include "common/log.hpp"
 #include "common/utility.h"
 #include "common/frequency_meter.h"
-#include "common/timer.h"
 
 namespace lseb {
 
@@ -37,7 +36,7 @@ ReadoutUnit::ReadoutUnit(
       m_pending_local_iov(0) {
 }
 
-void ReadoutUnit::operator()() {
+void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
 
   int const required_multievents = m_endpoints.size();
   std::vector<int> id_sequence = create_sequence(m_id, required_multievents);
@@ -77,103 +76,103 @@ void ReadoutUnit::operator()() {
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
-  Timer t_ctrl;
-  Timer t_send;
-  Timer t_release;
+  std::chrono::high_resolution_clock::time_point t_tot =
+    std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point t_start;
+  double active_time = 0;
 
-  while (true) {
+  while (!(*stop)) {
+
+    bool active_flag = false;
+    t_start = std::chrono::high_resolution_clock::now();
 
     // Release
-    t_release.start();
     std::vector<void*> wr_to_release;
+    bool all_conn_avail = true;
     for (auto id : id_sequence) {
-      bool available = false;
-      do {
-        std::vector<void*> completed_wr;
-        if (id != m_id) {
-          auto& conn = *(m_connection_ids.at(id));
-          completed_wr = conn.pop_completed();
-          available = (conn.pending() != m_credits);
-        } else {
-          iovec iov;
-          while (m_free_local_queue.pop(iov)) {
-            completed_wr.push_back(iov.iov_base);
-            --m_pending_local_iov;
-            assert(
-              m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
-          }
-          available = (m_pending_local_iov != m_credits);
+      std::vector<void*> completed_wr;
+      if (id != m_id) {
+        auto& conn = *(m_connection_ids.at(id));
+        completed_wr = conn.pop_completed();
+        all_conn_avail = (conn.pending() != m_credits) && all_conn_avail;
+      } else {
+        iovec iov;
+        while (m_free_local_queue.pop(iov)) {
+          completed_wr.push_back(iov.iov_base);
+          --m_pending_local_iov;
+          assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
-        if (!completed_wr.empty()) {
-          wr_to_release.insert(
-            std::end(wr_to_release),
-            std::begin(completed_wr),
-            std::end(completed_wr));
-          LOG(DEBUG)
-            << "Readout Unit - Completed "
-            << completed_wr.size()
-            << " iov to conn "
-            << id;
-        }
-      } while (!available);
+        all_conn_avail = (m_pending_local_iov != m_credits) && all_conn_avail;
+      }
+      if (!completed_wr.empty()) {
+        active_flag = true;
+        wr_to_release.insert(
+          std::end(wr_to_release),
+          std::begin(completed_wr),
+          std::end(completed_wr));
+        LOG(DEBUG)
+          << "Readout Unit - Completed "
+          << completed_wr.size()
+          << " iov to conn "
+          << id;
+      }
     }
     if (!wr_to_release.empty()) {
       m_accumulator.release_multievents(wr_to_release);
     }
-    t_release.pause();
 
-    // Acquire
-    t_ctrl.start();
-    std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
-    t_ctrl.pause();
+    if (all_conn_avail) {
+      // Acquire
+      std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
 
-    // Send
-    if (!iov_to_send.empty()) {
-      assert(iov_to_send.size() == required_multievents);
-      t_send.start();
-      for (auto id : id_sequence) {
-        auto& iov = iov_to_send[id];
-        if (id != m_id) {
-          auto& conn = *(m_connection_ids.at(id));
-          assert(m_credits - conn.pending() != 0);
-          bandwith.add(conn.post_write(iov));
-        } else {
-          while (!m_ready_local_queue.push(iov)) {
-            ;
+      // Send
+      if (!iov_to_send.empty()) {
+        active_flag = true;
+        assert(iov_to_send.size() == required_multievents);
+        for (auto id : id_sequence) {
+          auto& iov = iov_to_send[id];
+          if (id != m_id) {
+            auto& conn = *(m_connection_ids.at(id));
+            assert(m_credits - conn.pending() != 0);
+            bandwith.add(conn.post_write(iov));
+          } else {
+            while (!m_ready_local_queue.push(iov)) {
+              ;
+            }
+            ++m_pending_local_iov;
+            assert(
+              m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
           }
-          ++m_pending_local_iov;
-          assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
+          LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
         }
-        LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
+        frequency.add(required_multievents * m_bulk_size);
       }
-      t_send.pause();
-      frequency.add(required_multievents * m_bulk_size);
+    }
+
+    if(active_flag){
+      active_time += std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - t_start).count();
     }
 
     if (frequency.check()) {
+
+      double tot_time = std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now() - t_tot).count();
+
       LOG(NOTICE)
         << "Readout Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
         << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s";
-
-      LOG(INFO)
-        << "Times:\n"
-        << "\tt_ctrl: "
-        << t_ctrl.rate()
-        << "%\n"
-        << "\tt_release: "
-        << t_release.rate()
-        << "%\n"
-        << "\tt_send: "
-        << t_send.rate()
-        << "%";
-      t_ctrl.reset();
-      t_release.reset();
-      t_send.reset();
+        << " Gb/s - "
+        << active_time / tot_time * 100.
+        << " %";
+      active_time = 0;
+      t_tot = std::chrono::high_resolution_clock::now();
     }
   }
+
+  LOG(INFO) << "Readout Unit: exiting";
 }
 
 }
