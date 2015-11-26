@@ -138,7 +138,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   // Connections
 
   Acceptor<RecvSocket> acceptor(m_credits);
-
+/*
   bool ep_created = false;
   while (!ep_created) {
     try {
@@ -149,6 +149,9 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
+*/
+
+  acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
 
