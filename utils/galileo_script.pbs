@@ -3,7 +3,7 @@
 ##PBS -M matteo.manzali@cnaf.infn.it
 ##PBS -m e
 
-#PBS -l select=1:ncpus=16:nmics=1,walltime=2:30:00
+#PBS -l select=1:ncpus=16:nmics=1,walltime=2:00:00
 #PBS -A INF14_LHCb_0
 
 #PBS -N test
