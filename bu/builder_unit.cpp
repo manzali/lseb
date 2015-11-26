@@ -2,6 +2,8 @@
 #include <string>
 #include <algorithm>
 #include <map>
+#include <thread>
+#include <chrono>
 
 #include "common/frequency_meter.h"
 #include "common/log.hpp"
@@ -136,7 +138,17 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   // Connections
 
   Acceptor<RecvSocket> acceptor(m_credits);
-  acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
+
+  bool ep_created = false;
+  while (!ep_created) {
+    try {
+      acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
+      ep_created = true;
+    } catch (std::exception& e) {
+      LOG(WARNING) << "Builder Unit - Error on listen ... Retrying!";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
 
