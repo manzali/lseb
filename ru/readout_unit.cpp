@@ -60,8 +60,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
             std::distance(std::begin(data_range), std::end(data_range)));
           connected = true;
         } catch (std::exception& e) {
-          LOG(WARNING) << "Readout Unit - Error on connect ... Retrying!";
-          std::this_thread::sleep_for(std::chrono::seconds(1));
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
       }
       LOG(NOTICE)
