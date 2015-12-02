@@ -2,8 +2,11 @@
 #define TRANSPORT_TCP_CONNECTOR_TCP_H
 
 #include <type_traits>
+#include <thread>
+#include <chrono>
 
 #include <boost/asio.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 #include "common/utility.h"
 
@@ -15,9 +18,23 @@ template<typename T>
 class Connector {
 
   boost::asio::io_service m_io_service;
+  boost::asio::deadline_timer m_timer;
+  std::thread m_thread;
 
  public:
-  Connector(int credits) {
+  Connector(int credits):
+  m_io_service(),
+  m_timer(m_io_service) {
+    m_timer.expires_at(boost::posix_time::pos_infin);
+    m_timer.async_wait(
+      [this](const boost::system::error_code &ec) {std::cout << "TIMER EXPIRED!\n";});
+    m_thread = std::thread([&]() {m_io_service.run();});
+  }
+
+  ~Connector() {
+    m_timer.cancel();
+    m_io_service.stop();
+    m_thread.join();
   }
 
   std::unique_ptr<T> connect(std::string const& hostname, std::string const& port) {
