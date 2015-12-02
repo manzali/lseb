@@ -8,50 +8,43 @@ namespace lseb {
 
 SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
-      m_socket_ptr(std::move(socket_ptr)) {
-}
-
-void SendSocket::register_memory(void* buffer, size_t size) {
+      m_socket_ptr(std::move(socket_ptr)),
+      m_pending(0) {
 }
 
 std::vector<void*> SendSocket::pop_completed() {
   std::vector<void*> vect;
-  for(auto const& iov : m_iov_vect){
-    vect.push_back(iov.iov_base);
+  std::pair<iovec, bool> p = m_shared_queue.pop_no_wait();
+  while (p.second) {
+    m_pending--;
+    vect.push_back(p.first.iov_base);
+    p = m_shared_queue.pop_no_wait();
   }
-  m_iov_vect.clear();
   return vect;
 }
 
 size_t SendSocket::post_write(iovec const& iov) {
-  size_t bytes = iov.iov_len;
-  boost::system::error_code error;
-  boost::asio::write(
-    *m_socket_ptr,
-    boost::asio::buffer(&bytes, sizeof(bytes)),
-    boost::asio::transfer_all(),
-    error);
-  if (error) {
-    std::cout << "error on write 1\n";
-    throw boost::system::system_error(error);
-  }
   std::vector<boost::asio::const_buffer> buffers;
+  buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
-  boost::asio::write(
+
+  boost::asio::async_write(
     *m_socket_ptr,
     buffers,
-    boost::asio::transfer_all(),
-    error);
-  if (error) {
-    std::cout << "error on write 2\n";
-    throw boost::system::system_error(error);
-  }
-  m_iov_vect.push_back(iov);
-  return bytes;
+    [this, iov](boost::system::error_code const& error, size_t byte_transferred) {
+      if(error) {
+        std::cout << "Error on async_write: " << boost::system::system_error(error).what() << std::endl;
+        throw boost::system::system_error(error);
+      }
+      m_shared_queue.push(iov);
+      m_pending++;
+    });
+
+  return iov.iov_len;
 }
 
 int SendSocket::pending() {
-  return m_iov_vect.size();
+  return m_pending.load();
 }
 
 RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
@@ -59,54 +52,58 @@ RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
       m_socket_ptr(std::move(socket_ptr)) {
 }
 
-void RecvSocket::register_memory(void* buffer, size_t size) {
-}
-
-iovec RecvSocket::read_iov() {
-  assert(m_iov_vect.size());
-  iovec iov = m_iov_vect.back();
-  m_iov_vect.pop_back();
-  boost::system::error_code error;
-  size_t bytes;
-  boost::asio::read(
-    *m_socket_ptr,
-    boost::asio::buffer(&bytes, sizeof(bytes)),
-    boost::asio::transfer_all(),
-    error);
-  if (error) {
-    std::cout << "error on read 1\n";
-    throw boost::system::system_error(error);
-  }
-  boost::asio::read(
-    *m_socket_ptr,
-    boost::asio::buffer(iov.iov_base, bytes),
-    boost::asio::transfer_all(),
-    error);
-  if (error) {
-    std::cout << "error on read 2\n";
-    throw boost::system::system_error(error);
-  }
-  iov.iov_len = bytes;
-  return iov;
-}
-
 std::vector<iovec> RecvSocket::pop_completed() {
   std::vector<iovec> iov_vect;
-  boost::asio::socket_base::bytes_readable command(true);
-  m_socket_ptr->io_control(command);
-  while (command.get() && !m_iov_vect.empty()) {
-    iov_vect.push_back(read_iov());
-    m_socket_ptr->io_control(command);
+  std::pair<iovec, bool> p = m_shared_queue.pop_no_wait();
+  while (p.second) {
+    iov_vect.push_back(p.first);
+    p = m_shared_queue.pop_no_wait();
   }
   return iov_vect;
 }
 
 void RecvSocket::post_read(iovec const& iov) {
-  m_iov_vect.push_back(iov);
+  std::shared_ptr<size_t> p_len(new size_t);
+  boost::array<boost::asio::mutable_buffer, 2> buffers = { boost::asio::buffer(
+    p_len.get(),
+    sizeof(*p_len)), boost::asio::buffer(
+    boost::asio::buffer(iov.iov_base, iov.iov_len)) };
+
+  boost::asio::async_read(
+    *m_socket_ptr,
+    buffers,
+    boost::asio::transfer_at_least(sizeof(*p_len)),
+    [this, p_len, iov](boost::system::error_code const& error, size_t byte_transferred) {
+      if(error) {
+        std::cout << "Error on async_read: " << boost::system::system_error(error).what() << std::endl;
+        throw boost::system::system_error(error);
+      }
+
+      size_t len = *p_len;
+      assert(len <= iov.iov_len);
+      byte_transferred -= sizeof(len);
+      size_t remain = len - byte_transferred;
+      if(remain) {
+        boost::system::error_code error2;
+        boost::asio::read(
+            *m_socket_ptr,
+            boost::asio::buffer(static_cast<char*>(iov.iov_base) + byte_transferred, remain),
+            boost::asio::transfer_all(),
+            error2);
+
+        if(error2) {
+          std::cout << "Error on read: " << boost::system::system_error(error2).what() << std::endl;
+          throw boost::system::system_error(error2);
+        }
+        m_shared_queue.push( {iov.iov_base, len});
+      }
+    });
 }
 
 void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
-  m_iov_vect.insert(m_iov_vect.end(), iov_vect.begin(), iov_vect.end());
+  for (auto const& iov : iov_vect) {
+    post_read(iov);
+  }
 }
 
 std::string RecvSocket::peer_hostname() {
