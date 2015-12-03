@@ -91,7 +91,7 @@ void RecvSocket::post_read(iovec const& iov) {
       assert(remain >= 0);
       if(remain) {
         boost::system::error_code error2;
-        std::cout << "read...\n";
+        std::cout << "[" << iov.iov_base << "] read (waiting for " << remain << "bytes)...\n";
         size_t byte_transferred2 = boost::asio::read(
             *m_socket_ptr,
             boost::asio::buffer(static_cast<char*>(iov.iov_base) + byte_transferred, remain),
