@@ -84,7 +84,9 @@ void RecvSocket::post_read(iovec const& iov) {
       std::cout << "[" << iov.iov_base << "] async_read: received " << byte_transferred << " bytes\n";
 
       size_t len = *p_len;
-      assert(len > 0 && len <= iov.iov_len);
+
+      assert(len > 0);
+      assert(len <= iov.iov_len);
       assert(byte_transferred >= sizeof(len));
       byte_transferred -= sizeof(len);
       int remain = len - byte_transferred;
