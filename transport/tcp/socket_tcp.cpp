@@ -27,7 +27,7 @@ size_t SendSocket::post_write(iovec const& iov) {
   std::vector<boost::asio::const_buffer> buffers;
   buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
-  std::cout << "async_write...\n";
+  std::cout << "[" << iov.iov_base << "] async_write...\n";
   m_pending++;
   boost::asio::async_write(
     *m_socket_ptr,
@@ -71,7 +71,7 @@ void RecvSocket::post_read(iovec const& iov) {
     p_len.get(),
     sizeof(*p_len)), boost::asio::buffer(
     boost::asio::buffer(iov.iov_base, iov.iov_len)) };
-  std::cout << "async_read...\n";
+  std::cout << "[" << iov.iov_base << "] async_read...\n";
   boost::asio::async_read(
     *m_socket_ptr,
     buffers,
@@ -91,7 +91,7 @@ void RecvSocket::post_read(iovec const& iov) {
       assert(remain >= 0);
       if(remain) {
         boost::system::error_code error2;
-        std::cout << "[" << iov.iov_base << "] read (waiting for " << remain << "bytes)...\n";
+        std::cout << "[" << iov.iov_base << "] read (waiting for " << remain << " bytes)...\n";
         size_t byte_transferred2 = boost::asio::read(
             *m_socket_ptr,
             boost::asio::buffer(static_cast<char*>(iov.iov_base) + byte_transferred, remain),
