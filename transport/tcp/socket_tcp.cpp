@@ -27,7 +27,7 @@ size_t SendSocket::post_write(iovec const& iov) {
   std::vector<boost::asio::const_buffer> buffers;
   buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
-  //std::cout << "async_write...\n";
+  std::cout << "async_write...\n";
   m_pending++;
   boost::asio::async_write(
     *m_socket_ptr,
@@ -39,7 +39,7 @@ size_t SendSocket::post_write(iovec const& iov) {
       }
       assert(byte_transferred >= sizeof(iov.iov_len));
       assert(iov.iov_len == byte_transferred - sizeof(iov.iov_len));
-      //std::cout << "async_write: byte_transferred " << byte_transferred << std::endl;
+      std::cout << "[" << iov.iov_base << "] async_write: sent " << byte_transferred << " bytes\n";
       m_shared_queue.push(iov);
     });
 
@@ -71,7 +71,7 @@ void RecvSocket::post_read(iovec const& iov) {
     p_len.get(),
     sizeof(*p_len)), boost::asio::buffer(
     boost::asio::buffer(iov.iov_base, iov.iov_len)) };
-  //std::cout << "async_read...\n";
+  std::cout << "async_read...\n";
   boost::asio::async_read(
     *m_socket_ptr,
     buffers,
@@ -81,22 +81,23 @@ void RecvSocket::post_read(iovec const& iov) {
         std::cout << "Error on async_read: " << boost::system::system_error(error).what() << std::endl;
         throw boost::system::system_error(error);
       }
-      //std::cout << "async_read: byte_transferred " << byte_transferred << std::endl;
+      std::cout << "[" << iov.iov_base << "] async_read: received " << byte_transferred << " bytes\n";
 
       size_t len = *p_len;
-      assert(len <= iov.iov_len);
+      assert(len > 0 && len <= iov.iov_len);
       assert(byte_transferred >= sizeof(len));
       byte_transferred -= sizeof(len);
       int remain = len - byte_transferred;
       assert(remain >= 0);
       if(remain) {
         boost::system::error_code error2;
+        std::cout << "read...\n";
         size_t byte_transferred2 = boost::asio::read(
             *m_socket_ptr,
             boost::asio::buffer(static_cast<char*>(iov.iov_base) + byte_transferred, remain),
             boost::asio::transfer_all(),
             error2);
-        //std::cout << "read: byte_transferred " << byte_transferred2 << std::endl;
+        std::cout << "[" << iov.iov_base << "] read: received " << byte_transferred2 << " bytes\n";
         assert(remain == byte_transferred2);
         if(error2) {
           std::cout << "Error on read: " << boost::system::system_error(error2).what() << std::endl;
