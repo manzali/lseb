@@ -94,8 +94,8 @@ int main(int argc, char* argv[]) {
   }
 
   int const credits = configuration.get<int>("GENERAL.CREDITS");
-  if (credits <= 0) {
-    LOG(ERROR) << "Wrong CREDITS: " << credits;
+  if (credits < 2) {
+    LOG(ERROR) << "Wrong CREDITS: " << credits << " (at least 2)";
     return EXIT_FAILURE;
   }
 
