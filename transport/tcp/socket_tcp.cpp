@@ -49,10 +49,9 @@ void SendSocket::async_write(iovec const& iov) {
           async_write(iov);
         }
         else {
-
+          m_is_writing = false;
         }
         m_full_iovec_queue.push(iov);
-        m_is_writing = false;
     });
 }
 
