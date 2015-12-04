@@ -14,21 +14,21 @@ SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
 
 std::vector<void*> SendSocket::pop_completed() {
   std::vector<void*> vect;
-  std::pair<iovec, bool> p = m_shared_queue.pop_no_wait();
-  while (p.second) {
+  // Take lock
+  boost::mutex::scoped_lock lock(m_mutex);
+  while (!m_full_iovec_queue.empty()) {
+    vect.push_back(m_full_iovec_queue.front().iov_base);
+    m_full_iovec_queue.pop();
     m_pending--;
-    vect.push_back(p.first.iov_base);
-    p = m_shared_queue.pop_no_wait();
   }
   return vect;
 }
 
-size_t SendSocket::post_write(iovec const& iov) {
+void SendSocket::async_write(iovec const& iov) {
   std::vector<boost::asio::const_buffer> buffers;
   buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
 //std::cout << "[" << iov.iov_base << "] async_write...\n";
-  m_pending++;
   boost::asio::async_write(
     *m_socket_ptr,
     buffers,
@@ -40,14 +40,39 @@ size_t SendSocket::post_write(iovec const& iov) {
       assert(byte_transferred >= sizeof(iov.iov_len));
       assert(iov.iov_len == byte_transferred - sizeof(iov.iov_len));
       //std::cout << "[" << iov.iov_base << "] async_write: sent " << byte_transferred << " bytes\n";
-      m_shared_queue.push(iov);
-    });
 
+        // Take lock
+        boost::mutex::scoped_lock lock(m_mutex);
+        if(!m_free_iovec_queue.empty()) {
+          iovec iov = m_free_iovec_queue.front();
+          m_free_iovec_queue.pop();
+          async_write(iov);
+        }
+        else {
+
+        }
+        m_full_iovec_queue.push(iov);
+        m_is_writing = false;
+    });
+}
+
+
+size_t SendSocket::post_write(iovec const& iov) {
+  // Take lock
+  boost::mutex::scoped_lock lock(m_mutex);
+  ++m_pending;
+  if (!m_is_writing) {
+    m_is_writing = true;
+    async_write(iov);
+  }
+  else{
+    m_free_iovec_queue.push(iov);
+  }
   return iov.iov_len;
 }
 
 int SendSocket::pending() {
-  return m_pending.load();
+  return m_pending;
 }
 
 RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)

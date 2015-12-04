@@ -2,18 +2,23 @@
 #define TRANSPORT_TCP_SOCKET_TCP_H
 
 #include <atomic>
+#include <queue>
 
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
 #include "common/utility.h"
-#include "transport/tcp/shared_queue.h"
 
 namespace lseb {
 
 class SendSocket {
   std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
-  SharedQueue<iovec> m_shared_queue;
-  std::atomic<int> m_pending;
+  int m_pending;
+  boost::mutex m_mutex;
+  bool m_is_writing;
+  std::queue<iovec> m_free_iovec_queue;
+  std::queue<iovec> m_full_iovec_queue;
+  void async_write(iovec const& iov);
 
  public:
   SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr);
