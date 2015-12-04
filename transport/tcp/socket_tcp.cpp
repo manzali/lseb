@@ -67,7 +67,7 @@ std::vector<iovec> RecvSocket::pop_completed() {
 }
 
 void RecvSocket::async_read(iovec const& iov) {
-  m_is_reading++; // missing --
+  m_is_reading = 1;
   std::shared_ptr<iovec> p_iov(new iovec);
   p_iov->iov_base = iov.iov_base;
     boost::array<boost::asio::mutable_buffer, 2> buffers = { boost::asio::buffer(
@@ -109,14 +109,14 @@ void RecvSocket::async_read(iovec const& iov) {
         if(p.second){
           async_read(p.first);
         }
-        m_is_reading--;
+        m_is_reading = 0;
       });
     });
 }
 
 void RecvSocket::post_read(iovec const& iov) {
   m_empty_shared_queue.push(iov);
-  if(m_is_reading.load() == 0){
+  if(m_is_reading == 0){
     std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
     if(p.second){
       async_read(p.first);
