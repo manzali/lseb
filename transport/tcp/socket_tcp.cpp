@@ -106,10 +106,12 @@ void RecvSocket::async_read(iovec const& iov) {
         m_full_shared_queue.push(*p_iov);
 
         std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
-        if(p.second){
+        if(p.second) {
           async_read(p.first);
         }
-        m_is_reading = 0;
+        else {
+          m_is_reading = 0;
+        }
       });
     });
 }
