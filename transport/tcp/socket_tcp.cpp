@@ -58,10 +58,11 @@ RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
 
 std::vector<iovec> RecvSocket::pop_completed() {
   std::vector<iovec> iov_vect;
-  std::pair<iovec, bool> p = m_shared_queue.pop_no_wait();
-  while (p.second) {
-    iov_vect.push_back(p.first);
-    p = m_shared_queue.pop_no_wait();
+  // Take lock
+  boost::mutex::scoped_lock lock(m_mutex);
+  while (!m_full_iovec_queue.empty()) {
+    iov_vect.push_back(m_full_iovec_queue.front());
+    m_full_iovec_queue.pop();
   }
   return iov_vect;
 }
@@ -102,10 +103,10 @@ void RecvSocket::async_read(iovec const& iov) {
           throw boost::system::system_error(error);
         }
         //std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
-        m_shared_queue.push(*p_iov);
 
         // Take lock
         boost::mutex::scoped_lock lock(m_mutex);
+        m_full_iovec_queue.push(*p_iov);
         if(!m_free_iovec_queue.empty()){
           iovec iov = m_free_iovec_queue.front();
           m_free_iovec_queue.pop();

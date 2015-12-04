@@ -29,7 +29,7 @@ class RecvSocket {
   boost::mutex m_mutex;
   bool m_is_reading;
   std::queue<iovec> m_free_iovec_queue;
-  SharedQueue<iovec> m_shared_queue;
+  std::queue<iovec> m_full_iovec_queue;
   void async_read(iovec const& iov);
 
  public:
