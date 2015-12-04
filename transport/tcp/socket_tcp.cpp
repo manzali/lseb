@@ -27,7 +27,7 @@ size_t SendSocket::post_write(iovec const& iov) {
   std::vector<boost::asio::const_buffer> buffers;
   buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
-  std::cout << "[" << iov.iov_base << "] async_write...\n";
+//std::cout << "[" << iov.iov_base << "] async_write...\n";
   m_pending++;
   boost::asio::async_write(
     *m_socket_ptr,
@@ -39,7 +39,7 @@ size_t SendSocket::post_write(iovec const& iov) {
       }
       assert(byte_transferred >= sizeof(iov.iov_len));
       assert(iov.iov_len == byte_transferred - sizeof(iov.iov_len));
-      std::cout << "[" << iov.iov_base << "] async_write: sent " << byte_transferred << " bytes\n";
+      //std::cout << "[" << iov.iov_base << "] async_write: sent " << byte_transferred << " bytes\n";
       m_shared_queue.push(iov);
     });
 
@@ -74,7 +74,7 @@ void RecvSocket::async_read(iovec const& iov) {
     &(p_iov->iov_len),
     sizeof(p_iov->iov_len)), boost::asio::buffer(
     boost::asio::buffer(p_iov->iov_base, iov.iov_len)) };
-  std::cout << "[" << p_iov->iov_base << "] async_read (at least " << sizeof(p_iov->iov_len) << " bytes)...\n";
+  //std::cout << "[" << p_iov->iov_base << "] async_read (at least " << sizeof(p_iov->iov_len) << " bytes)...\n";
   boost::asio::async_read(
     *m_socket_ptr,
     buffers,
@@ -84,7 +84,7 @@ void RecvSocket::async_read(iovec const& iov) {
         std::cout << "Error on async_read: " << boost::system::system_error(error).what() << std::endl;
         throw boost::system::system_error(error);
       }
-      std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
+      //std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
 
       assert(p_iov->iov_len > 0);
       assert(byte_transferred >= sizeof(p_iov->iov_len));
@@ -92,7 +92,7 @@ void RecvSocket::async_read(iovec const& iov) {
       int remain = p_iov->iov_len - byte_transferred;
       assert(remain >= 0);
 
-      std::cout << "[" << p_iov->iov_base << "] async_read (exactly " << remain << " bytes)...\n";
+      //std::cout << "[" << p_iov->iov_base << "] async_read (exactly " << remain << " bytes)...\n";
       boost::asio::async_read(
         *m_socket_ptr,
         boost::asio::buffer(static_cast<char*>(p_iov->iov_base) + byte_transferred, remain),
@@ -102,7 +102,7 @@ void RecvSocket::async_read(iovec const& iov) {
           std::cout << "Error on async_read: " << boost::system::system_error(error).what() << std::endl;
           throw boost::system::system_error(error);
         }
-        std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
+        //std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
         m_full_shared_queue.push(*p_iov);
 
         std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
