@@ -53,21 +53,20 @@ int SendSocket::pending() {
 RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)),
-      m_is_reading(0) {
+      m_is_reading(false) {
 }
 
 std::vector<iovec> RecvSocket::pop_completed() {
   std::vector<iovec> iov_vect;
-  std::pair<iovec, bool> p = m_full_shared_queue.pop_no_wait();
+  std::pair<iovec, bool> p = m_shared_queue.pop_no_wait();
   while (p.second) {
     iov_vect.push_back(p.first);
-    p = m_full_shared_queue.pop_no_wait();
+    p = m_shared_queue.pop_no_wait();
   }
   return iov_vect;
 }
 
 void RecvSocket::async_read(iovec const& iov) {
-  m_is_reading = 1;
   std::shared_ptr<iovec> p_iov(new iovec);
   p_iov->iov_base = iov.iov_base;
     boost::array<boost::asio::mutable_buffer, 2> buffers = { boost::asio::buffer(
@@ -103,26 +102,31 @@ void RecvSocket::async_read(iovec const& iov) {
           throw boost::system::system_error(error);
         }
         //std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
-        m_full_shared_queue.push(*p_iov);
+        m_shared_queue.push(*p_iov);
 
-        std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
-        if(p.second) {
-          async_read(p.first);
+        // Take lock
+        boost::mutex::scoped_lock lock(m_mutex);
+        if(!m_free_iovec_queue.empty()){
+          iovec iov = m_free_iovec_queue.front();
+          m_free_iovec_queue.pop();
+          async_read(iov);
         }
-        else {
-          m_is_reading = 0;
+        else{
+          m_is_reading = false;
         }
       });
     });
 }
 
 void RecvSocket::post_read(iovec const& iov) {
-  m_empty_shared_queue.push(iov);
-  if(m_is_reading == 0){
-    std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
-    if(p.second){
-      async_read(p.first);
-    }
+  // Take lock
+  boost::mutex::scoped_lock lock(m_mutex);
+  if (!m_is_reading) {
+    m_is_reading = true;
+    async_read(iov);
+  }
+  else{
+    m_free_iovec_queue.push(iov);
   }
 }
 

@@ -26,9 +26,10 @@ class SendSocket {
 
 class RecvSocket {
   std::shared_ptr<boost::asio::ip::tcp::socket> m_socket_ptr;
-  std::atomic<int> m_is_reading;
-  SharedQueue<iovec> m_empty_shared_queue;
-  SharedQueue<iovec> m_full_shared_queue;
+  boost::mutex m_mutex;
+  bool m_is_reading;
+  std::queue<iovec> m_free_iovec_queue;
+  SharedQueue<iovec> m_shared_queue;
   void async_read(iovec const& iov);
 
  public:
