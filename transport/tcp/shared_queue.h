@@ -44,11 +44,6 @@ class SharedQueue {
     boost::mutex::scoped_lock lock(m_mutex);
     return m_queue.size();
   }
-
-  bool empty() const {
-    boost::mutex::scoped_lock lock(m_mutex);
-    return m_queue.empty();
-  }
 };
 
 #endif

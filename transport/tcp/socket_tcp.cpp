@@ -52,27 +52,29 @@ int SendSocket::pending() {
 
 RecvSocket::RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
-      m_socket_ptr(std::move(socket_ptr)) {
+      m_socket_ptr(std::move(socket_ptr)),
+      m_is_reading(0) {
 }
 
 std::vector<iovec> RecvSocket::pop_completed() {
   std::vector<iovec> iov_vect;
-  std::pair<iovec, bool> p = m_shared_queue.pop_no_wait();
+  std::pair<iovec, bool> p = m_full_shared_queue.pop_no_wait();
   while (p.second) {
     iov_vect.push_back(p.first);
-    p = m_shared_queue.pop_no_wait();
+    p = m_full_shared_queue.pop_no_wait();
   }
   return iov_vect;
 }
 
-void RecvSocket::post_read(iovec const& iov) {
+void RecvSocket::async_read(iovec const& iov) {
+  m_is_reading++; // missing --
   std::shared_ptr<iovec> p_iov(new iovec);
   p_iov->iov_base = iov.iov_base;
     boost::array<boost::asio::mutable_buffer, 2> buffers = { boost::asio::buffer(
     &(p_iov->iov_len),
     sizeof(p_iov->iov_len)), boost::asio::buffer(
     boost::asio::buffer(p_iov->iov_base, iov.iov_len)) };
-  std::cout << "[" << p_iov->iov_base << "] async_read...\n";
+  std::cout << "[" << p_iov->iov_base << "] async_read (at least " << sizeof(p_iov->iov_len) << " bytes)...\n";
   boost::asio::async_read(
     *m_socket_ptr,
     buffers,
@@ -84,29 +86,42 @@ void RecvSocket::post_read(iovec const& iov) {
       }
       std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
 
-      size_t len = p_iov->iov_len;
-      assert(len > 0);
-      assert(byte_transferred >= sizeof(len));
-      byte_transferred -= sizeof(len);
-      int remain = len - byte_transferred;
+      assert(p_iov->iov_len > 0);
+      assert(byte_transferred >= sizeof(p_iov->iov_len));
+      byte_transferred -= sizeof(p_iov->iov_len);
+      int remain = p_iov->iov_len - byte_transferred;
       assert(remain >= 0);
-      if(remain) {
-        boost::system::error_code error2;
-        std::cout << "[" << p_iov->iov_base << "] read (waiting for " << remain << " bytes)...\n";
-        size_t byte_transferred2 = boost::asio::read(
-            *m_socket_ptr,
-            boost::asio::buffer(static_cast<char*>(p_iov->iov_base) + byte_transferred, remain),
-            boost::asio::transfer_all(),
-            error2);
-        std::cout << "[" << p_iov->iov_base << "] read: received " << byte_transferred2 << " bytes\n";
-        assert(remain == byte_transferred2);
-        if(error2) {
-          std::cout << "Error on read: " << boost::system::system_error(error2).what() << std::endl;
-          throw boost::system::system_error(error2);
+
+      std::cout << "[" << p_iov->iov_base << "] async_read (exactly " << remain << " bytes)...\n";
+      boost::asio::async_read(
+        *m_socket_ptr,
+        boost::asio::buffer(static_cast<char*>(p_iov->iov_base) + byte_transferred, remain),
+        boost::asio::transfer_all(),
+        [this, p_iov](boost::system::error_code const& error, size_t byte_transferred) {
+        if(error) {
+          std::cout << "Error on async_read: " << boost::system::system_error(error).what() << std::endl;
+          throw boost::system::system_error(error);
         }
-      }
-      m_shared_queue.push( {p_iov->iov_base, len});
+        std::cout << "[" << p_iov->iov_base << "] async_read: received " << byte_transferred << " bytes\n";
+        m_full_shared_queue.push(*p_iov);
+
+        std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
+        if(p.second){
+          async_read(p.first);
+        }
+        m_is_reading--;
+      });
     });
+}
+
+void RecvSocket::post_read(iovec const& iov) {
+  m_empty_shared_queue.push(iov);
+  if(m_is_reading.load() == 0){
+    std::pair<iovec, bool> p = m_empty_shared_queue.pop_no_wait();
+    if(p.second){
+      async_read(p.first);
+    }
+  }
 }
 
 void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
