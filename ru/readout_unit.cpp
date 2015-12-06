@@ -94,11 +94,19 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     // Check for data to acquire
     std::pair<iovec, bool> p;
     p.second = true;
-    for (int i = iov_to_send.size(); i <= id && p.second; ++i) {
+    int old_size = iov_to_send.size();
+    for (int i = old_size; i <= id && p.second; ++i) {
       p = m_accumulator.get_multievent();
       if (p.second) {
         iov_to_send.push_back(p.first);
       }
+    }
+    if (iov_to_send.size() != old_size) {
+      active_flag = true;
+      LOG(DEBUG)
+        << "Readout Unit - Acquired "
+        << iov_to_send.size() - old_size
+        << " multievents";
     }
 
     // Check for completed wr
