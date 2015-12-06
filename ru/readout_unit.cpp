@@ -106,7 +106,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       if (id != m_id) {
         auto& conn = *(m_connection_ids.at(id));
         completed_wr = conn.pop_completed();
-        conn_avail = (conn.pending() != m_credits) && (seq_id == id);
+        conn_avail = (seq_id == id) ? (conn.pending() != m_credits) : conn_avail;
       } else {
         iovec iov;
         while (m_free_local_queue.pop(iov)) {
@@ -114,7 +114,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
           --m_pending_local_iov;
           assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
-        conn_avail = (m_pending_local_iov != m_credits) && (seq_id == id);
+        conn_avail = (seq_id == id) ? (m_pending_local_iov != m_credits) : conn_avail;
       }
       if (!completed_wr.empty()) {
          wr_to_release.insert(
