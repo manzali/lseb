@@ -84,11 +84,10 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
 
   while (!(*stop)) {
 
-    bool active_flag = false;
     t_start = std::chrono::high_resolution_clock::now();
-
-    int id = *seq_it;
+    bool active_flag = false;
     bool conn_avail = false;
+    int id = *seq_it;
 
     // Check for data to acquire
     std::pair<iovec, bool> p;

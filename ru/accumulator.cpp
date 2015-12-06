@@ -74,6 +74,8 @@ std::pair<iovec, bool> Accumulator::get_multievent() {
 
   m_generated_events -= m_events_in_multievent;
   m_current_metadata = std::end(multievent_metadata);
+
+  LOG(DEBUG) << "Accumulator - Acquired 1 multievent";
   }
   else {
     p.second = false;
@@ -114,6 +116,9 @@ void Accumulator::release_multievents(std::vector<void*> const& vect) {
     m_iov_multievents.erase(
       std::begin(m_iov_multievents),
       std::begin(m_iov_multievents) + multievents_to_release);
+
+    LOG(DEBUG) << "Accumulator - Released " << multievents_to_release
+               << " multievents";
   }
 }
 
