@@ -37,8 +37,7 @@ ReadoutUnit::ReadoutUnit(
 
 void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
 
-  int const required_multievents = m_endpoints.size();
-  std::vector<int> id_sequence = create_sequence(m_id, required_multievents);
+  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
