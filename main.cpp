@@ -134,8 +134,7 @@ int main(int argc, char* argv[]) {
     controller,
     metadata_range,
     data_range,
-    bulk_size,
-    endpoints.size());
+    bulk_size);
 
   /**************** Builder Unit and Readout Unit *****************/
 

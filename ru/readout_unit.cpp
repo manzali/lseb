@@ -80,6 +80,8 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   std::chrono::high_resolution_clock::time_point t_start;
   double active_time = 0;
 
+  std::vector<iovec> iov_to_send;
+
   while (!(*stop)) {
 
     bool active_flag = false;
@@ -121,11 +123,22 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     }
 
     if (all_conn_avail) {
+
       // Acquire
-      std::vector<iovec> iov_to_send = m_accumulator.get_multievents();
+      for (int i = iov_to_send.size(); i < m_endpoints.size(); ++i) {
+        std::pair<iovec, bool> p = m_accumulator.get_multievent();
+        if (p.second) {
+          iov_to_send.push_back(p.first);
+        }
+        else {
+          break;
+        }
+      }
+
+      assert(iov_to_send.size() <= m_endpoints.size());
 
       // Send
-      if (!iov_to_send.empty()) {
+      if (iov_to_send.size() == m_endpoints.size()) {
         active_flag = true;
         assert(iov_to_send.size() == required_multievents);
         for (auto id : id_sequence) {
@@ -145,6 +158,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
           LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
         }
         frequency.add(required_multievents * m_bulk_size);
+        iov_to_send.clear();
       }
     }
 
