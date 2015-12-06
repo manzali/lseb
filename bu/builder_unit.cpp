@@ -247,6 +247,6 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     }
   }
 
-  LOG(INFO) << "Readout Unit: exiting";
+  LOG(INFO) << "Builder Unit: exiting";
 }
 }

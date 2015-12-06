@@ -118,7 +118,7 @@ void Accumulator::release_multievents(std::vector<void*> const& vect) {
       std::begin(m_iov_multievents) + multievents_to_release);
 
     LOG(DEBUG) << "Accumulator - Released " << multievents_to_release
-               << " multievents";
+               << " contiguous multievents";
   }
 }
 
