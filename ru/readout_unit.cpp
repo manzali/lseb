@@ -153,7 +153,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
           m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
       }
       LOG(DEBUG) << "Readout Unit - Writing iov to conn " << id;
-      frequency.add(required_multievents * m_bulk_size);
+      frequency.add(m_bulk_size);
 
       // Increment seq_it and check for end of a cycle
       if (++seq_it == std::end(id_sequence)) {
