@@ -9,7 +9,8 @@ namespace lseb {
 SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
     :
       m_socket_ptr(std::move(socket_ptr)),
-      m_pending(0) {
+      m_pending(0),
+      m_is_writing(false) {
 }
 
 std::vector<void*> SendSocket::pop_completed() {
@@ -28,7 +29,7 @@ void SendSocket::async_write(iovec const& iov) {
   std::vector<boost::asio::const_buffer> buffers;
   buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
-//std::cout << "[" << iov.iov_base << "] async_write...\n";
+  //std::cout << "[" << iov.iov_base << "] async_write...\n";
   boost::asio::async_write(
     *m_socket_ptr,
     buffers,
