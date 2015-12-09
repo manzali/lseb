@@ -124,7 +124,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
          LOG(DEBUG)
            << "Readout Unit - Completed "
            << completed_wr.size()
-           << " wrs to conn "
+           << " wrs of conn "
            << id;
        }
     }

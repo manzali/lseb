@@ -201,7 +201,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     for (auto id : id_sequence) {
       int read_wrs = read_data(id);
       if (read_wrs) {
-        LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs to conn " << id;
+        LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs from conn " << id;
         active_flag = true;
       }
       int const current_wrs = m_data_vect[id].size();
@@ -219,7 +219,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
         if (id != m_endpoints.size() - 1) {
           bandwith.add(bytes);
         }
-        LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs";
+        LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs of conn " << id;
       }
       frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
     }
