@@ -124,7 +124,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
          LOG(DEBUG)
            << "Readout Unit - Completed "
            << completed_wr.size()
-           << " iov to conn "
+           << " wrs to conn "
            << id;
        }
     }
@@ -151,7 +151,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
         assert(
           m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
       }
-      LOG(DEBUG) << "Readout Unit - Writing iov to conn " << seq_id;
+      LOG(DEBUG) << "Readout Unit - Written 1 wrs to conn " << seq_id;
       frequency.add(m_bulk_size);
 
       // Increment seq_it and check for end of a cycle

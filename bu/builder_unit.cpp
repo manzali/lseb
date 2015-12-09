@@ -201,7 +201,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     for (auto id : id_sequence) {
       int read_wrs = read_data(id);
       if (read_wrs) {
-        LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs";
+        LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs to conn " << id;
         active_flag = true;
       }
       int const current_wrs = m_data_vect[id].size();
