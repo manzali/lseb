@@ -94,15 +94,15 @@ int main(int argc, char* argv[]) {
   }
 
   int const credits = configuration.get<int>("GENERAL.CREDITS");
-  if (credits < 2) {
-    LOG(ERROR) << "Wrong CREDITS: " << credits << " (at least 2)";
+  if (credits < 1) {
+    LOG(ERROR) << "Wrong CREDITS: " << credits;
     return EXIT_FAILURE;
   }
 
   /************** Memory allocation ******************/
 
-  int const meta_size = sizeof(EventMetaData) * bulk_size * credits;
-  int const data_size = max_fragment_size * bulk_size * credits;
+  int const meta_size = sizeof(EventMetaData) * bulk_size * (credits * 2 + 1);
+  int const data_size = max_fragment_size * bulk_size * (credits * 2 + 1);
 
   std::unique_ptr<unsigned char[]> const metadata_ptr(
     new unsigned char[meta_size]);

@@ -71,6 +71,7 @@ size_t SendSocket::post_write(iovec const& iov) {
 }
 
 int SendSocket::pending() {
+  boost::mutex::scoped_lock lock(m_mutex);
   return m_pending;
 }
 
