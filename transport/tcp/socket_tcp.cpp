@@ -13,12 +13,12 @@ SendSocket::SendSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr)
       m_is_writing(false) {
 }
 
-std::vector<void*> SendSocket::pop_completed() {
-  std::vector<void*> vect;
+std::vector<iovec> SendSocket::pop_completed() {
+  std::vector<iovec> vect;
   // Take lock
   boost::mutex::scoped_lock lock(m_mutex);
   while (!m_full_iovec_queue.empty()) {
-    vect.push_back(m_full_iovec_queue.front().iov_base);
+    vect.push_back(m_full_iovec_queue.front());
     m_full_iovec_queue.pop();
     m_pending--;
   }
@@ -57,7 +57,7 @@ void SendSocket::async_send(iovec const& iov) {
 }
 
 
-size_t SendSocket::post_send(iovec const& iov) {
+void SendSocket::post_send(iovec const& iov) {
   // Take lock
   boost::mutex::scoped_lock lock(m_mutex);
   ++m_pending;
@@ -68,7 +68,6 @@ size_t SendSocket::post_send(iovec const& iov) {
   else{
     m_free_iovec_queue.push(iov);
   }
-  return iov.iov_len;
 }
 
 int SendSocket::pending() {

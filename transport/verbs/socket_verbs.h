@@ -21,8 +21,8 @@ class SendSocket {
  public:
   SendSocket(rdma_cm_id* cm_id, int credits);
   void register_memory(void* buffer, size_t size);
-  std::vector<void*> pop_completed();
-  size_t post_send(iovec const& iov);
+  std::vector<iovec> pop_completed();
+  void post_send(iovec const& iov);
   int pending();
 
   static ibv_qp_init_attr create_qp_attr(int credits) {

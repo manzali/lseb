@@ -20,15 +20,15 @@ void SendSocket::register_memory(void* buffer, size_t size) {
   }
 }
 
-std::vector<void*> SendSocket::pop_completed() {
+std::vector<iovec> SendSocket::pop_completed() {
 
   std::vector<ibv_wc> wcs(m_credits);
-  std::vector<void*> vect;
   int ret = ibv_poll_cq(m_cm_id->send_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw std::runtime_error(
       "Error on ibv_poll_cq: " + std::string(strerror(ret)));
   }
+  std::vector<iovec> vect;
   for (auto wcs_it = std::begin(wcs); wcs_it != std::begin(wcs) + ret;
       ++wcs_it) {
     if (wcs_it->status) {
@@ -36,17 +36,18 @@ std::vector<void*> SendSocket::pop_completed() {
         "Error status in wc of send_cq: " + std::string(
           ibv_wc_status_str(wcs_it->status)));
     }
-
-    vect.push_back(reinterpret_cast<void*>(wcs_it->wr_id));
-    if (!m_wrs_size.erase(reinterpret_cast<void*>(wcs_it->wr_id))) {
+    auto map_it = m_wrs_size.find(reinterpret_cast<void*>(wcs_it->wr_id));
+    if (map_it == std::end(m_wrs_size)){
       throw std::runtime_error("Error on erase: key element not exists");
     }
+    vect.push_back( {map_it->first, map_it->second});
+    m_wrs_size.erase(map_it);
   }
 
   return vect;
 }
 
-size_t SendSocket::post_send(iovec const& iov) {
+void SendSocket::post_send(iovec const& iov) {
 
   ibv_sge sge;
   sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
@@ -73,8 +74,6 @@ size_t SendSocket::post_send(iovec const& iov) {
    if (!p.second) {
      throw std::runtime_error("Error on insert: key element already exists");
    }
-
-  return iov.iov_len;
 }
 
 int SendSocket::pending() {

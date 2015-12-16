@@ -100,9 +100,9 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     }
 
     // Check for completed wr (in all connections)
-    std::vector<void*> wr_to_release;
+    std::vector<iovec> wr_to_release;
     for (auto id : id_sequence) {
-      std::vector<void*> completed_wr;
+      std::vector<iovec> completed_wr;
       if (id != m_id) {
         auto& conn = *(m_connection_ids.at(id));
         completed_wr = conn.pop_completed();
@@ -110,7 +110,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       } else {
         iovec iov;
         while (m_free_local_queue.pop(iov)) {
-          completed_wr.push_back(iov.iov_base);
+          completed_wr.push_back(iov);
           --m_pending_local_iov;
           assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
@@ -130,9 +130,10 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     }
 
     // Release completed wr
-    if (!wr_to_release.empty()) {
+    for (auto const& wr : wr_to_release) {
       active_flag = true;
-      m_accumulator.release_multievents(wr_to_release);
+      m_accumulator.release_multievent(wr.iov_base);
+      bandwith.add(wr.iov_len);
     }
 
     // If there are free resources for this connection and ready data, send it
@@ -142,7 +143,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       if (seq_id != m_id) {
         auto& conn = *(m_connection_ids.at(seq_id));
         assert(m_credits - conn.pending() != 0);
-        bandwith.add(conn.post_send(iov));
+        conn.post_send(iov);
       } else {
         while (!m_ready_local_queue.push(iov)) {
           ;

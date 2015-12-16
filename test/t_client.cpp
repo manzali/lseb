@@ -64,12 +64,13 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(5.0);
 
   while (true) {
-    std::vector<void*> vect = socket->pop_completed();
+    std::vector<iovec> vect = socket->pop_completed();
     for (auto& iov : vect) {
-      pool.free({iov, chunk_size});
+      bandwith.add(iov.iov_len);
+      pool.free({iov.iov_base, chunk_size});
     }
     if (socket->pending() != credits) {
-      bandwith.add(socket->post_send(pool.alloc()));
+      socket->post_send(pool.alloc());
     }
     if (bandwith.check()) {
       std::cout

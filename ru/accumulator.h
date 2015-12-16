@@ -21,6 +21,7 @@ class Accumulator {
   MetaDataRange::iterator m_release_metadata;
 
   bool checkDataWrap(MetaDataRange multievent_metadata);
+  int releaseContiguousMemory();
 
  public:
   Accumulator(
@@ -29,6 +30,7 @@ class Accumulator {
     DataRange const& data_range,
     int events_in_multievent);
   std::pair<iovec, bool> get_multievent();
+  void release_multievent(void* addr);
   void release_multievents(std::vector<void*> const& vect);
   DataRange data_range() {
     return m_data_range;
