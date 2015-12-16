@@ -22,7 +22,7 @@ class SendSocket {
   SendSocket(rdma_cm_id* cm_id, int credits);
   void register_memory(void* buffer, size_t size);
   std::vector<void*> pop_completed();
-  size_t post_write(iovec const& iov);
+  size_t post_send(iovec const& iov);
   int pending();
 
   static ibv_qp_init_attr create_qp_attr(int credits) {
@@ -48,8 +48,8 @@ class RecvSocket {
   RecvSocket(rdma_cm_id* cm_id, int credits);
   void register_memory(void* buffer, size_t size);
   std::vector<iovec> pop_completed();
-  void post_read(iovec const& iov);
-  void post_read(std::vector<iovec> const& iov_vect);
+  void post_recv(iovec const& iov);
+  void post_recv(std::vector<iovec> const& iov_vect);
   std::string peer_hostname();
 
   static ibv_qp_init_attr create_qp_attr(int credits) {

@@ -46,7 +46,7 @@ std::vector<void*> SendSocket::pop_completed() {
   return vect;
 }
 
-size_t SendSocket::post_write(iovec const& iov) {
+size_t SendSocket::post_send(iovec const& iov) {
 
   ibv_sge sge;
   sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
@@ -119,11 +119,11 @@ std::vector<iovec> RecvSocket::pop_completed() {
   return iov_vect;
 }
 
-void RecvSocket::post_read(iovec const& iov) {
-  post_read(std::vector<iovec>(1, iov));
+void RecvSocket::post_recv(iovec const& iov) {
+  post_recv(std::vector<iovec>(1, iov));
 }
 
-void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
+void RecvSocket::post_recv(std::vector<iovec> const& iov_vect) {
 
   std::vector<std::pair<ibv_recv_wr, ibv_sge> > wrs(iov_vect.size());
 
