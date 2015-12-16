@@ -35,15 +35,15 @@ class RecvSocket {
   bool m_is_reading;
   std::queue<iovec> m_free_iovec_queue;
   std::queue<iovec> m_full_iovec_queue;
-  void async_read(iovec const& iov);
+  void async_recv(iovec const& iov);
 
  public:
   RecvSocket(std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr);
   void register_memory(void* buffer, size_t size) {
   }
   std::vector<iovec> pop_completed();
-  void post_read(iovec const& iov);
-  void post_read(std::vector<iovec> const& iov_vect);
+  void post_recv(iovec const& iov);
+  void post_recv(std::vector<iovec> const& iov_vect);
   std::string peer_hostname();
 };
 

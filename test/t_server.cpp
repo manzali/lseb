@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
   FrequencyMeter bandwith(5.0);
 
   while (!pool.empty()) {
-    socket->post_read(pool.alloc());
+    socket->post_recv(pool.alloc());
   }
 
   while (true) {
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     }
     bandwith.add(iovec_length(vect));
     if (!pool.empty()) {
-      socket->post_read(pool.alloc());
+      socket->post_recv(pool.alloc());
     }
     if (bandwith.check()) {
       std::cout

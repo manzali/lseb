@@ -93,7 +93,7 @@ std::vector<iovec> RecvSocket::pop_completed() {
   return iov_vect;
 }
 
-void RecvSocket::async_read(iovec const& iov) {
+void RecvSocket::async_recv(iovec const& iov) {
   std::shared_ptr<iovec> p_iov(new iovec);
   p_iov->iov_base = iov.iov_base;
     boost::array<boost::asio::mutable_buffer, 2> buffers = { boost::asio::buffer(
@@ -136,7 +136,7 @@ void RecvSocket::async_read(iovec const& iov) {
         if(!m_free_iovec_queue.empty()){
           iovec iov = m_free_iovec_queue.front();
           m_free_iovec_queue.pop();
-          async_read(iov);
+          async_recv(iov);
         }
         else{
           m_is_reading = false;
@@ -145,21 +145,21 @@ void RecvSocket::async_read(iovec const& iov) {
     });
 }
 
-void RecvSocket::post_read(iovec const& iov) {
+void RecvSocket::post_recv(iovec const& iov) {
   // Take lock
   boost::mutex::scoped_lock lock(m_mutex);
   if (!m_is_reading) {
     m_is_reading = true;
-    async_read(iov);
+    async_recv(iov);
   }
   else{
     m_free_iovec_queue.push(iov);
   }
 }
 
-void RecvSocket::post_read(std::vector<iovec> const& iov_vect) {
+void RecvSocket::post_recv(std::vector<iovec> const& iov_vect) {
   for (auto const& iov : iov_vect) {
-    post_read(iov);
+    post_recv(iov);
   }
 }
 

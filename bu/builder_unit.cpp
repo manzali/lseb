@@ -112,7 +112,7 @@ size_t BuilderUnit::release_data(int id, int n) {
     for (auto& iov : sub_vect) {
       iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
     }
-    conn.post_read(sub_vect);
+    conn.post_recv(sub_vect);
   } else {
     for (auto& iov : sub_vect) {
       while (!m_free_local_queue.push(iov)) {
@@ -175,7 +175,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     for (int j = 0; j < m_credits; ++j) {
       iov_vect.push_back( { base_data_ptr + j * chunk_size, chunk_size });
     }
-    conn.post_read(iov_vect);
+    conn.post_recv(iov_vect);
 
     LOG(NOTICE)
       << "Builder Unit - Connection established with ip "
