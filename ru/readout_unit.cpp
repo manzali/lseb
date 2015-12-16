@@ -100,40 +100,41 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
     }
 
     // Check for completed wr (in all connections)
-    std::vector<iovec> wr_to_release;
+    std::vector<void*> wr_to_release;
     for (auto id : id_sequence) {
-      std::vector<iovec> completed_wr;
+      int count = 0;
       if (id != m_id) {
         auto& conn = *(m_connection_ids.at(id));
-        completed_wr = conn.pop_completed();
+        std::vector<iovec> completed_wr = conn.pop_completed();
+        for (auto const& wr : completed_wr) {
+          bandwith.add(wr.iov_len);
+          wr_to_release.push_back(wr.iov_base);
+        }
+        count = completed_wr.size();
         conn_avail = (seq_id == id) ? (conn.pending() != m_credits) : conn_avail;
       } else {
         iovec iov;
         while (m_free_local_queue.pop(iov)) {
-          completed_wr.push_back(iov);
+          wr_to_release.push_back(iov.iov_base);
+          ++count;
           --m_pending_local_iov;
           assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
         conn_avail = (seq_id == id) ? (m_pending_local_iov != m_credits) : conn_avail;
       }
-      if (!completed_wr.empty()) {
-         wr_to_release.insert(
-           std::end(wr_to_release),
-           std::begin(completed_wr),
-           std::end(completed_wr));
+      if (!count) {
          LOG(DEBUG)
            << "Readout Unit - Completed "
-           << completed_wr.size()
+           << count
            << " wrs of conn "
            << id;
        }
     }
 
     // Release completed wr
-    for (auto const& wr : wr_to_release) {
+    if (!wr_to_release.empty()) {
       active_flag = true;
-      m_accumulator.release_multievent(wr.iov_base);
-      bandwith.add(wr.iov_len);
+      m_accumulator.release_multievents(wr_to_release);
     }
 
     // If there are free resources for this connection and ready data, send it
