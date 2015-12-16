@@ -38,7 +38,7 @@ std::vector<void*> SendSocket::pop_completed() {
     }
 
     vect.push_back(reinterpret_cast<void*>(wcs_it->wr_id));
-    if (!m_wrs_size.erase(wcs_it->wr_id)) {
+    if (!m_wrs_size.erase(reinterpret_cast<void*>(wcs_it->wr_id))) {
       throw std::runtime_error("Error on erase: key element not exists");
     }
   }
