@@ -1,6 +1,8 @@
 #ifndef TRANSPORT_VERBS_SOCKET_VERBS_H
 #define TRANSPORT_VERBS_SOCKET_VERBS_H
 
+#include <map>
+
 #include <cstring>
 
 #include <infiniband/verbs.h>
@@ -14,7 +16,7 @@ class SendSocket {
   rdma_cm_id* m_cm_id;
   ibv_mr* m_mr;
   int m_credits;
-  int m_counter;
+  std::map<void*, size_t> m_wrs_size;
 
  public:
   SendSocket(rdma_cm_id* cm_id, int credits);

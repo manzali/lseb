@@ -9,8 +9,7 @@ SendSocket::SendSocket(rdma_cm_id* cm_id, int credits)
     :
       m_cm_id(cm_id),
       m_mr(nullptr),
-      m_credits(credits),
-      m_counter(0) {
+      m_credits(credits) {
 }
 
 void SendSocket::register_memory(void* buffer, size_t size) {
@@ -37,8 +36,11 @@ std::vector<void*> SendSocket::pop_completed() {
         "Error status in wc of send_cq: " + std::string(
           ibv_wc_status_str(wcs_it->status)));
     }
-    --m_counter;
+
     vect.push_back(reinterpret_cast<void*>(wcs_it->wr_id));
+    if (!m_wrs_size.erase(wcs_it->wr_id)) {
+      throw std::runtime_error("Error on erase: key element not exists");
+    }
   }
 
   return vect;
@@ -46,7 +48,6 @@ std::vector<void*> SendSocket::pop_completed() {
 
 size_t SendSocket::post_write(iovec const& iov) {
 
-  size_t bytes_sent = iov.iov_len;
   ibv_sge sge;
   sge.addr = reinterpret_cast<uint64_t>(iov.iov_base);
   sge.length = iov.iov_len;
@@ -59,7 +60,6 @@ size_t SendSocket::post_write(iovec const& iov) {
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = 0;
-  ++m_counter;
 
   ibv_send_wr* bad_wr;
   int ret = ibv_post_send(m_cm_id->qp, &wr, &bad_wr);
@@ -68,11 +68,17 @@ size_t SendSocket::post_write(iovec const& iov) {
       "Error on ibv_post_send: " + std::string(strerror(ret)));
   }
 
-  return bytes_sent;
+  auto p = m_wrs_size.insert(
+      std::pair<void*, size_t>(iov.iov_base, iov.iov_len));
+   if (!p.second) {
+     throw std::runtime_error("Error on insert: key element already exists");
+   }
+
+  return iov.iov_len;
 }
 
 int SendSocket::pending() {
-  return m_counter;
+  return m_wrs_size.size();
 }
 
 RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
