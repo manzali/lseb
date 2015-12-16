@@ -142,7 +142,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       if (seq_id != m_id) {
         auto& conn = *(m_connection_ids.at(seq_id));
         assert(m_credits - conn.pending() != 0);
-        bandwith.add(conn.post_write(iov));
+        bandwith.add(conn.post_send(iov));
       } else {
         while (!m_ready_local_queue.push(iov)) {
           ;

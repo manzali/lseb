@@ -25,7 +25,7 @@ std::vector<void*> SendSocket::pop_completed() {
   return vect;
 }
 
-void SendSocket::async_write(iovec const& iov) {
+void SendSocket::async_send(iovec const& iov) {
   std::vector<boost::asio::const_buffer> buffers;
   buffers.push_back(boost::asio::buffer(&iov.iov_len, sizeof(iov.iov_len)));
   buffers.push_back(boost::asio::buffer(iov.iov_base, iov.iov_len));
@@ -47,7 +47,7 @@ void SendSocket::async_write(iovec const& iov) {
         if(!m_free_iovec_queue.empty()) {
           iovec iov = m_free_iovec_queue.front();
           m_free_iovec_queue.pop();
-          async_write(iov);
+          async_send(iov);
         }
         else {
           m_is_writing = false;
@@ -57,13 +57,13 @@ void SendSocket::async_write(iovec const& iov) {
 }
 
 
-size_t SendSocket::post_write(iovec const& iov) {
+size_t SendSocket::post_send(iovec const& iov) {
   // Take lock
   boost::mutex::scoped_lock lock(m_mutex);
   ++m_pending;
   if (!m_is_writing) {
     m_is_writing = true;
-    async_write(iov);
+    async_send(iov);
   }
   else{
     m_free_iovec_queue.push(iov);
