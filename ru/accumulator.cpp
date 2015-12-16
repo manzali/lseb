@@ -109,18 +109,6 @@ int Accumulator::releaseContiguousMemory() {
   return multievents_to_release;
 }
 
-void Accumulator::release_multievent(void* addr) {
-  auto it =
-    std::find_if(
-      std::begin(m_iov_multievents),
-      std::end(m_iov_multievents),
-      [&addr] (std::pair<void*, bool> const& p) {return p.first == addr;});
-  assert(it != std::end(m_iov_multievents));
-  assert(it->second == false);
-  it->second = true;
-  releaseContiguousMemory();
-}
-
 void Accumulator::release_multievents(std::vector<void*> const& vect) {
   for (auto& addr : vect) {
     auto it =
