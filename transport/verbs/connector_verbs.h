@@ -6,8 +6,6 @@
 #include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
 
-#include "common/utility.h"
-
 #include "transport/verbs/socket_verbs.h"
 
 namespace lseb {

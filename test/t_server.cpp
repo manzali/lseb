@@ -4,6 +4,7 @@
 
 #include "common/memory_pool.h"
 #include "common/frequency_meter.h"
+#include "common/utility.h"
 
 #include "transport/transport.h"
 

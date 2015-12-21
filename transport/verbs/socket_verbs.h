@@ -2,13 +2,12 @@
 #define TRANSPORT_VERBS_SOCKET_VERBS_H
 
 #include <map>
+#include <vector>
 
 #include <cstring>
 
 #include <infiniband/verbs.h>
 #include <rdma/rdma_verbs.h>
-
-#include "common/utility.h"
 
 namespace lseb {
 
