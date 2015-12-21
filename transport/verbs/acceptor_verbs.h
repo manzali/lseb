@@ -51,6 +51,10 @@ class Acceptor {
         m_cm_id(nullptr) {
   }
 
+  ~Acceptor() {
+    // To be filled
+  }
+
   void listen(std::string const& hostname, std::string const& port) {
     auto res = create_addr_info(hostname, port);
     auto attr = T::create_qp_attr(m_credits);

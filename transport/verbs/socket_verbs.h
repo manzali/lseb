@@ -20,6 +20,7 @@ class SendSocket {
 
  public:
   SendSocket(rdma_cm_id* cm_id, int credits);
+  ~SendSocket();
   void register_memory(void* buffer, size_t size);
   std::vector<iovec> pop_completed();
   void post_send(iovec const& iov);
@@ -46,6 +47,7 @@ class RecvSocket {
 
  public:
   RecvSocket(rdma_cm_id* cm_id, int credits);
+  ~RecvSocket();
   void register_memory(void* buffer, size_t size);
   std::vector<iovec> pop_completed();
   void post_recv(iovec const& iov);

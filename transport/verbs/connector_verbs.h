@@ -48,6 +48,10 @@ class Connector {
         m_credits(credits) {
   }
 
+  ~Connector() {
+    // To be filled
+  }
+
   std::unique_ptr<T> connect(std::string const& hostname, std::string const& port) {
     auto res = create_addr_info(hostname, port);
     auto attr = T::create_qp_attr(m_credits);

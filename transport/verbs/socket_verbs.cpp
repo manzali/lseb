@@ -12,6 +12,10 @@ SendSocket::SendSocket(rdma_cm_id* cm_id, int credits)
       m_credits(credits) {
 }
 
+SendSocket::~SendSocket() {
+  // To be filled
+}
+
 void SendSocket::register_memory(void* buffer, size_t size) {
   m_mr = rdma_reg_msgs(m_cm_id, buffer, size);
   if (!m_mr) {
@@ -86,6 +90,10 @@ RecvSocket::RecvSocket(rdma_cm_id* cm_id, int credits)
       m_mr(nullptr),
       m_credits(credits),
       m_init(false) {
+}
+
+RecvSocket::~RecvSocket() {
+  // To be filled
 }
 
 void RecvSocket::register_memory(void* buffer, size_t size) {
