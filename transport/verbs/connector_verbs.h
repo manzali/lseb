@@ -1,6 +1,8 @@
 #ifndef TRANSPORT_VERBS_CONNECTOR_VERBS_H
 #define TRANSPORT_VERBS_CONNECTOR_VERBS_H
 
+#include <memory>
+
 #include <type_traits>
 
 #include <infiniband/verbs.h>

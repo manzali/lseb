@@ -161,23 +161,23 @@ int main(int argc, char* argv[]) {
 
   std::shared_ptr<std::atomic<bool> > stop(new std::atomic<bool>(false));
 
-  sigset_t set;
-  sigfillset(&set);  // mask all signals
-  pthread_sigmask(SIG_SETMASK, &set, NULL);  // set mask
+  // sigset_t set;
+  // sigfillset(&set);  // mask all signals
+  // pthread_sigmask(SIG_SETMASK, &set, NULL);  // set mask
 
   std::thread bu_th(&BuilderUnit::operator(), &bu, stop);
   std::thread ru_th(&ReadoutUnit::operator(), &ru, stop);
 
-  sigemptyset(&set);
-  sigaddset(&set, SIGINT);
-  sigaddset(&set, SIGTERM);
+  // sigemptyset(&set);
+  // sigaddset(&set, SIGINT);
+  // sigaddset(&set, SIGTERM);
 
-  int sig_caught;
-  sigwait(&set, &sig_caught);
+  // int sig_caught;
+  // sigwait(&set, &sig_caught);
 
-  std::cout << "Received signal " << sig_caught << std::endl;
+  // std::cout << "Received signal " << sig_caught << std::endl;
 
-  *stop = true;
+  // *stop = true;
 
   bu_th.join();
   ru_th.join();
