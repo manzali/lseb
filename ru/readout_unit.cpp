@@ -35,7 +35,7 @@ ReadoutUnit::ReadoutUnit(
       m_pending_local_iov(0) {
 }
 
-void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
+void ReadoutUnit::operator()() {
 
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
@@ -82,7 +82,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   auto seq_it = std::begin(id_sequence);
   std::vector<iovec> iov_to_send;
 
-  while (!(*stop)) {
+  while (true) {
 
     t_start = std::chrono::high_resolution_clock::now();
     bool active_flag = false;

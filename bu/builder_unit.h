@@ -2,7 +2,6 @@
 #define BU_BUILDER_UNIT_H
 
 #include <map>
-#include <atomic>
 
 #include <sys/uio.h>
 
@@ -37,7 +36,7 @@ class BuilderUnit {
     int credits,
     int max_fragment_size,
     int id);
-  void operator()(std::shared_ptr<std::atomic<bool> > stop);
+  void operator()();
 };
 
 }

@@ -123,7 +123,7 @@ size_t BuilderUnit::release_data(int id, int n) {
   return bytes;
 }
 
-void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
+void BuilderUnit::operator()() {
 
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
@@ -137,19 +137,6 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   // Connections
 
   Acceptor<RecvSocket> acceptor(m_credits);
-/*
-  bool ep_created = false;
-  while (!ep_created) {
-    try {
-      acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
-      ep_created = true;
-    } catch (std::exception& e) {
-      LOG(WARNING) << "Builder Unit - Error on listen ... Retrying!";
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-  }
-*/
-
   acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
@@ -191,7 +178,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   std::chrono::high_resolution_clock::time_point t_active;
   double active_time = 0;
 
-  while (!(*stop)) {
+  while (true) {
 
     bool active_flag = false;
     t_active = std::chrono::high_resolution_clock::now();

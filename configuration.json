@@ -13,7 +13,7 @@
     "CREDITS": "20"
   },
   "ENDPOINTS":
-  [
+  {
     __ENDPOINTS__
-  ]
+  }
 }

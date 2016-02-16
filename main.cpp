@@ -6,7 +6,6 @@
 #include <boost/program_options.hpp>
 
 #include <cassert>
-#include <signal.h>
 
 #include "bu/builder_unit.h"
 #include "ru/readout_unit.h"
@@ -21,24 +20,27 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  int id;
   std::string str_conf;
+  std::string str_logdir;
+  std::string str_nodename;
 
   boost::program_options::options_description desc("Options");
 
   desc.add_options()("help,h", "Print help messages.")(
-    "id,i",
-    boost::program_options::value<int>(&id)->required(),
-    "Process ID.")(
-    "configuration,c",
-    boost::program_options::value<std::string>(&str_conf)->required(),
-    "Configuration JSON file.");
+      "configuration,c",
+      boost::program_options::value<std::string>(&str_conf)->required(),
+      "Configuration file in JSON")(
+      "logdir,l", boost::program_options::value<std::string>(&str_logdir),
+      "Log directory (default is standard output)")(
+      "nodename,n", boost::program_options::value<std::string>(&str_nodename),
+      "Node name (default is the hostname)");
 
   try {
     boost::program_options::variables_map vm;
     boost::program_options::store(
-      boost::program_options::command_line_parser(argc, argv).options(desc).run(),
-      vm);
+        boost::program_options::command_line_parser(argc, argv).options(desc)
+            .run(),
+        vm);
     if (vm.count("help")) {
       std::cout << desc << std::endl;
       return EXIT_SUCCESS;
@@ -49,39 +51,63 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Open configuration file
+
   std::ifstream f(str_conf);
   if (!f) {
     std::cerr << str_conf << ": No such file or directory\n";
     return EXIT_FAILURE;
   }
-
   Configuration configuration = read_configuration(f);
 
-  /*
-  std::ofstream log_file("/tmp/tridas_log.txt");
-  Log::init(
-    "LSEB",
-    Log::FromString(configuration.get<std::string>("LOG_LEVEL")),
-    log_file);
-*/
+  // Configure log
 
-  Log::init(
-    "LSEB",
-    Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
+  std::ofstream log_stream(str_logdir);
+  if (str_logdir.empty()) {
+    Log::init("LSEB",
+              Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
+  } else {
+    Log::init("LSEB",
+              Log::FromString(configuration.get<std::string>("LOG_LEVEL")),
+              log_stream);
+  }
 
   LOG(INFO) << configuration << std::endl;
 
+  // Check node name
+
+  if (str_nodename.empty()) {
+    str_nodename = boost::asio::ip::host_name();
+  }
+
+  LOG(NOTICE) << "Node name: " << str_nodename;
+
   /************ Read configuration *****************/
 
-  std::vector<Endpoint> const endpoints = get_endpoints(
-    configuration.get_child("ENDPOINTS"));
-  if (id < 0 || id >= endpoints.size()) {
-    LOG(ERROR) << "Wrong ID: " << id;
+  int id = -1;
+
+  Configuration const& ep_child = configuration.get_child("ENDPOINTS");
+  std::vector<Endpoint> endpoints;
+
+  for (Configuration::const_iterator it = std::begin(ep_child), e =
+    std::end(ep_child); it != e; ++it) {
+
+    if (it->first == str_nodename) {
+      id = std::distance(std::begin(ep_child), it);
+    }
+
+    endpoints.emplace_back(
+      it->second.get < std::string > ("HOST"),
+      it->second.get < std::string > ("PORT"));
+  }
+
+  if (id == -1) {
+    LOG(ERROR) << "Wrong node name: can't find it in configuration file!";
     return EXIT_FAILURE;
   }
 
   int const max_fragment_size = configuration.get<int>(
-    "GENERAL.MAX_FRAGMENT_SIZE");
+      "GENERAL.MAX_FRAGMENT_SIZE");
   if (max_fragment_size <= 0 || max_fragment_size % sizeof(EventHeader)) {
     LOG(ERROR) << "Wrong MAX_FRAGMENT_SIZE: " << max_fragment_size;
     return EXIT_FAILURE;
@@ -105,12 +131,12 @@ int main(int argc, char* argv[]) {
   int const data_size = max_fragment_size * bulk_size * (credits * 2 + 1);
 
   std::unique_ptr<unsigned char[]> const metadata_ptr(
-    new unsigned char[meta_size]);
+      new unsigned char[meta_size]);
   std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
 
   MetaDataRange metadata_range(
-    pointer_cast<EventMetaData>(metadata_ptr.get()),
-    pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
+      pointer_cast<EventMetaData>(metadata_ptr.get()),
+      pointer_cast<EventMetaData>(metadata_ptr.get() + meta_size));
   DataRange data_range(data_ptr.get(), data_ptr.get() + data_size);
 
   /********* Generator, Controller and Accumulator **********/
@@ -125,59 +151,24 @@ int main(int argc, char* argv[]) {
   assert(stddev >= 0);
 
   LengthGenerator payload_size_generator(
-    mean,
-    stddev,
-    max_fragment_size - sizeof(EventHeader));
+      mean, stddev, max_fragment_size - sizeof(EventHeader));
   Generator generator(payload_size_generator, metadata_range, data_range, id);
   Controller controller(generator, metadata_range, generator_frequency);
-  Accumulator accumulator(
-    controller,
-    metadata_range,
-    data_range,
-    bulk_size);
+  Accumulator accumulator(controller, metadata_range, data_range, bulk_size);
 
   /**************** Builder Unit and Readout Unit *****************/
 
   boost::lockfree::spsc_queue<iovec> free_local_data(credits);
   boost::lockfree::spsc_queue<iovec> ready_local_data(credits);
 
-  BuilderUnit bu(
-    free_local_data,
-    ready_local_data,
-    endpoints,
-    bulk_size,
-    credits,
-    max_fragment_size,
-    id);
+  BuilderUnit bu(free_local_data, ready_local_data, endpoints, bulk_size,
+                 credits, max_fragment_size, id);
 
-  ReadoutUnit ru(
-    accumulator,
-    free_local_data,
-    ready_local_data,
-    endpoints,
-    bulk_size,
-    credits,
-    id);
+  ReadoutUnit ru(accumulator, free_local_data, ready_local_data, endpoints,
+                 bulk_size, credits, id);
 
-  std::shared_ptr<std::atomic<bool> > stop(new std::atomic<bool>(false));
-
-  // sigset_t set;
-  // sigfillset(&set);  // mask all signals
-  // pthread_sigmask(SIG_SETMASK, &set, NULL);  // set mask
-
-  std::thread bu_th(&BuilderUnit::operator(), &bu, stop);
-  std::thread ru_th(&ReadoutUnit::operator(), &ru, stop);
-
-  // sigemptyset(&set);
-  // sigaddset(&set, SIGINT);
-  // sigaddset(&set, SIGTERM);
-
-  // int sig_caught;
-  // sigwait(&set, &sig_caught);
-
-  // std::cout << "Received signal " << sig_caught << std::endl;
-
-  // *stop = true;
+  std::thread bu_th(&BuilderUnit::operator(), &bu);
+  std::thread ru_th(&ReadoutUnit::operator(), &ru);
 
   bu_th.join();
   ru_th.join();

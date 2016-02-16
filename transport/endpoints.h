@@ -34,17 +34,6 @@ class Endpoint {
   }
 };
 
-inline std::vector<Endpoint> get_endpoints(Configuration const& configuration) {
-  std::vector<Endpoint> endpoints;
-  for (Configuration::const_iterator it = std::begin(configuration), e =
-    std::end(configuration); it != e; ++it) {
-    endpoints.emplace_back(
-      it->second.get < std::string > ("HOST"),
-      it->second.get < std::string > ("PORT"));
-  }
-  return endpoints;
-}
-
 }
 
 #endif
