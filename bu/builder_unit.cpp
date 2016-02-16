@@ -46,8 +46,11 @@ BuilderUnit::BuilderUnit(
       m_bulk_size(bulk_size),
       m_credits(credits),
       m_max_fragment_size(max_fragment_size),
-      m_id(id) {
-}
+      m_id(id),
+      m_acceptor(credits),
+      m_data_ptr(new unsigned char[max_fragment_size * bulk_size * credits * (endpoints.size() - 1)])
+      {
+      }
 
 int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
@@ -123,21 +126,9 @@ size_t BuilderUnit::release_data(int id, int n) {
   return bytes;
 }
 
-void BuilderUnit::operator()() {
-
+void BuilderUnit::connect() {
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
-
-  // Allocate memory
-
-  size_t const data_size =
-    m_max_fragment_size * m_bulk_size * m_credits * (m_endpoints.size() - 1);
-  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
-  LOG(NOTICE) << "Builder Unit - Allocated " << data_size << " bytes of memory";
-
-  // Connections
-
-  Acceptor<RecvSocket> acceptor(m_credits);
-  acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
+  m_acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
 
@@ -147,7 +138,7 @@ void BuilderUnit::operator()() {
 
     // Create a temporary entry in the map with the local id
     auto p = m_connection_ids.emplace(
-      std::make_pair(m_id, std::unique_ptr<RecvSocket>(acceptor.accept())));
+      std::make_pair(m_id, std::unique_ptr<RecvSocket>(m_acceptor.accept())));
     int id = find_endpoint_id(m_endpoints, p.first->second->peer_hostname());
     assert(id != -1 && "Address not found in endpoints list.");
     // Insert the real id and delete the local one
@@ -155,7 +146,7 @@ void BuilderUnit::operator()() {
     m_connection_ids.erase(p.first);
     auto& conn = *(m_connection_ids.at(id));
 
-    unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
+    unsigned char* base_data_ptr = m_data_ptr.get() + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);
 
     std::vector<iovec> iov_vect;
@@ -169,6 +160,11 @@ void BuilderUnit::operator()() {
       << conn.peer_hostname();
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
+}
+
+void BuilderUnit::run() {
+
+  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)

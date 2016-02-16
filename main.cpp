@@ -171,8 +171,14 @@ int main(int argc, char* argv[]) {
   ReadoutUnit ru(accumulator, free_local_data, ready_local_data, endpoints,
                  bulk_size, credits, id);
 
-  std::thread bu_th(&BuilderUnit::operator(), &bu);
-  std::thread ru_th(&ReadoutUnit::operator(), &ru);
+  std::thread bu_conn_th(&BuilderUnit::connect, &bu);
+  std::thread ru_conn_th(&ReadoutUnit::connect, &ru);
+
+  bu_conn_th.join();
+  ru_conn_th.join();
+
+  std::thread bu_th(&BuilderUnit::run, &bu);
+  std::thread ru_th(&ReadoutUnit::run, &ru);
 
   bu_th.join();
   ru_th.join();

@@ -24,6 +24,7 @@ class ReadoutUnit {
   int m_credits;
   int m_id;
   int m_pending_local_iov;
+  Connector<SendSocket> m_connector;
 
  public:
   ReadoutUnit(
@@ -34,7 +35,8 @@ class ReadoutUnit {
     int bulk_size,
     int credits,
     int id);
-  void operator()();
+  void connect();
+  void run();
 };
 
 }

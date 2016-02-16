@@ -32,17 +32,15 @@ ReadoutUnit::ReadoutUnit(
       m_bulk_size(bulk_size),
       m_credits(credits),
       m_id(id),
-      m_pending_local_iov(0) {
+      m_pending_local_iov(0),
+      m_connector(credits) {
 }
 
-void ReadoutUnit::operator()() {
-
+void ReadoutUnit::connect() {
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
-
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
   DataRange const data_range = m_accumulator.data_range();
-  Connector<SendSocket> connector(m_credits);
 
   for (auto id : id_sequence) {
     if (id != m_id) {
@@ -51,7 +49,7 @@ void ReadoutUnit::operator()() {
       while (!connected) {
         try {
           auto ret = m_connection_ids.emplace(
-            std::make_pair(id, connector.connect(ep.hostname(), ep.port())));
+            std::make_pair(id, m_connector.connect(ep.hostname(), ep.port())));
           assert(ret.second && "Connection already present");
           ret.first->second->register_memory(
             (void*) std::begin(data_range),
@@ -70,6 +68,11 @@ void ReadoutUnit::operator()() {
     }
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
+}
+
+void ReadoutUnit::run() {
+
+  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
   FrequencyMeter frequency(5.0);
   FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)

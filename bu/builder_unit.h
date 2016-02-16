@@ -22,6 +22,8 @@ class BuilderUnit {
   int m_credits;
   int m_max_fragment_size;
   int m_id;
+  Acceptor<RecvSocket> m_acceptor;
+  std::unique_ptr<unsigned char[]> m_data_ptr;
 
   int read_data(int id);
   bool check_data();
@@ -36,7 +38,8 @@ class BuilderUnit {
     int credits,
     int max_fragment_size,
     int id);
-  void operator()();
+  void connect();
+  void run();
 };
 
 }
