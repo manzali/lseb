@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-
 project(LSEB CXX)
-
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -11,17 +9,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "-pthread -Wall -Wextra -Wno-unused-local-typedefs -Wno-unused-parameter")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
-  
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # using Clang or AppleClang
   set(CMAKE_CXX_FLAGS "-pthread -Wall -Wextra")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
-  
-#elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-  # using Intel C++
-#elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # using Visual Studio C++
 else()
     message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} is not a supported compiler")
     # exit due to fatal error
