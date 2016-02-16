@@ -61,10 +61,19 @@ int main(int argc, char* argv[]) {
   }
   Configuration configuration = read_configuration(f);
 
+  // Check node name
+
+  if (str_nodename.empty()) {
+    str_nodename = boost::asio::ip::host_name();
+  }
+
   // Configure log
 
+  std::string logdir_postfix = "/" + str_nodename;
+  str_logdir.append(logdir_postfix);
+
   std::ofstream log_stream(str_logdir);
-  if (str_logdir.empty()) {
+  if (str_logdir == logdir_postfix) {
     Log::init("LSEB",
               Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
   } else {
@@ -74,12 +83,6 @@ int main(int argc, char* argv[]) {
   }
 
   LOG(INFO) << configuration << std::endl;
-
-  // Check node name
-
-  if (str_nodename.empty()) {
-    str_nodename = boost::asio::ip::host_name();
-  }
 
   LOG(NOTICE) << "Node name: " << str_nodename;
 
