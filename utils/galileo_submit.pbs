@@ -10,7 +10,7 @@
 #PBS -j oe
 
 # load mpi module
-module load openmpi/1.8.5--gnu--4.9.2
+#module load openmpi/1.8.5--gnu--4.9.2
 
 # Create a dedicate directory
 id=`echo ${PBS_JOBID} | cut -f1 -d'.'`
@@ -45,7 +45,14 @@ endpoints="${endpoints%?}"
 cp ${HOME}/configuration.json ${dir}/configuration.json
 sed -i "s/__ENDPOINTS__/${endpoints}/g" ${dir}/configuration.json
 
+# MPI hosts
+mpihosts="${dir}/mpihosts.txt"
+touch ${hostnames}
+while read line; do
+  echo "$line slots=1" >> $mpihosts
+done < $hostnames
+
 # run lseb
-mpirun --hostfile ${hostnames} ${HOME}/lseb/build/lseb -c ${dir}/configuration.json -l ${dir}
+#ssh -n "node165" "mpirun  --hostfile ${mpihosts} ${HOME}/lseb/build/lseb -c ${dir}/configuration.json -l ${dir}"
 
-
+mpirun --hostfile ${mpihosts} ${HOME}/lseb/build/lseb -c ${dir}/configuration.json -l ${dir}
