@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
   std::string str_conf;
   std::string str_logdir;
   std::string str_nodename;
-
+  int timeout = 0;
   boost::program_options::options_description desc("Options");
 
   desc.add_options()("help,h", "Print help messages.")(
@@ -35,7 +35,9 @@ int main(int argc, char* argv[]) {
       "logdir,l", boost::program_options::value<std::string>(&str_logdir),
       "Log directory (default is standard output)")(
       "nodename,n", boost::program_options::value<std::string>(&str_nodename),
-      "Node name (default is the hostname)");
+      "Node name (default is the hostname)")(
+      "timeout,t", boost::program_options::value<int>(&timeout),
+      "Timeout in seconds (default is infinite)");
 
   try {
     boost::program_options::variables_map vm;
@@ -52,6 +54,12 @@ int main(int argc, char* argv[]) {
     std::cerr << e.what() << std::endl << desc << std::endl;
     return EXIT_FAILURE;
   }
+
+  if (timeout < 0) {
+    LOG(ERROR) << "Wrong timeout: can't be negative!";
+    return EXIT_FAILURE;
+  }
+
 
   // Open configuration file
 
@@ -187,8 +195,11 @@ int main(int argc, char* argv[]) {
   std::thread bu_th(&BuilderUnit::run, &bu);
   std::thread ru_th(&ReadoutUnit::run, &ru);
 
-  bu_th.join();
-  ru_th.join();
-
+  if (timeout) {
+    std::this_thread::sleep_for(std::chrono::seconds(timeout));
+  } else {
+    bu_th.join();
+    ru_th.join();
+  }
   return EXIT_SUCCESS;
 }
