@@ -14,6 +14,7 @@
 #include "common/log.hpp"
 #include "common/configuration.h"
 #include "common/dataformat.h"
+#include "common/tcp_barrier.h"
 
 #include "transport/endpoints.h"
 
@@ -176,6 +177,12 @@ int main(int argc, char* argv[]) {
 
   bu_conn_th.join();
   ru_conn_th.join();
+
+  tcp_barrier(
+    id,
+    endpoints.size(),
+    endpoints[0].hostname(),
+    endpoints[0].port());
 
   std::thread bu_th(&BuilderUnit::run, &bu);
   std::thread ru_th(&ReadoutUnit::run, &ru);
