@@ -89,7 +89,6 @@ void ReadoutUnit::run() {
 
     t_start = std::chrono::high_resolution_clock::now();
     bool active_flag = false;
-    bool conn_avail = false;
     int seq_id = *seq_it;
 
     // Check for data to acquire
@@ -114,7 +113,6 @@ void ReadoutUnit::run() {
           wr_to_release.push_back(wr.iov_base);
         }
         count = completed_wr.size();
-        conn_avail = (seq_id == id) ? (conn.pending() != m_credits) : conn_avail;
       } else {
         iovec iov;
         while (m_free_local_queue.pop(iov)) {
@@ -123,7 +121,6 @@ void ReadoutUnit::run() {
           --m_pending_local_iov;
           assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
         }
-        conn_avail = (seq_id == id) ? (m_pending_local_iov != m_credits) : conn_avail;
       }
       if (!count) {
          LOG(DEBUG)
@@ -141,24 +138,27 @@ void ReadoutUnit::run() {
     }
 
     // If there are free resources for this connection and ready data, send it
-    if (conn_avail && iov_to_send.size() > seq_id) {
-      active_flag = true;
+    while (iov_to_send.size() > seq_id) {
       auto& iov = iov_to_send[seq_id];
       if (seq_id != m_id) {
         auto& conn = *(m_connection_ids.at(seq_id));
+        if (conn.pending() == m_credits) {
+          break;
+        }
         assert(m_credits - conn.pending() != 0);
         conn.post_send(iov);
       } else {
+        if (m_pending_local_iov == m_credits) {
+          break;
+        }
         while (!m_ready_local_queue.push(iov)) {
           ;
         }
         ++m_pending_local_iov;
-        assert(
-          m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
       }
       LOG(DEBUG) << "Readout Unit - Written 1 wrs to conn " << seq_id;
       frequency.add(m_bulk_size);
-
+      active_flag = true;
       // Increment seq_it and check for end of a cycle
       if (++seq_it == std::end(id_sequence)) {
         // End of a cycle
