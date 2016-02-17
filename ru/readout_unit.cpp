@@ -89,7 +89,6 @@ void ReadoutUnit::run() {
 
     t_start = std::chrono::high_resolution_clock::now();
     bool active_flag = false;
-    bool conn_avail = false;
     int seq_id = *seq_it;
 
     // Check for data to acquire
@@ -102,37 +101,36 @@ void ReadoutUnit::run() {
       }
     }
 
-    // Check for completed wr (in all connections)
+    // Check for completed wr
     std::vector<void*> wr_to_release;
-    for (auto id : id_sequence) {
-      int count = 0;
-      if (id != m_id) {
-        auto& conn = *(m_connection_ids.at(id));
-        std::vector<iovec> completed_wr = conn.pop_completed();
-        for (auto const& wr : completed_wr) {
-          bandwith.add(wr.iov_len);
-          wr_to_release.push_back(wr.iov_base);
-        }
-        count = completed_wr.size();
-        conn_avail = (seq_id == id) ? (conn.pending() != m_credits) : conn_avail;
-      } else {
-        iovec iov;
-        while (m_free_local_queue.pop(iov)) {
-          wr_to_release.push_back(iov.iov_base);
-          ++count;
-          --m_pending_local_iov;
-          assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
-        }
-        conn_avail = (seq_id == id) ? (m_pending_local_iov != m_credits) : conn_avail;
+    bool wr_avail = false;
+    int count = 0;
+    if (seq_id != m_id) {
+      auto& conn = *(m_connection_ids.at(seq_id));
+      std::vector<iovec> completed_wr = conn.pop_completed();
+      for (auto const& wr : completed_wr) {
+        bandwith.add(wr.iov_len);
+        wr_to_release.push_back(wr.iov_base);
       }
-      if (!count) {
-         LOG(DEBUG)
-           << "Readout Unit - Completed "
-           << count
-           << " wrs of conn "
-           << id;
-       }
+      count = completed_wr.size();
+      wr_avail = conn.pending() != m_credits;
+    } else {
+      iovec iov;
+      while (m_free_local_queue.pop(iov)) {
+        wr_to_release.push_back(iov.iov_base);
+        ++count;
+        --m_pending_local_iov;
+        assert(m_pending_local_iov >= 0 && m_pending_local_iov <= m_credits);
+      }
+      wr_avail = m_pending_local_iov != m_credits;
     }
+    if (!count) {
+       LOG(DEBUG)
+         << "Readout Unit - Completed "
+         << count
+         << " wrs of conn "
+         << seq_id;
+     }
 
     // Release completed wr
     if (!wr_to_release.empty()) {
@@ -141,7 +139,7 @@ void ReadoutUnit::run() {
     }
 
     // If there are free resources for this connection and ready data, send it
-    if (conn_avail && iov_to_send.size() > seq_id) {
+    if (wr_avail && iov_to_send.size() > seq_id) {
       active_flag = true;
       auto& iov = iov_to_send[seq_id];
       if (seq_id != m_id) {
