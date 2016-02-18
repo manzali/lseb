@@ -145,7 +145,6 @@ void ReadoutUnit::run() {
         if (conn.pending() == m_credits) {
           break;
         }
-        assert(m_credits - conn.pending() != 0);
         conn.post_send(iov);
       } else {
         if (m_pending_local_iov == m_credits) {
@@ -166,6 +165,8 @@ void ReadoutUnit::run() {
         assert(iov_to_send.size() == m_endpoints.size());
         iov_to_send.clear();
       }
+      // update seq_id
+      seq_id = *seq_it;
     }
 
     if(active_flag){
