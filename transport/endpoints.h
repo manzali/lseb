@@ -10,6 +10,8 @@
 
 #include "common/configuration.h"
 
+#include "launcher/LauncherHydra.hpp"
+
 namespace lseb {
 
 class Endpoint {
@@ -34,14 +36,11 @@ class Endpoint {
   }
 };
 
-inline std::vector<Endpoint> get_endpoints(Configuration const& configuration) {
+inline std::vector<Endpoint> get_endpoints(DAQ::LauncherHydra & launcher,std::string & port) {
   std::vector<Endpoint> endpoints;
-  for (Configuration::const_iterator it = std::begin(configuration), e =
-    std::end(configuration); it != e; ++it) {
-    endpoints.emplace_back(
-      it->second.get < std::string > ("HOST"),
-      it->second.get < std::string > ("PORT"));
-  }
+  int nodes = launcher.getWorldSize();
+  for (int i = 0 ; i < nodes ; i++)
+    endpoints.emplace_back(launcher.get("ip",i),port);
   return endpoints;
 }
 

@@ -1,0 +1,112 @@
+/* pmiconf.h.in.  Generated from configure.in by autoheader.  */
+
+/* -*- Mode: C; c-basic-offset:4 ; -*- */
+/*  
+ *  (C) 2001 by Argonne National Laboratory.
+ *      See COPYRIGHT in top-level directory.
+ */
+#ifndef PMICONF_H_INCLUDED
+#define PMICONF_H_INCLUDED
+
+
+/* Define to 1 if you have the <assert.h> header file. */
+#cmakedefine HAVE_ASSERT_H
+
+/* Define if GNU __attribute__ is supported */
+#cmakedefine HAVE_GCC_ATTRIBUTE
+
+/* Define to 1 if you have the `gethostbyname' function. */
+#cmakedefine HAVE_GETHOSTBYNAME
+
+/* Define if struct hostent contains h_addr_list */
+#cmakedefine HAVE_H_ADDR_LIST
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <memory.h> header file. */
+#cmakedefine HAVE_MEMORY_H
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#cmakedefine HAVE_NETDB_H
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#cmakedefine HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#cmakedefine HAVE_NETINET_TCP_H
+
+/* Define to 1 if you have the `setsockopt' function. */
+#cmakedefine HAVE_SETSOCKOPT
+
+/* Define to 1 if you have the `snprintf' function. */
+#cmakedefine HAVE_SNPRINTF
+
+/* Define to 1 if you have the `socket' function. */
+#cmakedefine HAVE_SOCKET
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#cmakedefine HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#cmakedefine HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#cmakedefine HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#cmakedefine HAVE_STRING_H
+
+/* Define to 1 if you have the `strncasecmp' function. */
+#cmakedefine HAVE_STRNCASECMP
+
+/* Define to 1 if you have the <sys/param.h> header file. */
+#cmakedefine HAVE_SYS_PARAM_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#cmakedefine HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#cmakedefine HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#cmakedefine HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <sys/un.h> header file. */
+#cmakedefine HAVE_SYS_UN_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#cmakedefine HAVE_UNISTD_H
+
+/* Define if snprintf needs a declaration */
+#cmakedefine NEEDS_SNPRINTF_DECL
+
+/* Define to the address where bug reports for this package should be sent. */
+@PACKAGE_BUGREPORT@
+
+/* Define to the full name of this package. */
+@PACKAGE_NAME@
+
+/* Define to the full name and version of this package. */
+@PACKAGE_STRING@
+
+/* Define to the one symbol short name of this package. */
+@PACKAGE_TARNAME@
+
+/* Define to the home page for this package. */
+@PACKAGE_URL@
+
+/* Define to the version of this package. */
+@PACKAGE_VERSION@
+
+/* Define to 1 if you have the ANSI C header files. */
+#cmakedefine STDC_HEADERS
+
+/* Define if access to PMI information through a port rather than just an fd
+   is allowed */
+#cmakedefine USE_PMI_PORT
+
+/* Define if socklen_t is not defined */
+#cmakedefine socklen_t
+
+#endif

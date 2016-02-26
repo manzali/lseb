@@ -12,8 +12,8 @@
     "BULKED_EVENTS": "600",
     "CREDITS": "20"
   },
-  "ENDPOINTS":
-  [
-    __ENDPOINTS__
-  ]
+  "NETWORK": {
+    "IFACE": "ib0",
+    "PORT": "7000"
+  }
 }

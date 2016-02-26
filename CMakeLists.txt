@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.6)
-project(LSEB CXX)
+project(LSEB CXX C)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
+
+#Add internal search path for scripts
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/)
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
@@ -43,6 +46,7 @@ add_subdirectory(generator)
 add_subdirectory(ru)
 add_subdirectory(bu)
 add_subdirectory(test)
+add_subdirectory(launcher)
 
 include_directories(
   ${LSEB_SOURCE_DIR}
@@ -58,5 +62,6 @@ target_link_libraries(
   lseb
   ru
   bu
+  launcher
   ${Boost_LIBRARIES}
 )

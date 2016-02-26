@@ -14,6 +14,9 @@
 #include "common/log.hpp"
 #include "common/configuration.h"
 #include "common/dataformat.h"
+#include "common/local_ip.h"
+
+#include "launcher/LauncherHydra.hpp"
 
 #include "transport/endpoints.h"
 
@@ -70,11 +73,28 @@ int main(int argc, char* argv[]) {
     Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
 
   LOG(INFO) << configuration << std::endl;
+  
+  /****** Setup Launcher / exchange addresses ******/
+  //extract from config
+  std::string iface = configuration.get_child("NETWORK").get<std::string>("IFACE");
+  std::string port = configuration.get_child("NETWORK").get<std::string>("PORT");
+  if (iface.empty())
+    iface = "ib0";
+  LOG(DEBUG) << "Using iface = " << iface << ", port = " << port;
+  
+  //get ip
+  std::string ip = get_local_ip(iface);
+  
+  //exchange
+  DAQ::LauncherHydra launcher;
+  launcher.initialize(argc,argv);
+  launcher.set("ip",ip);
+  launcher.commit();
+  launcher.barrier();
 
   /************ Read configuration *****************/
 
-  std::vector<Endpoint> const endpoints = get_endpoints(
-    configuration.get_child("ENDPOINTS"));
+  std::vector<Endpoint> const endpoints = get_endpoints(launcher,port);
   if (id < 0 || id >= endpoints.size()) {
     LOG(ERROR) << "Wrong ID: " << id;
     return EXIT_FAILURE;
