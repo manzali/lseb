@@ -30,9 +30,6 @@ int main(int argc, char* argv[]) {
   boost::program_options::options_description desc("Options");
 
   desc.add_options()("help,h", "Print help messages.")(
-    "id,i",
-    boost::program_options::value<int>(&id)->required(),
-    "Process ID.")(
     "configuration,c",
     boost::program_options::value<std::string>(&str_conf)->required(),
     "Configuration JSON file.");
@@ -77,10 +74,11 @@ int main(int argc, char* argv[]) {
   /****** Setup Launcher / exchange addresses ******/
   //extract from config
   std::string iface = configuration.get_child("NETWORK").get<std::string>("IFACE");
-  std::string port = configuration.get_child("NETWORK").get<std::string>("PORT");
+  int port = configuration.get_child("NETWORK").get<int>("PORT");
+  int range = configuration.get_child("NETWORK").get<int>("RANGE");
   if (iface.empty())
     iface = "ib0";
-  LOG(DEBUG) << "Using iface = " << iface << ", port = " << port;
+  LOG(DEBUG) << "Using iface = " << iface << ", port = " << port << ", range = " << range;
   
   //get ip
   std::string ip = get_local_ip(iface);
@@ -88,13 +86,19 @@ int main(int argc, char* argv[]) {
   //exchange
   DAQ::LauncherHydra launcher;
   launcher.initialize(argc,argv);
+  char portStr[8];
+  sprintf(portStr,"%d",port+launcher.getRank()%range);
   launcher.set("ip",ip);
+  launcher.set("port",portStr);
   launcher.commit();
   launcher.barrier();
+  
+  //extract id
+  id = launcher.getRank();
 
   /************ Read configuration *****************/
 
-  std::vector<Endpoint> const endpoints = get_endpoints(launcher,port);
+  std::vector<Endpoint> const endpoints = get_endpoints(launcher);
   if (id < 0 || id >= endpoints.size()) {
     LOG(ERROR) << "Wrong ID: " << id;
     return EXIT_FAILURE;

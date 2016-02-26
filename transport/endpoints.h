@@ -36,11 +36,11 @@ class Endpoint {
   }
 };
 
-inline std::vector<Endpoint> get_endpoints(DAQ::LauncherHydra & launcher,std::string & port) {
+inline std::vector<Endpoint> get_endpoints(DAQ::LauncherHydra & launcher) {
   std::vector<Endpoint> endpoints;
   int nodes = launcher.getWorldSize();
   for (int i = 0 ; i < nodes ; i++)
-    endpoints.emplace_back(launcher.get("ip",i),port);
+    endpoints.emplace_back(launcher.get("ip",i),launcher.get("port",i));
   return endpoints;
 }
 
