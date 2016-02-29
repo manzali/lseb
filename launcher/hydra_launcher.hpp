@@ -11,14 +11,14 @@
 #include <string>
 
 /*******************  NAMESPACE  ********************/
-namespace DAQ
+namespace lseb
 {
 
 /*********************  CLASS  **********************/
 /**
  * Provide a wrapper to hide the low level functions from PMI (hydra).
 **/
-class LauncherHydra
+class HydraLauncher
 {
 	public:
 		void initialize ( int argc, char** argv );

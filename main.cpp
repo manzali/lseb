@@ -16,7 +16,7 @@
 #include "common/dataformat.h"
 #include "common/local_ip.h"
 
-#include "launcher/LauncherHydra.hpp"
+#include "launcher/hydra_launcher.hpp"
 
 #include "transport/endpoints.h"
 
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
   std::string ip = get_local_ip(iface);
   
   //exchange
-  DAQ::LauncherHydra launcher;
+  HydraLauncher launcher;
   launcher.initialize(argc,argv);
   char portStr[8];
   sprintf(portStr,"%d",port+launcher.getRank()%range);

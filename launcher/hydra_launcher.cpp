@@ -14,10 +14,10 @@
 #include <cstdio>
 #include <cstdlib>
 //to implement
-#include "LauncherHydra.hpp"
+#include "hydra_launcher.hpp"
 
 /*******************  NAMESPACE  ********************/
-namespace DAQ
+namespace lseb
 {
 
 /********************  MACROS  **********************/
@@ -60,7 +60,7 @@ const char * cstPMIErrors[] = {
 /**
  * Setup the PMI by calling its init function and fetching the KVS name to register keys.
 **/
-void LauncherHydra::initialize ( int argc, char** argv )
+void HydraLauncher::initialize ( int argc, char** argv )
 {
 	//init
 	int spawned;
@@ -89,7 +89,7 @@ void LauncherHydra::initialize ( int argc, char** argv )
 /**
  * Finish PMI on exit.
 **/
-void LauncherHydra::finalize ( void )
+void HydraLauncher::finalize ( void )
 {
 	PMI_Finalize();
 }
@@ -98,7 +98,7 @@ void LauncherHydra::finalize ( void )
 /**
  * Wait all nodes to be here.
 **/
-void LauncherHydra::barrier ( void )
+void HydraLauncher::barrier ( void )
 {
 	int status = PMI_Barrier();
 	PMI_CHECK_STATUS("PMI_Barrier",status);
@@ -108,7 +108,7 @@ void LauncherHydra::barrier ( void )
 /**
  * Return the number of processes in the job.
 **/
-int LauncherHydra::getWorldSize ( void )
+int HydraLauncher::getWorldSize ( void )
 {
 	//get universe size
 	int size;
@@ -121,7 +121,7 @@ int LauncherHydra::getWorldSize ( void )
 /**
  * Return the rank of the current process in the job.
 **/
-int LauncherHydra::getRank ( void )
+int HydraLauncher::getRank ( void )
 {
 	//get rank
 	int rank;
@@ -134,7 +134,7 @@ int LauncherHydra::getRank ( void )
 /**
  * Commit the new registered keys to made them visible to all.
 **/
-void LauncherHydra::commit ( void )
+void HydraLauncher::commit ( void )
 {
 	int status = PMI_KVS_Commit(kvsName);
 	PMI_CHECK_STATUS("PMI_KVS_Commit",status);
@@ -148,7 +148,7 @@ void LauncherHydra::commit ( void )
  * @param rank Associate value to given rank in addition to key.
  * @param value Value to attached to the key/rank.
 **/
-void LauncherHydra::set ( const std::string& key, const std::string& value )
+void HydraLauncher::set ( const std::string& key, const std::string& value )
 {
 	char buffer[512];
 	sprintf(buffer,"%s-%d",key.c_str(),getRank());
@@ -162,7 +162,7 @@ void LauncherHydra::set ( const std::string& key, const std::string& value )
  * @param key Key to read.
  * @param rank Read value from the given rank.
 **/
-std::string LauncherHydra::get ( const std::string& key, int rank )
+std::string HydraLauncher::get ( const std::string& key, int rank )
 {
 	char buffer[512];
 	char outputBuffer[1024];

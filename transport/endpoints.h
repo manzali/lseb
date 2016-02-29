@@ -10,7 +10,7 @@
 
 #include "common/configuration.h"
 
-#include "launcher/LauncherHydra.hpp"
+#include "launcher/hydra_launcher.hpp"
 
 namespace lseb {
 
@@ -36,7 +36,7 @@ class Endpoint {
   }
 };
 
-inline std::vector<Endpoint> get_endpoints(DAQ::LauncherHydra & launcher) {
+inline std::vector<Endpoint> get_endpoints(HydraLauncher & launcher) {
   std::vector<Endpoint> endpoints;
   int nodes = launcher.getWorldSize();
   for (int i = 0 ; i < nodes ; i++)
