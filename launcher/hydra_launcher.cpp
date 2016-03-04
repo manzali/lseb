@@ -27,33 +27,33 @@ namespace lseb
  * @param status Define the output status to check.
 **/
 #define PMI_CHECK_STATUS(funcName,status) \
-	do {\
-		if (status != PMI_SUCCESS) {\
-			fprintf(stderr,"Failed onto %s with code %d : %s",funcName,status,cstPMIErrors[status]);\
-			abort();\
-		}\
-	} while(0)
+  do {\
+    if (status != PMI_SUCCESS) {\
+      fprintf(stderr,"Failed onto %s with code %d : %s",funcName,status,cstPMIErrors[status]);\
+      abort();\
+    }\
+  } while(0)
 
 /********************  GLOBALS  *********************/
 /**
  * Array to convert MPI error ids to strings in PMI_CHECK_STATUS().
 **/
 const char * cstPMIErrors[] = {
-	"SUCCESS",
-	"FAIL",
-	"ERR_INIT",
-	"ERR_NOMEM",
-	"ERR_INVALID",
-	"ERR_INVALID_KEY",
-	"ERR_INVALID_KEY",
-	"ERR_INVALID_VAL",
-	"ERR_INVALID_VAL_LENGTH",
-	"ERR_INVALID_LENGTH",
-	"ERR_INVALID_NUM_ARGS",
-	"ERR_INVALID_ARGS",
-	"ERR_INVALID_NUM_PARSED",
-	"ERR_INVALID_KEYVALP",
-	"ERR_INVALID_SIZE"
+  "SUCCESS",
+  "FAIL",
+  "ERR_INIT",
+  "ERR_NOMEM",
+  "ERR_INVALID",
+  "ERR_INVALID_KEY",
+  "ERR_INVALID_KEY",
+  "ERR_INVALID_VAL",
+  "ERR_INVALID_VAL_LENGTH",
+  "ERR_INVALID_LENGTH",
+  "ERR_INVALID_NUM_ARGS",
+  "ERR_INVALID_ARGS",
+  "ERR_INVALID_NUM_PARSED",
+  "ERR_INVALID_KEYVALP",
+  "ERR_INVALID_SIZE"
 };
 
 /*******************  FUNCTION  *********************/
@@ -62,27 +62,27 @@ const char * cstPMIErrors[] = {
 **/
 void HydraLauncher::initialize ( int argc, char** argv )
 {
-	//init
-	int spawned;
-	int status = PMI_Init(&spawned);
-	PMI_CHECK_STATUS("PMI_Init",status);
-	
-	//get KVS key size and check
-	int size;
-	status = PMI_KVS_Get_name_length_max(&size);
-	PMI_CHECK_STATUS("PMI_KVS_Get_name_length_max",status);
-	if (size >= 1024)
-	{
-		fprintf(stderr,"Too small buffer to get KVS name\n");
-		abort();
-	}
-	
-	//load kvs name
-	status = PMI_KVS_Get_my_name( kvsName, sizeof(kvsName) );
-	PMI_CHECK_STATUS("PMI_KVS_Get_my_name",status);
-	
-	//debugging
-	LOG(DEBUG) << "hydra-launcher [" << getRank() << "] KVS name : " << kvsName;
+  //init
+  int spawned;
+  int status = PMI_Init(&spawned);
+  PMI_CHECK_STATUS("PMI_Init",status);
+  
+  //get KVS key size and check
+  int size;
+  status = PMI_KVS_Get_name_length_max(&size);
+  PMI_CHECK_STATUS("PMI_KVS_Get_name_length_max",status);
+  if (size >= 1024)
+  {
+    fprintf(stderr,"Too small buffer to get KVS name\n");
+    abort();
+  }
+  
+  //load kvs name
+  status = PMI_KVS_Get_my_name( kvsName, sizeof(kvsName) );
+  PMI_CHECK_STATUS("PMI_KVS_Get_my_name",status);
+  
+  //debugging
+  LOG(DEBUG) << "hydra-launcher [" << getRank() << "] KVS name : " << kvsName;
 }
 
 /*******************  FUNCTION  *********************/
@@ -91,7 +91,7 @@ void HydraLauncher::initialize ( int argc, char** argv )
 **/
 void HydraLauncher::finalize ( void )
 {
-	PMI_Finalize();
+  PMI_Finalize();
 }
 
 /*******************  FUNCTION  *********************/
@@ -100,8 +100,8 @@ void HydraLauncher::finalize ( void )
 **/
 void HydraLauncher::barrier ( void )
 {
-	int status = PMI_Barrier();
-	PMI_CHECK_STATUS("PMI_Barrier",status);
+  int status = PMI_Barrier();
+  PMI_CHECK_STATUS("PMI_Barrier",status);
 }
 
 /*******************  FUNCTION  *********************/
@@ -110,11 +110,11 @@ void HydraLauncher::barrier ( void )
 **/
 int HydraLauncher::getWorldSize ( void )
 {
-	//get universe size
-	int size;
-	int status = PMI_Get_size(&size);
-	PMI_CHECK_STATUS("PMI_Get_size",status);
-	return size;
+  //get universe size
+  int size;
+  int status = PMI_Get_size(&size);
+  PMI_CHECK_STATUS("PMI_Get_size",status);
+  return size;
 }
 
 /*******************  FUNCTION  *********************/
@@ -123,11 +123,11 @@ int HydraLauncher::getWorldSize ( void )
 **/
 int HydraLauncher::getRank ( void )
 {
-	//get rank
-	int rank;
-	int status = PMI_Get_rank(&rank);
-	PMI_CHECK_STATUS("PMI_Get_rank",status);
-	return rank;
+  //get rank
+  int rank;
+  int status = PMI_Get_rank(&rank);
+  PMI_CHECK_STATUS("PMI_Get_rank",status);
+  return rank;
 }
 
 /*******************  FUNCTION  *********************/
@@ -136,8 +136,8 @@ int HydraLauncher::getRank ( void )
 **/
 void HydraLauncher::commit ( void )
 {
-	int status = PMI_KVS_Commit(kvsName);
-	PMI_CHECK_STATUS("PMI_KVS_Commit",status);
+  int status = PMI_KVS_Commit(kvsName);
+  PMI_CHECK_STATUS("PMI_KVS_Commit",status);
 }
 
 /*******************  FUNCTION  *********************/
@@ -150,10 +150,10 @@ void HydraLauncher::commit ( void )
 **/
 void HydraLauncher::set ( const std::string& key, const std::string& value )
 {
-	char buffer[512];
-	sprintf(buffer,"%s-%d",key.c_str(),getRank());
-	int status = PMI_KVS_Put(kvsName,buffer,value.c_str());
-	PMI_CHECK_STATUS("PMI_KVS_Put",status);
+  char buffer[512];
+  sprintf(buffer,"%s-%d",key.c_str(),getRank());
+  int status = PMI_KVS_Put(kvsName,buffer,value.c_str());
+  PMI_CHECK_STATUS("PMI_KVS_Put",status);
 }
 
 /*******************  FUNCTION  *********************/
@@ -164,12 +164,12 @@ void HydraLauncher::set ( const std::string& key, const std::string& value )
 **/
 std::string HydraLauncher::get ( const std::string& key, int rank )
 {
-	char buffer[512];
-	char outputBuffer[1024];
-	sprintf(buffer,"%s-%d",key.c_str(),rank);
-	int status = PMI_KVS_Get(kvsName,buffer,outputBuffer,sizeof(outputBuffer));
-	PMI_CHECK_STATUS("PMI_KVS_Get",status);
-	return outputBuffer;
+  char buffer[512];
+  char outputBuffer[1024];
+  sprintf(buffer,"%s-%d",key.c_str(),rank);
+  int status = PMI_KVS_Get(kvsName,buffer,outputBuffer,sizeof(outputBuffer));
+  PMI_CHECK_STATUS("PMI_KVS_Get",status);
+  return outputBuffer;
 }
 
 }
