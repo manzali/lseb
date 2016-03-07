@@ -10,7 +10,9 @@
 
 #include "common/configuration.h"
 
-#include "launcher/hydra_launcher.hpp"
+#ifdef HAVE_HYDRA
+  #include "launcher/hydra_launcher.hpp"
+#endif //HAVE_HYDRA
 
 namespace lseb {
 
@@ -36,13 +38,25 @@ class Endpoint {
   }
 };
 
-inline std::vector<Endpoint> get_endpoints(HydraLauncher & launcher) {
-  std::vector<Endpoint> endpoints;
-  int nodes = launcher.getWorldSize();
-  for (int i = 0 ; i < nodes ; i++)
-    endpoints.emplace_back(launcher.get("ip",i),launcher.get("port",i));
-  return endpoints;
-}
+#ifdef HAVE_HYDRA
+  inline std::vector<Endpoint> get_endpoints(HydraLauncher & launcher) {
+    std::vector<Endpoint> endpoints;
+    int nodes = launcher.getWorldSize();
+    for (int i = 0 ; i < nodes ; i++)
+      endpoints.emplace_back(launcher.get("ip",i),launcher.get("port",i));
+    return endpoints;
+  }
+#else //HAVE_HYDRA
+  inline std::vector<Endpoint> get_endpoints(Configuration const& configuration) {
+    std::vector<Endpoint> endpoints;
+    for (Configuration::const_iterator it = std::begin(configuration), e =
+      std::end(configuration); it != e; ++it) {
+      endpoints.emplace_back(
+        it->second.get < std::string > ("HOST"),
+        it->second.get < std::string > ("PORT"));
+    }
+  }
+#endif //HAVE_HYDRA
 
 }
 

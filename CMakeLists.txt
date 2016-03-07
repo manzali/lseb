@@ -5,6 +5,12 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 #Add internal search path for scripts
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/)
 
+#enable or disable usage of hydra
+set(ENABLE_HYDRA OFF CACHE BOOL "Enable or disable hydra launcher.")
+if (ENABLE_HYDRA)
+	add_definitions(-DHAVE_HYDRA)
+endif (ENABLE_HYDRA)
+
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")	
@@ -46,7 +52,6 @@ add_subdirectory(generator)
 add_subdirectory(ru)
 add_subdirectory(bu)
 add_subdirectory(test)
-add_subdirectory(launcher)
 
 include_directories(
   ${LSEB_SOURCE_DIR}
@@ -62,6 +67,11 @@ target_link_libraries(
   lseb
   ru
   bu
-  launcher
   ${Boost_LIBRARIES}
 )
+
+#optional usage of hydra
+if (ENABLE_HYDRA)
+	add_subdirectory(launcher)
+	target_link_libraries(lseb launcher)
+endif (ENABLE_HYDRA)

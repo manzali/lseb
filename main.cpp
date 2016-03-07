@@ -16,7 +16,9 @@
 #include "common/dataformat.h"
 #include "common/local_ip.h"
 
-#include "launcher/hydra_launcher.hpp"
+#ifdef HAVE_HYDRA
+	#include "launcher/hydra_launcher.hpp"
+#endif //HAVE_HYDRA
 
 #include "transport/endpoints.h"
 
@@ -72,33 +74,40 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << configuration << std::endl;
   
   /****** Setup Launcher / exchange addresses ******/
-  //extract from config
-  std::string iface = configuration.get_child("NETWORK").get<std::string>("IFACE");
-  int port = configuration.get_child("NETWORK").get<int>("PORT");
-  int range = configuration.get_child("NETWORK").get<int>("RANGE");
-  if (iface.empty())
-    iface = "ib0";
-  LOG(DEBUG) << "Using iface = " << iface << ", port = " << port << ", range = " << range;
+  #ifdef HAVE_HYDRA
+    //extract from config
+    std::string iface = configuration.get_child("NETWORK").get<std::string>("IFACE");
+    int port = configuration.get_child("NETWORK").get<int>("PORT");
+    int range = configuration.get_child("NETWORK").get<int>("RANGE");
+    if (iface.empty())
+      iface = "ib0";
+    LOG(DEBUG) << "Using iface = " << iface << ", port = " << port << ", range = " << range;
   
-  //get ip
-  std::string ip = get_local_ip(iface);
+    //get ip
+    std::string ip = get_local_ip(iface);
   
-  //exchange
-  HydraLauncher launcher;
-  launcher.initialize(argc,argv);
-  char portStr[8];
-  sprintf(portStr,"%d",port+launcher.getRank()%range);
-  launcher.set("ip",ip);
-  launcher.set("port",portStr);
-  launcher.commit();
-  launcher.barrier();
+    //exchange
+    HydraLauncher launcher;
+    launcher.initialize(argc,argv);
+    char portStr[8];
+    sprintf(portStr,"%d",port+launcher.getRank()%range);
+    launcher.set("ip",ip);
+    launcher.set("port",portStr);
+    launcher.commit();
+    launcher.barrier();
   
-  //extract id
-  id = launcher.getRank();
+    //extract id
+    id = launcher.getRank();
+  #endif //HAVE_HYDRA
 
   /************ Read configuration *****************/
 
-  std::vector<Endpoint> const endpoints = get_endpoints(launcher);
+  #ifdef HAVE_HYDRA
+    std::vector<Endpoint> const endpoints = get_endpoints(launcher);
+  #else //HAVE_HYDRA
+    std::vector<Endpoint> const endpoints = get_endpoints(
+      configuration.get_child("ENDPOINTS"));
+  #endif //HAVE_HYDRA
   if (id < 0 || id >= endpoints.size()) {
     LOG(ERROR) << "Wrong ID: " << id;
     return EXIT_FAILURE;
