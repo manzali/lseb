@@ -20,9 +20,6 @@ before_install:
   - wget http://sourceforge.net/projects/boost/files/boost/1.58.0/boost_1_58_0.tar.bz2/download
   - tar xfj download
   - rm download
-# Hydra
-  - wget http://www.mpich.org/static/downloads/3.2/hydra-3.2.tar.gz
-  - tar -xvzf hydra-3.2.tar.gz
 
 install:
   - sudo apt-get update -qq
@@ -38,13 +35,6 @@ install:
   - sudo ./b2 install &>/dev/null
   - cd ..
   - rm -rf boost_1_58_0
-# Hydra
-  - cd hydra-3.2
-  - ./configure --prefix=/usr
-  - make
-  - sudo make install
-  - cd ..
-  - rm -rf hydra-3.2
 
 before_script:
   - mkdir build
