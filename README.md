@@ -20,7 +20,7 @@ LSEB runs as a single process in each node and spawn two threads: one for the Re
 
 First of all you need to install the boost libraries (at least with system and program_options components). You need also the infiniband libraries (available installing the OFED Package) if you want to use infiniband as transport layer.
 
-You also need to install the hydra launcher fropm mpich (https://www.mpich.org/downloads/).
+You also optionnaly need to install the hydra launcher fropm mpich (https://www.mpich.org/downloads/).
 
 In order to install LSEB run:
 
@@ -29,10 +29,27 @@ In order to install LSEB run:
     cd lseb
     mkdir build
     cd build
-    cmake -DTRANSPORT=<TCP | VERBS> -DWITH_HYDRA=<PATh_TO_HYDRA_PREFIX> ..
+    cmake -DTRANSPORT=<TCP | VERBS> ..
+    #or
+    cmake -DTRANSPORT=<TCP | VERBS> -DENABLE_HYDRA=ON -DWITH_HYDRA=<PATh_TO_HYDRA_PREFIX> ..
 ```
 
 ## Getting Started
+
+You can start from configuration.json in the root directory in order to create your own configuration file.
+
+```JSON
+    {"HOST":"hostname1", "PORT":"7000"},
+    {"HOST":"hostname2", "PORT":"7000"}
+```
+ 
+Once that the configuration file is ready you can LSEB typing:
+
+```Bash
+    ./lseb -c configuration.json -i ID
+```
+
+## Running with Hydra
 
 You can start from configuration.json in the root directory in order to create your own configuration file. Select the net interface you want to use. Setup an `hostfile` listing the hosts you want to run on.
 
@@ -47,7 +64,7 @@ It says to use `./hosts` to get list of hosts to run on, `-ppn 1` force usage of
 If you are running into slurm (http://slurm.schedmd.com/) or requivalent job scheduler you might use :
 
 ```Bash
-	salloc -N 16 -n 16 --exclusive mpiexec ./lseb -c configuration.json
+    salloc -N 16 -n 16 --exclusive mpiexec ./lseb -c configuration.json
 ```
 
 ## License
