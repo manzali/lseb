@@ -14,6 +14,11 @@
 #include "common/log.hpp"
 #include "common/configuration.h"
 #include "common/dataformat.h"
+#include "common/local_ip.h"
+
+#ifdef HAVE_HYDRA
+	#include "launcher/hydra_launcher.hpp"
+#endif //HAVE_HYDRA
 
 #include "transport/endpoints.h"
 
@@ -27,9 +32,6 @@ int main(int argc, char* argv[]) {
   boost::program_options::options_description desc("Options");
 
   desc.add_options()("help,h", "Print help messages.")(
-    "id,i",
-    boost::program_options::value<int>(&id)->required(),
-    "Process ID.")(
     "configuration,c",
     boost::program_options::value<std::string>(&str_conf)->required(),
     "Configuration JSON file.");
@@ -70,11 +72,42 @@ int main(int argc, char* argv[]) {
     Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
 
   LOG(INFO) << configuration << std::endl;
+  
+  /****** Setup Launcher / exchange addresses ******/
+  #ifdef HAVE_HYDRA
+    //extract from config
+    std::string iface = configuration.get_child("NETWORK").get<std::string>("IFACE");
+    int port = configuration.get_child("NETWORK").get<int>("PORT");
+    int range = configuration.get_child("NETWORK").get<int>("RANGE");
+    if (iface.empty())
+      iface = "ib0";
+    LOG(DEBUG) << "Using iface = " << iface << ", port = " << port << ", range = " << range;
+  
+    //get ip
+    std::string ip = get_local_ip(iface);
+  
+    //exchange
+    HydraLauncher launcher;
+    launcher.initialize(argc,argv);
+    char portStr[8];
+    sprintf(portStr,"%d",port+launcher.getRank()%range);
+    launcher.set("ip",ip);
+    launcher.set("port",portStr);
+    launcher.commit();
+    launcher.barrier();
+  
+    //extract id
+    id = launcher.getRank();
+  #endif //HAVE_HYDRA
 
   /************ Read configuration *****************/
 
-  std::vector<Endpoint> const endpoints = get_endpoints(
-    configuration.get_child("ENDPOINTS"));
+  #ifdef HAVE_HYDRA
+    std::vector<Endpoint> const endpoints = get_endpoints(launcher);
+  #else //HAVE_HYDRA
+    std::vector<Endpoint> const endpoints = get_endpoints(
+      configuration.get_child("ENDPOINTS"));
+  #endif //HAVE_HYDRA
   if (id < 0 || id >= endpoints.size()) {
     LOG(ERROR) << "Wrong ID: " << id;
     return EXIT_FAILURE;

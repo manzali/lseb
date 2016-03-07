@@ -15,5 +15,10 @@
   "ENDPOINTS":
   [
     __ENDPOINTS__
-  ]
+  ],
+  "NETWORK": {
+    "IFACE": "ib0",
+    "PORT": 7000,
+    "RANGE": 32
+  }
 }
