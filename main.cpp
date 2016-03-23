@@ -32,6 +32,9 @@ int main(int argc, char* argv[]) {
   boost::program_options::options_description desc("Options");
 
   desc.add_options()("help,h", "Print help messages.")(
+    "id,i",
+    boost::program_options::value<int>(&id)->required(),
+    "Process ID.")(
     "configuration,c",
     boost::program_options::value<std::string>(&str_conf)->required(),
     "Configuration JSON file.");

@@ -55,6 +55,7 @@ class Endpoint {
         it->second.get < std::string > ("HOST"),
         it->second.get < std::string > ("PORT"));
     }
+    return endpoints;
   }
 #endif //HAVE_HYDRA
 
