@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
 
   int id;
   std::string str_conf;
+  int timeout = 0;
 
   boost::program_options::options_description desc("Options");
 
@@ -37,7 +38,10 @@ int main(int argc, char* argv[]) {
     "Process ID.")(
     "configuration,c",
     boost::program_options::value<std::string>(&str_conf)->required(),
-    "Configuration JSON file.");
+    "Configuration JSON file.")(
+    "timeout,t",
+    boost::program_options::value<int>(&timeout),
+    "Timeout in seconds (default is infinite)");
 
   try {
     boost::program_options::variables_map vm;
@@ -51,6 +55,11 @@ int main(int argc, char* argv[]) {
     boost::program_options::notify(vm);
   } catch (const boost::program_options::error& e) {
     std::cerr << e.what() << std::endl << desc << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if (timeout < 0) {
+    LOG(ERROR) << "Wrong timeout: can't be negative!";
     return EXIT_FAILURE;
   }
 
@@ -215,8 +224,12 @@ int main(int argc, char* argv[]) {
 
   // *stop = true;
 
-  bu_th.join();
-  ru_th.join();
+  if (timeout) {
+    std::this_thread::sleep_for(std::chrono::seconds(timeout));
+  } else {
+    bu_th.join();
+    ru_th.join();
+  }
 
   return EXIT_SUCCESS;
 }
