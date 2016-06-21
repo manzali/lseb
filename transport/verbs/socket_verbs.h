@@ -12,6 +12,12 @@
 
 namespace lseb {
 
+namespace socket {
+static uint8_t RETRY_COUNT = 7;
+static uint8_t RNR_RETRY_COUNT = 7;
+static uint8_t MIN_RTR_TIMER = 1;
+}
+
 class SendSocket {
   rdma_cm_id* m_cm_id;
   ibv_mr* m_mr;

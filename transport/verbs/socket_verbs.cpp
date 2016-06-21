@@ -158,10 +158,23 @@ void RecvSocket::post_recv(std::vector<iovec> const& iov_vect) {
   }
 
   if (!m_init) {
-    if (rdma_accept(m_cm_id, NULL)) {
+    rdma_conn_param conn_param;
+    memset(&conn_param, 0, sizeof(rdma_conn_param));
+    conn_param.rnr_retry_count = socket::RNR_RETRY_COUNT;
+    if (rdma_accept(m_cm_id, &conn_param)) {
       throw std::runtime_error(
         "Error on rdma_accept: " + std::string(strerror(errno)));
     }
+
+    ibv_qp_attr attr;
+    memset(&attr, 0, sizeof(ibv_qp_attr));
+    attr.min_rnr_timer = socket::MIN_RTR_TIMER;
+    int flags = IBV_QP_MIN_RNR_TIMER;
+    if (ibv_modify_qp(m_cm_id->qp, &attr, flags)) {
+      throw std::runtime_error(
+          "Error on ibv_modify_qp: " + std::string(strerror(errno)));
+    }
+
     m_init = true;
   }
 }

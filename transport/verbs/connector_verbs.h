@@ -64,7 +64,11 @@ class Connector {
         "Error on rdma_create_ep: " + std::string(strerror(errno)));
     }
 
-    if (rdma_connect(cm_id, NULL)) {
+    rdma_conn_param conn_param;
+    memset(&conn_param, 0, sizeof(rdma_conn_param));
+    conn_param.retry_count = socket::RETRY_COUNT;
+    conn_param.rnr_retry_count = socket::RNR_RETRY_COUNT;
+    if (rdma_connect(cm_id, &conn_param)) {
       rdma_destroy_ep(cm_id);
       if (errno == ECONNREFUSED) {
         throw std::runtime_error(
@@ -74,6 +78,17 @@ class Connector {
           "Error on rdma_connect: " + std::string(strerror(errno)));
       }
     }
+
+    ibv_qp_attr qp_attr;
+    memset(&qp_attr, 0, sizeof(ibv_qp_attr));
+    qp_attr.min_rnr_timer = socket::MIN_RTR_TIMER;
+    int flags = IBV_QP_MIN_RNR_TIMER;
+    if (ibv_modify_qp(cm_id->qp, &qp_attr, flags)) {
+      rdma_destroy_ep(cm_id);
+      throw std::runtime_error(
+          "Error on ibv_modify_qp: " + std::string(strerror(errno)));
+    }
+
     std::unique_ptr<T> socket(new T(cm_id, m_credits));
     return socket;
   }
