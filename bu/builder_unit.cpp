@@ -77,12 +77,12 @@ size_t BuilderUnit::release_data(int id, int n) {
   iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + n);
   size_t const bytes = iovec_length(sub_vect);
   // Release iovec
-    auto& conn = *(m_connection_ids.at(id));
-    // Reset len of iovec
-    for (auto& iov : sub_vect) {
-      iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
-    }
-    conn.post_recv(sub_vect);
+  auto& conn = *(m_connection_ids.at(id));
+  // Reset len of iovec
+  for (auto& iov : sub_vect) {
+    iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
+  }
+  conn.post_recv(sub_vect);
   return bytes;
 }
 
@@ -93,7 +93,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   // Allocate memory
 
   size_t const data_size = m_max_fragment_size * m_bulk_size * m_credits
-      * (m_endpoints.size() - 1);
+      * (m_endpoints.size());
   std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
   LOG(NOTICE) << "Builder Unit - Allocated " << data_size << " bytes of memory";
 
