@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/program_options.hpp>
 
 #include <cassert>
@@ -182,13 +181,7 @@ int main(int argc, char* argv[]) {
     bulk_size);
 
   /**************** Builder Unit and Readout Unit *****************/
-
-  boost::lockfree::spsc_queue<iovec> free_local_data(credits);
-  boost::lockfree::spsc_queue<iovec> ready_local_data(credits);
-
   BuilderUnit bu(
-    free_local_data,
-    ready_local_data,
     endpoints,
     bulk_size,
     credits,
@@ -197,8 +190,6 @@ int main(int argc, char* argv[]) {
 
   ReadoutUnit ru(
     accumulator,
-    free_local_data,
-    ready_local_data,
     endpoints,
     bulk_size,
     credits,
