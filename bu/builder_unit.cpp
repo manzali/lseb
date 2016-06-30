@@ -86,7 +86,7 @@ size_t BuilderUnit::release_data(int id, int n) {
   return bytes;
 }
 
-void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
+void BuilderUnit::operator()() {
 
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
@@ -136,7 +136,7 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   std::chrono::high_resolution_clock::time_point t_active;
   double active_time = 0;
 
-  while (!(*stop)) {
+  while (true) {
 
     bool active_flag = false;
     t_active = std::chrono::high_resolution_clock::now();

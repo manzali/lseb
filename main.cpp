@@ -195,14 +195,12 @@ int main(int argc, char* argv[]) {
     credits,
     id);
 
-  std::shared_ptr<std::atomic<bool> > stop(new std::atomic<bool>(false));
-
   // sigset_t set;
   // sigfillset(&set);  // mask all signals
   // pthread_sigmask(SIG_SETMASK, &set, NULL);  // set mask
 
-  std::thread bu_th(&BuilderUnit::operator(), &bu, stop);
-  std::thread ru_th(&ReadoutUnit::operator(), &ru, stop);
+  std::thread bu_th(&BuilderUnit::operator(), &bu);
+  std::thread ru_th(&ReadoutUnit::operator(), &ru);
 
   // sigemptyset(&set);
   // sigaddset(&set, SIGINT);

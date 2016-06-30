@@ -2,7 +2,6 @@
 #define RU_READOUT_UNIT_H
 
 #include <map>
-#include <atomic>
 
 #include <sys/uio.h>
 
@@ -28,7 +27,7 @@ class ReadoutUnit {
     int bulk_size,
     int credits,
     int id);
-  void operator()(std::shared_ptr<std::atomic<bool> > stop);
+  void operator()();
 };
 
 }
