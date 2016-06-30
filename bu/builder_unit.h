@@ -19,6 +19,8 @@ class BuilderUnit {
   int m_max_fragment_size;
   int m_id;
 
+  std::unique_ptr<unsigned char[]> m_data_ptr;
+
   int read_data(int id);
   bool check_data();
   size_t release_data(int id, int n);
@@ -30,7 +32,8 @@ class BuilderUnit {
     int credits,
     int max_fragment_size,
     int id);
-  void operator()();
+  void connect();
+  void run();
 };
 
 }

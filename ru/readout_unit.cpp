@@ -29,8 +29,7 @@ ReadoutUnit::ReadoutUnit(
       m_id(id) {
 }
 
-void ReadoutUnit::operator()() {
-
+void ReadoutUnit::connect(){
   std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
@@ -62,6 +61,11 @@ void ReadoutUnit::operator()() {
       << ")";
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
+}
+
+void ReadoutUnit::run() {
+
+  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
 
   FrequencyMeter bandwith(5.0);
 

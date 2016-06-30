@@ -27,7 +27,8 @@ class ReadoutUnit {
     int bulk_size,
     int credits,
     int id);
-  void operator()();
+  void connect();
+  void run();
 };
 
 }

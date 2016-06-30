@@ -24,7 +24,10 @@ BuilderUnit::BuilderUnit(
       m_bulk_size(bulk_size),
       m_credits(credits),
       m_max_fragment_size(max_fragment_size),
-      m_id(id) {
+      m_id(id),
+      m_data_ptr(
+          new unsigned char[max_fragment_size * bulk_size * credits
+              * endpoints.size()]) {
 }
 
 int BuilderUnit::read_data(int id) {
@@ -42,18 +45,18 @@ int BuilderUnit::read_data(int id) {
 }
 
 bool BuilderUnit::check_data() {
-  uint64_t local_evt_id = pointer_cast<EventHeader>(
+  uint64_t first_evt_id = pointer_cast<EventHeader>(
       m_data_vect[0].front().iov_base)->id;
   for (auto& data : m_data_vect) {
     uint64_t id = pointer_cast<EventHeader>(data.front().iov_base)->id;
     uint64_t flags = pointer_cast<EventHeader>(data.front().iov_base)->flags;
     uint64_t length = pointer_cast<EventHeader>(data.front().iov_base)->length;
-    if (id != local_evt_id) {
+    if (id != first_evt_id) {
       LOG(ERROR)
         << "Remote event id ("
         << id
         << ") is different from the event id of the BU 0 ("
-        << local_evt_id
+        << first_evt_id
         << ")";
       return false;
     }
@@ -86,16 +89,7 @@ size_t BuilderUnit::release_data(int id, int n) {
   return bytes;
 }
 
-void BuilderUnit::operator()() {
-
-  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
-
-  // Allocate memory
-
-  size_t const data_size = m_max_fragment_size * m_bulk_size * m_credits
-      * (m_endpoints.size());
-  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
-  LOG(NOTICE) << "Builder Unit - Allocated " << data_size << " bytes of memory";
+void BuilderUnit::connect() {
 
   // Connections
 
@@ -114,7 +108,8 @@ void BuilderUnit::operator()() {
         std::make_pair(i, std::unique_ptr<RecvSocket>(acceptor.accept())));
     auto& conn = *(m_connection_ids.at(i));
 
-    unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
+    unsigned char* base_data_ptr = m_data_ptr.get()
+        + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);
 
     std::vector<iovec> iov_vect;
@@ -128,6 +123,9 @@ void BuilderUnit::operator()() {
       << conn.peer_hostname();
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
+}
+
+void BuilderUnit::run() {
 
   FrequencyMeter frequency(5.0);
 
@@ -143,17 +141,17 @@ void BuilderUnit::operator()() {
 
     // Acquire
     int min_wrs = m_credits;
-    for (auto id : id_sequence) {
-      int read_wrs = read_data(id);
+    for (int i = 0; i < m_endpoints.size(); ++i) {
+      int read_wrs = read_data(i);
       if (read_wrs) {
         LOG(DEBUG)
           << "Builder Unit - Read "
           << read_wrs
           << " wrs from conn "
-          << id;
+          << i;
         active_flag = true;
       }
-      int const current_wrs = m_data_vect[id].size();
+      int const current_wrs = m_data_vect[i].size();
       min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
     }
 
@@ -163,13 +161,13 @@ void BuilderUnit::operator()() {
       }
 
       // Release
-      for (auto id : id_sequence) {
-        size_t const bytes = release_data(id, min_wrs);
+      for (int i = 0; i < m_endpoints.size(); ++i) {
+        size_t const bytes = release_data(i, min_wrs);
         LOG(DEBUG)
           << "Builder Unit - Released "
           << min_wrs
           << " wrs of conn "
-          << id;
+          << i;
       }
       frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
     }
