@@ -130,7 +130,6 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   LOG(NOTICE) << "Builder Unit - All connections established";
 
   FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   std::chrono::high_resolution_clock::time_point t_tot =
       std::chrono::high_resolution_clock::now();
@@ -166,9 +165,6 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       // Release
       for (auto id : id_sequence) {
         size_t const bytes = release_data(id, min_wrs);
-        if (id != m_endpoints.size() - 1) {
-          bandwith.add(bytes);
-        }
         LOG(DEBUG)
           << "Builder Unit - Released "
           << min_wrs
@@ -192,8 +188,6 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
         << "Builder Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s - "
         << active_time / tot_time * 100.
         << " %";
       active_time = 0;

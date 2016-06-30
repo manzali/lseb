@@ -63,8 +63,7 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
   }
   LOG(NOTICE) << "Readout Unit - All connections established";
 
-  FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
+  FrequencyMeter bandwith(5.0);
 
   std::chrono::high_resolution_clock::time_point t_tot =
       std::chrono::high_resolution_clock::now();
@@ -97,7 +96,9 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       auto& conn = *(m_connection_ids.at(id));
       std::vector<iovec> completed_wr = conn.pop_completed();
       for (auto const& wr : completed_wr) {
-        bandwith.add(wr.iov_len);
+        if (id != m_id) {
+          bandwith.add(wr.iov_len);
+        }
         wr_to_release.push_back(wr.iov_base);
       }
       int const count = completed_wr.size();
@@ -125,7 +126,6 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       assert(m_credits - conn.pending() != 0);
       conn.post_send(iov);
       LOG(DEBUG) << "Readout Unit - Written 1 wrs to conn " << seq_id;
-      frequency.add(m_bulk_size);
 
       // Increment seq_it and check for end of a cycle
       if (++seq_it == std::end(id_sequence)) {
@@ -141,15 +141,13 @@ void ReadoutUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
           std::chrono::high_resolution_clock::now() - t_start).count();
     }
 
-    if (frequency.check()) {
+    if (bandwith.check()) {
 
       double tot_time = std::chrono::duration<double>(
           std::chrono::high_resolution_clock::now() - t_tot).count();
 
       LOG(NOTICE)
         << "Readout Unit: "
-        << frequency.frequency() / std::mega::num
-        << " MHz - "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s - "
         << active_time / tot_time * 100.
