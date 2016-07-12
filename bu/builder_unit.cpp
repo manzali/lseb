@@ -13,76 +13,50 @@
 
 namespace lseb {
 
-namespace {
-
-int find_endpoint_id(
-  std::vector<Endpoint> const& endpoints,
-  std::string const& address) {
-  auto it = std::find_if(
-    std::begin(endpoints),
-    std::end(endpoints),
-    [&address](Endpoint const& ep) {return ep.hostname() == address;});
-  return
-      (it == std::end(endpoints)) ?
-        -1 :
-        std::distance(std::begin(endpoints), it);
-}
-
-}
-
 BuilderUnit::BuilderUnit(
-  boost::lockfree::spsc_queue<iovec>& free_local_data,
-  boost::lockfree::spsc_queue<iovec>& ready_local_data,
-  std::vector<Endpoint> const& endpoints,
-  int bulk_size,
-  int credits,
-  int max_fragment_size,
-  int id)
-    :
-      m_free_local_queue(free_local_data),
-      m_ready_local_queue(ready_local_data),
-      m_endpoints(endpoints),
+    std::vector<Endpoint> const& endpoints,
+    int bulk_size,
+    int credits,
+    int max_fragment_size,
+    int id)
+    : m_endpoints(endpoints),
       m_data_vect(endpoints.size()),
       m_bulk_size(bulk_size),
       m_credits(credits),
       m_max_fragment_size(max_fragment_size),
-      m_id(id) {
+      m_id(id),
+      m_data_ptr(
+          new unsigned char[max_fragment_size * bulk_size * credits
+              * endpoints.size()]) {
 }
 
 int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
   int const old_size = iov_vect.size();
-  if (id != m_id) {
-    auto& conn = *(m_connection_ids.at(id));
-    std::vector<iovec> new_data = conn.pop_completed();
-    if (!new_data.empty()) {
-      iov_vect.insert(
+  auto& conn = *(m_connection_ids.at(id));
+  std::vector<iovec> new_data = conn.pop_completed();
+  if (!new_data.empty()) {
+    iov_vect.insert(
         std::end(iov_vect),
         std::begin(new_data),
         std::end(new_data));
-    }
-  } else {
-    iovec iov;
-    while (m_ready_local_queue.pop(iov)) {
-      iov_vect.push_back(iov);
-    }
   }
   return iov_vect.size() - old_size;
 }
 
 bool BuilderUnit::check_data() {
-  uint64_t local_evt_id = pointer_cast<EventHeader>(
-    m_data_vect[m_id].front().iov_base)->id;
+  uint64_t first_evt_id = pointer_cast<EventHeader>(
+      m_data_vect[0].front().iov_base)->id;
   for (auto& data : m_data_vect) {
     uint64_t id = pointer_cast<EventHeader>(data.front().iov_base)->id;
     uint64_t flags = pointer_cast<EventHeader>(data.front().iov_base)->flags;
     uint64_t length = pointer_cast<EventHeader>(data.front().iov_base)->length;
-    if (id != local_evt_id) {
+    if (id != first_evt_id) {
       LOG(ERROR)
         << "Remote event id ("
         << id
-        << ") is different from local event id ("
-        << local_evt_id
+        << ") is different from the event id of the BU 0 ("
+        << first_evt_id
         << ")";
       return false;
     }
@@ -106,49 +80,20 @@ size_t BuilderUnit::release_data(int id, int n) {
   iov_vect.erase(std::begin(iov_vect), std::begin(iov_vect) + n);
   size_t const bytes = iovec_length(sub_vect);
   // Release iovec
-  if (id != m_id) {
-    auto& conn = *(m_connection_ids.at(id));
-    // Reset len of iovec
-    for (auto& iov : sub_vect) {
-      iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
-    }
-    conn.post_recv(sub_vect);
-  } else {
-    for (auto& iov : sub_vect) {
-      while (!m_free_local_queue.push(iov)) {
-        ;
-      }
-    }
+  auto& conn = *(m_connection_ids.at(id));
+  // Reset len of iovec
+  for (auto& iov : sub_vect) {
+    iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
   }
+  conn.post_recv(sub_vect);
   return bytes;
 }
 
-void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
-
-  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
-
-  // Allocate memory
-
-  size_t const data_size =
-    m_max_fragment_size * m_bulk_size * m_credits * (m_endpoints.size() - 1);
-  std::unique_ptr<unsigned char[]> const data_ptr(new unsigned char[data_size]);
-  LOG(NOTICE) << "Builder Unit - Allocated " << data_size << " bytes of memory";
+void BuilderUnit::connect() {
 
   // Connections
 
   Acceptor<RecvSocket> acceptor(m_credits);
-/*
-  bool ep_created = false;
-  while (!ep_created) {
-    try {
-      acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
-      ep_created = true;
-    } catch (std::exception& e) {
-      LOG(WARNING) << "Builder Unit - Error on listen ... Retrying!";
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-  }
-*/
 
   acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
 
@@ -156,19 +101,15 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
 
   size_t const chunk_size = m_max_fragment_size * m_bulk_size;
 
-  for (int i = 0; i < m_endpoints.size() - 1; ++i) {
+  for (int i = 0; i < m_endpoints.size(); ++i) {
 
     // Create a temporary entry in the map with the local id
     auto p = m_connection_ids.emplace(
-      std::make_pair(m_id, std::unique_ptr<RecvSocket>(acceptor.accept())));
-    int id = find_endpoint_id(m_endpoints, p.first->second->peer_hostname());
-    assert(id != -1 && "Address not found in endpoints list.");
-    // Insert the real id and delete the local one
-    m_connection_ids.emplace(std::make_pair(id, std::move(p.first->second)));
-    m_connection_ids.erase(p.first);
-    auto& conn = *(m_connection_ids.at(id));
+        std::make_pair(i, std::unique_ptr<RecvSocket>(acceptor.accept())));
+    auto& conn = *(m_connection_ids.at(i));
 
-    unsigned char* base_data_ptr = data_ptr.get() + i * chunk_size * m_credits;
+    unsigned char* base_data_ptr = m_data_ptr.get()
+        + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);
 
     std::vector<iovec> iov_vect;
@@ -182,29 +123,35 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       << conn.peer_hostname();
   }
   LOG(NOTICE) << "Builder Unit - All connections established";
+}
+
+void BuilderUnit::run() {
 
   FrequencyMeter frequency(5.0);
-  FrequencyMeter bandwith(5.0);  // this timeout is ignored (frequency is used)
 
   std::chrono::high_resolution_clock::time_point t_tot =
-    std::chrono::high_resolution_clock::now();
+      std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::time_point t_active;
   double active_time = 0;
 
-  while (!(*stop)) {
+  while (true) {
 
     bool active_flag = false;
     t_active = std::chrono::high_resolution_clock::now();
 
     // Acquire
     int min_wrs = m_credits;
-    for (auto id : id_sequence) {
-      int read_wrs = read_data(id);
+    for (int i = 0; i < m_endpoints.size(); ++i) {
+      int read_wrs = read_data(i);
       if (read_wrs) {
-        LOG(DEBUG) << "Builder Unit - Read " << read_wrs << " wrs from conn " << id;
+        LOG(DEBUG)
+          << "Builder Unit - Read "
+          << read_wrs
+          << " wrs from conn "
+          << i;
         active_flag = true;
       }
-      int const current_wrs = m_data_vect[id].size();
+      int const current_wrs = m_data_vect[i].size();
       min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
     }
 
@@ -214,32 +161,31 @@ void BuilderUnit::operator()(std::shared_ptr<std::atomic<bool> > stop) {
       }
 
       // Release
-      for (auto id : id_sequence) {
-        size_t const bytes = release_data(id, min_wrs);
-        if (id != m_endpoints.size() - 1) {
-          bandwith.add(bytes);
-        }
-        LOG(DEBUG) << "Builder Unit - Released " << min_wrs << " wrs of conn " << id;
+      for (int i = 0; i < m_endpoints.size(); ++i) {
+        size_t const bytes = release_data(i, min_wrs);
+        LOG(DEBUG)
+          << "Builder Unit - Released "
+          << min_wrs
+          << " wrs of conn "
+          << i;
       }
       frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
     }
 
     if (active_flag) {
       active_time += std::chrono::duration<double>(
-        std::chrono::high_resolution_clock::now() - t_active).count();
+          std::chrono::high_resolution_clock::now() - t_active).count();
     }
 
     if (frequency.check()) {
 
       double tot_time = std::chrono::duration<double>(
-        std::chrono::high_resolution_clock::now() - t_tot).count();
+          std::chrono::high_resolution_clock::now() - t_tot).count();
 
       LOG(NOTICE)
         << "Builder Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
-        << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s - "
         << active_time / tot_time * 100.
         << " %";
       active_time = 0;

@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/program_options.hpp>
 
 #include <cassert>
@@ -10,6 +9,8 @@
 
 #include "bu/builder_unit.h"
 #include "ru/readout_unit.h"
+
+#include "common/tcp_barrier.h"
 
 #include "common/log.hpp"
 #include "common/configuration.h"
@@ -182,13 +183,7 @@ int main(int argc, char* argv[]) {
     bulk_size);
 
   /**************** Builder Unit and Readout Unit *****************/
-
-  boost::lockfree::spsc_queue<iovec> free_local_data(credits);
-  boost::lockfree::spsc_queue<iovec> ready_local_data(credits);
-
   BuilderUnit bu(
-    free_local_data,
-    ready_local_data,
     endpoints,
     bulk_size,
     credits,
@@ -197,32 +192,25 @@ int main(int argc, char* argv[]) {
 
   ReadoutUnit ru(
     accumulator,
-    free_local_data,
-    ready_local_data,
     endpoints,
     bulk_size,
     credits,
     id);
 
-  std::shared_ptr<std::atomic<bool> > stop(new std::atomic<bool>(false));
+  std::thread bu_conn_th(&BuilderUnit::connect, &bu);
+  std::thread ru_conn_th(&ReadoutUnit::connect, &ru);
 
-  // sigset_t set;
-  // sigfillset(&set);  // mask all signals
-  // pthread_sigmask(SIG_SETMASK, &set, NULL);  // set mask
+  bu_conn_th.join();
+  ru_conn_th.join();
 
-  std::thread bu_th(&BuilderUnit::operator(), &bu, stop);
-  std::thread ru_th(&ReadoutUnit::operator(), &ru, stop);
+  tcp_barrier(
+    id,
+    endpoints.size(),
+    endpoints[0].hostname(),
+    endpoints[0].port());
 
-  // sigemptyset(&set);
-  // sigaddset(&set, SIGINT);
-  // sigaddset(&set, SIGTERM);
-
-  // int sig_caught;
-  // sigwait(&set, &sig_caught);
-
-  // std::cout << "Received signal " << sig_caught << std::endl;
-
-  // *stop = true;
+  std::thread bu_th(&BuilderUnit::run, &bu);
+  std::thread ru_th(&ReadoutUnit::run, &ru);
 
   if (timeout) {
     std::this_thread::sleep_for(std::chrono::seconds(timeout));
