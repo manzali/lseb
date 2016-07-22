@@ -43,4 +43,4 @@ before_script:
 
 script:
   - make -j 4
-  - make check
+#  - make check
