@@ -1,10 +1,10 @@
 #!/bin/sh
 
-#PBS -M matteo.manzali@cnaf.infn.it
-#PBS -m abe
+##PBS -M matteo.manzali@cnaf.infn.it
+##PBS -m abe
 
-#PBS -l nodes=32:ppn=8,walltime=2:00:00
-#PBS -A INF14_LHCb_0
+#PBS -l nodes=2:ppn=8,walltime=2:00:00
+#PBS -A INF16_LHCb
 
 #PBS -N test
 #PBS -j oe
@@ -55,7 +55,7 @@ cp ${HOME}/lseb/utils/galileo_stop.sh ${dir}/galileo_stop.sh
 sed -i "s/__ID__/${id}/g" ${dir}/galileo_stop.sh
 
 ssh -n "node165" "/bin/sh ${dir}/galileo_start.sh"
-sleep 5000
+sleep 300
 /bin/sh ${dir}/galileo_stop.sh
 
 # Kill processes
