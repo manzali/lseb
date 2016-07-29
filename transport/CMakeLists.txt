@@ -15,7 +15,6 @@ target_link_libraries(
   ${Boost_LIBRARIES}
 )
 
-
 elseif (TRANSPORT STREQUAL "VERBS")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
@@ -35,6 +34,26 @@ target_link_libraries(
   transport
   -libverbs
   ${RDMA_LIBRARIES}
+)
+
+elseif (TRANSPORT STREQUAL "LIBFABRIC")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
+find_package (LibFabric REQUIRED)
+
+include_directories(
+  ${LSEB_SOURCE_DIR}
+  ${LIBFABRIC_INCLUDE_DIRS}
+)
+
+add_library(
+  transport
+  libfabric/socket_libfabric.cpp
+)
+
+target_link_libraries(
+  transport
+  ${LIBFABRIC_LIBRARIES}
 )
 
 else()
