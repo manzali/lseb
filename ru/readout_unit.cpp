@@ -35,7 +35,7 @@ void ReadoutUnit::connect(){
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
   DataRange const data_range = m_accumulator.data_range();
-  Connector<SendSocket> connector(m_credits);
+  Connector connector(m_credits);
 
   for (auto id : id_sequence) {
     Endpoint const& ep = m_endpoints[id];
@@ -98,7 +98,7 @@ void ReadoutUnit::run() {
     std::vector<void*> wr_to_release;
     for (auto id : id_sequence) {
       auto& conn = *(m_connection_ids.at(id));
-      std::vector<iovec> completed_wr = conn.pop_completed();
+      std::vector<iovec> completed_wr = conn.poll_completed_send();
       for (auto const& wr : completed_wr) {
         if (id != m_id) {
           bandwith.add(wr.iov_len);
@@ -106,7 +106,7 @@ void ReadoutUnit::run() {
         wr_to_release.push_back(wr.iov_base);
       }
       int const count = completed_wr.size();
-      conn_avail = (seq_id == id) ? (conn.pending() != m_credits) : conn_avail;
+      conn_avail = (seq_id == id) ? (conn.available_send()) : conn_avail;
       if (!count) {
         LOG(DEBUG)
           << "Readout Unit - Completed "
@@ -127,7 +127,6 @@ void ReadoutUnit::run() {
       active_flag = true;
       auto& iov = iov_to_send[seq_id];
       auto& conn = *(m_connection_ids.at(seq_id));
-      assert(m_credits - conn.pending() != 0);
       conn.post_send(iov);
       LOG(DEBUG) << "Readout Unit - Written 1 wrs to conn " << seq_id;
 

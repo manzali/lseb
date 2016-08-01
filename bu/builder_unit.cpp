@@ -34,7 +34,7 @@ int BuilderUnit::read_data(int id) {
   auto& iov_vect = m_data_vect[id];
   int const old_size = iov_vect.size();
   auto& conn = *(m_connection_ids.at(id));
-  std::vector<iovec> new_data = conn.pop_completed();
+  std::vector<iovec> new_data = conn.poll_completed_recv();
   if (!new_data.empty()) {
     iov_vect.insert(
         std::end(iov_vect),
@@ -84,8 +84,8 @@ size_t BuilderUnit::release_data(int id, int n) {
   // Reset len of iovec
   for (auto& iov : sub_vect) {
     iov.iov_len = m_max_fragment_size * m_bulk_size;  // chunk size
+    conn.post_recv(iov);
   }
-  conn.post_recv(sub_vect);
   return bytes;
 }
 
@@ -93,7 +93,7 @@ void BuilderUnit::connect() {
 
   // Connections
 
-  Acceptor<RecvSocket> acceptor(m_credits);
+  Acceptor acceptor(m_credits);
 
   acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
 
@@ -105,18 +105,16 @@ void BuilderUnit::connect() {
 
     // Create a temporary entry in the map with the local id
     auto p = m_connection_ids.emplace(
-        std::make_pair(i, std::unique_ptr<RecvSocket>(acceptor.accept())));
+        std::make_pair(i, std::unique_ptr<Socket>(acceptor.accept())));
     auto& conn = *(m_connection_ids.at(i));
 
     unsigned char* base_data_ptr = m_data_ptr.get()
         + i * chunk_size * m_credits;
     conn.register_memory(base_data_ptr, chunk_size * m_credits);
 
-    std::vector<iovec> iov_vect;
     for (int j = 0; j < m_credits; ++j) {
-      iov_vect.push_back( { base_data_ptr + j * chunk_size, chunk_size });
+      conn.post_recv({ base_data_ptr + j * chunk_size, chunk_size });
     }
-    conn.post_recv(iov_vect);
 
     LOG(NOTICE)
       << "Builder Unit - Connection established with ip "

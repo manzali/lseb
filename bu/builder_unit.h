@@ -12,7 +12,7 @@ namespace lseb {
 
 class BuilderUnit {
   std::vector<Endpoint> m_endpoints;
-  std::map<int, std::unique_ptr<RecvSocket> > m_connection_ids;
+  std::map<int, std::unique_ptr<Socket> > m_connection_ids;
   std::vector<std::vector<iovec> > m_data_vect;
   int m_bulk_size;
   int m_credits;

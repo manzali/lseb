@@ -1,8 +1,0 @@
-#ifndef TRANSPORT_LIBFABRIC_SOCKET_LIBFABRIC_H
-#define TRANSPORT_LIBFABRIC_SOCKET_LIBFABRIC_H
-
-namespace lseb {
-
-}
-
-#endif

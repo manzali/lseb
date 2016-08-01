@@ -1,21 +1,4 @@
-if(TRANSPORT STREQUAL "TCP")
-
-include_directories(
-  ${LSEB_SOURCE_DIR}
-  ${Boost_INCLUDE_DIRS}
-)
-
-add_library(
-  transport
-  tcp/socket_tcp.cpp
-)
-
-target_link_libraries(
-  transport
-  ${Boost_LIBRARIES}
-)
-
-elseif (TRANSPORT STREQUAL "VERBS")
+if (TRANSPORT STREQUAL "VERBS")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
 find_package (RDMA REQUIRED)
@@ -27,7 +10,9 @@ include_directories(
 
 add_library(
   transport
-  verbs/socket_verbs.cpp
+  verbs/socket.cpp
+  verbs/acceptor.cpp
+  verbs/connector.cpp
 )
 
 target_link_libraries(
@@ -48,7 +33,9 @@ include_directories(
 
 add_library(
   transport
-  libfabric/socket_libfabric.cpp
+  libfabric/socket.cpp
+  libfabric/acceptor.cpp
+  libfabric/connector.cpp
 )
 
 target_link_libraries(
