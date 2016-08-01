@@ -57,10 +57,10 @@ int main(int argc, char* argv[]) {
 
   MemoryPool pool(buffer_ptr.get(), buffer_size, chunk_size);
 
-  Acceptor<RecvSocket> acceptor(credits);
+  Acceptor acceptor(credits);
 
   acceptor.listen(server, port);
-  std::unique_ptr<RecvSocket> socket = acceptor.accept();
+  std::unique_ptr<Socket> socket = acceptor.accept();
   socket->register_memory(buffer_ptr.get(), buffer_size);
   std::cout << "Accepted connection" << std::endl;
 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
   }
 
   while (true) {
-    std::vector<iovec> vect = socket->pop_completed();
+    std::vector<iovec> vect = socket->poll_completed_recv();
     for (auto& iov : vect) {
       pool.free(iov);
     }

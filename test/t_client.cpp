@@ -56,20 +56,20 @@ int main(int argc, char* argv[]) {
 
   MemoryPool pool(buffer_ptr.get(), buffer_size, chunk_size);
 
-  Connector<SendSocket> connector(credits);
-  std::unique_ptr<SendSocket> socket(connector.connect(server, port));
+  Connector connector(credits);
+  std::unique_ptr<Socket> socket(connector.connect(server, port));
   socket->register_memory(buffer_ptr.get(), buffer_size);
   std::cout << "Connected to " << server << " on port " << port << std::endl;
 
   FrequencyMeter bandwith(5.0);
 
   while (true) {
-    std::vector<iovec> vect = socket->pop_completed();
+    std::vector<iovec> vect = socket->poll_completed_send();
     for (auto& iov : vect) {
       bandwith.add(iov.iov_len);
       pool.free({iov.iov_base, chunk_size});
     }
-    if (socket->pending() != credits) {
+    if (socket->available_send()) {
       socket->post_send(pool.alloc());
     }
     if (bandwith.check()) {
