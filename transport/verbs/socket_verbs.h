@@ -12,7 +12,7 @@
 
 namespace lseb {
 
-namespace socket {
+namespace verbs {
 static uint8_t RETRY_COUNT = 7;
 static uint8_t RNR_RETRY_COUNT = 7;
 static uint8_t MIN_RTR_TIMER = 1;

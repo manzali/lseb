@@ -66,8 +66,8 @@ class Connector {
 
     rdma_conn_param conn_param;
     memset(&conn_param, 0, sizeof(rdma_conn_param));
-    conn_param.retry_count = socket::RETRY_COUNT;
-    conn_param.rnr_retry_count = socket::RNR_RETRY_COUNT;
+    conn_param.retry_count = verbs::RETRY_COUNT;
+    conn_param.rnr_retry_count = verbs::RNR_RETRY_COUNT;
     if (rdma_connect(cm_id, &conn_param)) {
       rdma_destroy_ep(cm_id);
       if (errno == ECONNREFUSED) {
@@ -81,7 +81,7 @@ class Connector {
 
     ibv_qp_attr qp_attr;
     memset(&qp_attr, 0, sizeof(ibv_qp_attr));
-    qp_attr.min_rnr_timer = socket::MIN_RTR_TIMER;
+    qp_attr.min_rnr_timer = verbs::MIN_RTR_TIMER;
     int flags = IBV_QP_MIN_RNR_TIMER;
     if (ibv_modify_qp(cm_id->qp, &qp_attr, flags)) {
       rdma_destroy_ep(cm_id);
