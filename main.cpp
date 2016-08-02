@@ -190,13 +190,12 @@ int main(int argc, char* argv[]) {
 
   ReadoutUnit ru(
     accumulator,
-    endpoints,
     bulk_size,
     credits,
     id);
 
   std::thread bu_conn_th(&BuilderUnit::connect, &bu);
-  std::thread ru_conn_th(&ReadoutUnit::connect, &ru);
+  std::thread ru_conn_th(&ReadoutUnit::connect, &ru, endpoints);
 
   bu_conn_th.join();
   ru_conn_th.join();

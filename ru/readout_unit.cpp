@@ -18,19 +18,17 @@ namespace lseb {
 
 ReadoutUnit::ReadoutUnit(
     Accumulator& accumulator,
-    std::vector<Endpoint> const& endpoints,
     int bulk_size,
     int credits,
     int id)
     : m_accumulator(accumulator),
-      m_endpoints(endpoints),
       m_bulk_size(bulk_size),
       m_credits(credits),
       m_id(id) {
 }
 
-void ReadoutUnit::connect(){
-  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
+void ReadoutUnit::connect(std::vector<Endpoint> const& endpoints){
+  std::vector<int> id_sequence = create_sequence(m_id, endpoints.size());
 
   LOG(NOTICE) << "Readout Unit - Waiting for connections...";
 
@@ -38,7 +36,7 @@ void ReadoutUnit::connect(){
   Connector connector(m_credits);
 
   for (auto id : id_sequence) {
-    Endpoint const& ep = m_endpoints[id];
+    Endpoint const& ep = endpoints[id];
     bool connected = false;
     while (!connected) {
       try {

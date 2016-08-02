@@ -14,7 +14,6 @@ namespace lseb {
 
 class ReadoutUnit {
   Accumulator& m_accumulator;
-  std::vector<Endpoint> m_endpoints;
   std::map<int, std::unique_ptr<Socket> > m_connection_ids;
   int m_bulk_size;
   int m_credits;
@@ -23,11 +22,10 @@ class ReadoutUnit {
  public:
   ReadoutUnit(
     Accumulator& accumulator,
-    std::vector<Endpoint> const& endpoints,
     int bulk_size,
     int credits,
     int id);
-  void connect();
+  void connect(std::vector<Endpoint> const& endpoints);
   void run();
 };
 
