@@ -65,7 +65,7 @@ void ReadoutUnit::connect(){
 
 void ReadoutUnit::run() {
 
-  std::vector<int> id_sequence = create_sequence(m_id, m_endpoints.size());
+  std::vector<int> id_sequence = create_sequence(m_id, m_connection_ids.size());
 
   FrequencyMeter bandwith(5.0);
 
@@ -134,7 +134,7 @@ void ReadoutUnit::run() {
       if (++seq_it == std::end(id_sequence)) {
         // End of a cycle
         seq_it = std::begin(id_sequence);
-        assert(iov_to_send.size() == m_endpoints.size());
+        assert(iov_to_send.size() == m_connection_ids.size());
         iov_to_send.clear();
       }
     }

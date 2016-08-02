@@ -6,7 +6,7 @@ compiler:
 
 branches:
   except:
-    - all_in_one
+    - libfabric
 
 # Problem with clang
 # http://stackoverflow.com/questions/15747223/why-does-this-basic-thread-program-fail-with-clang-but-pass-in-g
