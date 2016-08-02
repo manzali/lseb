@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  Log::init("t_server", Log::INFO);
+  Log::init("t_client", Log::INFO);
 
   size_t const buffer_size = chunk_size * credits;
 
