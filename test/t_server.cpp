@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
       LOG(INFO)
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s"l;
+        << " Gb/s";
     }
   }
 }
