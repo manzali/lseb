@@ -4,6 +4,7 @@
 
 #include "common/memory_pool.h"
 #include "common/frequency_meter.h"
+#include "common/log.hpp"
 
 #include "transport/transport.h"
 
@@ -47,9 +48,11 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  Log::init("t_server", Log::INFO);
+
   size_t const buffer_size = chunk_size * credits;
 
-  std::cout << "Allocating " << buffer_size << " bytes of memory" << std::endl;
+  LOG(INFO) << "Allocating " << buffer_size << " bytes of memory";
 
   std::unique_ptr<unsigned char[]> const buffer_ptr(
     new unsigned char[buffer_size]);
@@ -59,7 +62,7 @@ int main(int argc, char* argv[]) {
   Connector connector(credits);
   std::unique_ptr<Socket> socket(connector.connect(server, port));
   socket->register_memory(buffer_ptr.get(), buffer_size);
-  std::cout << "Connected to " << server << " on port " << port << std::endl;
+  LOG(INFO) << "Connected to " << server << " on port " << port;
 
   FrequencyMeter bandwith(5.0);
 
@@ -73,11 +76,10 @@ int main(int argc, char* argv[]) {
       socket->post_send(pool.alloc());
     }
     if (bandwith.check()) {
-      std::cout
+      LOG(INFO)
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s"
-        << std::endl;
+        << " Gb/s";
     }
   }
 }
