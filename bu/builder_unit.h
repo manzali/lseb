@@ -11,7 +11,6 @@
 namespace lseb {
 
 class BuilderUnit {
-  std::vector<Endpoint> m_endpoints;
   std::map<int, std::unique_ptr<Socket> > m_connection_ids;
   std::vector<std::vector<iovec> > m_data_vect;
   int m_bulk_size;
@@ -27,12 +26,12 @@ class BuilderUnit {
 
  public:
   BuilderUnit(
-    std::vector<Endpoint> const& endpoints,
+    int nodes,
     int bulk_size,
     int credits,
     int max_fragment_size,
     int id);
-  void connect();
+  void connect(std::vector<Endpoint> const& endpoints);
   void run();
 };
 

@@ -182,7 +182,7 @@ int main(int argc, char* argv[]) {
 
   /**************** Builder Unit and Readout Unit *****************/
   BuilderUnit bu(
-    endpoints,
+    endpoints.size(),
     bulk_size,
     credits,
     max_fragment_size,
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
     credits,
     id);
 
-  std::thread bu_conn_th(&BuilderUnit::connect, &bu);
+  std::thread bu_conn_th(&BuilderUnit::connect, &bu, endpoints);
   std::thread ru_conn_th(&ReadoutUnit::connect, &ru, endpoints);
 
   bu_conn_th.join();

@@ -14,20 +14,18 @@
 namespace lseb {
 
 BuilderUnit::BuilderUnit(
-    std::vector<Endpoint> const& endpoints,
+    int nodes,
     int bulk_size,
     int credits,
     int max_fragment_size,
     int id)
-    : m_endpoints(endpoints),
-      m_data_vect(endpoints.size()),
+    : m_data_vect(nodes),
       m_bulk_size(bulk_size),
       m_credits(credits),
       m_max_fragment_size(max_fragment_size),
       m_id(id),
       m_data_ptr(
-          new unsigned char[max_fragment_size * bulk_size * credits
-              * endpoints.size()]) {
+          new unsigned char[max_fragment_size * bulk_size * credits * nodes]) {
 }
 
 int BuilderUnit::read_data(int id) {
@@ -60,10 +58,10 @@ bool BuilderUnit::check_data() {
         << ")";
       return false;
     }
-    if (flags >= m_endpoints.size()) {
-      LOG(ERROR) << "Found wrong connection id: " << flags;
-      return false;
-    }
+    //if (flags >= m_endpoints.size()) {
+    //  LOG(ERROR) << "Found wrong connection id: " << flags;
+    //  return false;
+    //}
     if (!length) {
       LOG(ERROR) << "Found wrong length: " << length;
       return false;
@@ -89,19 +87,19 @@ size_t BuilderUnit::release_data(int id, int n) {
   return bytes;
 }
 
-void BuilderUnit::connect() {
+void BuilderUnit::connect(std::vector<Endpoint> const& endpoints) {
 
   // Connections
 
   Acceptor acceptor(m_credits);
 
-  acceptor.listen(m_endpoints[m_id].hostname(), m_endpoints[m_id].port());
+  acceptor.listen(endpoints[m_id].hostname(), endpoints[m_id].port());
 
   LOG(NOTICE) << "Builder Unit - Waiting for connections...";
 
   size_t const chunk_size = m_max_fragment_size * m_bulk_size;
 
-  for (int i = 0; i < m_endpoints.size(); ++i) {
+  for (int i = 0; i < endpoints.size(); ++i) {
 
     // Create a temporary entry in the map with the local id
     auto p = m_connection_ids.emplace(
@@ -139,7 +137,7 @@ void BuilderUnit::run() {
 
     // Acquire
     int min_wrs = m_credits;
-    for (int i = 0; i < m_endpoints.size(); ++i) {
+    for (int i = 0; i < m_connection_ids.size(); ++i) {
       int read_wrs = read_data(i);
       if (read_wrs) {
         LOG(DEBUG)
@@ -159,7 +157,7 @@ void BuilderUnit::run() {
       }
 
       // Release
-      for (int i = 0; i < m_endpoints.size(); ++i) {
+      for (int i = 0; i < m_connection_ids.size(); ++i) {
         size_t const bytes = release_data(i, min_wrs);
         LOG(DEBUG)
           << "Builder Unit - Released "
@@ -167,7 +165,7 @@ void BuilderUnit::run() {
           << " wrs of conn "
           << i;
       }
-      frequency.add(min_wrs * m_bulk_size * m_endpoints.size());
+      frequency.add(min_wrs * m_bulk_size * m_connection_ids.size());
     }
 
     if (active_flag) {
