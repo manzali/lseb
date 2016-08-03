@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
       pool.free(iov);
     }
     bandwith.add(iovec_length(vect));
-    if (!pool.empty()) {
+    while (socket->available_recv() && !pool.empty()) {
       socket->post_recv(pool.alloc());
     }
     if (bandwith.check()) {
