@@ -51,29 +51,24 @@ int main(int argc, char* argv[]) {
 
   Log::init("t_client2", Log::INFO);
 
-  size_t const buffer_size = chunk_size * credits;
+  size_t const buffer_size = chunk_size * credits * 2;
 
   LOG(INFO) << "Two-way client test";
 
-  std::unique_ptr<unsigned char[]> const send_buffer_ptr(
+  std::unique_ptr<unsigned char[]> const buffer_ptr(
     new unsigned char[buffer_size]);
 
-  std::unique_ptr<unsigned char[]> const recv_buffer_ptr(
-    new unsigned char[buffer_size]);
-
-  MemoryPool send_pool(send_buffer_ptr.get(), buffer_size, chunk_size);
-  MemoryPool recv_pool(recv_buffer_ptr.get(), buffer_size, chunk_size);
+  MemoryPool pool(buffer_ptr.get(), buffer_size, chunk_size);
 
   Connector connector(credits);
   std::unique_ptr<Socket> socket(connector.connect(server, port));
-  socket->register_memory(send_buffer_ptr.get(), buffer_size);
-  socket->register_memory(recv_buffer_ptr.get(), buffer_size);
+  socket->register_memory(buffer_ptr.get(), buffer_size);
   LOG(INFO) << "Connected to " << server << " on port " << port;
 
   FrequencyMeter bandwith(5.0);
 
-  while (!recv_pool.empty()) {
-    socket->post_recv(recv_pool.alloc());
+  for (int i = 0; i < credits; ++i) {
+    socket->post_recv(pool.alloc());
   }
 
   while (true) {
@@ -81,20 +76,20 @@ int main(int argc, char* argv[]) {
     std::vector<iovec> send_vect = socket->poll_completed_send();
     for (auto& iov : send_vect) {
       bandwith.add(iov.iov_len);
-      send_pool.free({iov.iov_base, chunk_size});
+      pool.free({iov.iov_base, chunk_size});
     }
-    if (socket->available_send() && !send_pool.empty()) {
-      socket->post_send(send_pool.alloc());
+    if (socket->available_send() && !pool.empty()) {
+      socket->post_send(pool.alloc());
     }
 
     // Recv
     std::vector<iovec> recv_vect = socket->poll_completed_recv();
     for (auto& iov : recv_vect) {
-      recv_pool.free(iov);
+      pool.free(iov);
     }
     bandwith.add(iovec_length(recv_vect));
-    if (socket->available_recv() && !recv_pool.empty()) {
-      socket->post_recv(recv_pool.alloc());
+    if (socket->available_recv() && !pool.empty()) {
+      socket->post_recv(pool.alloc());
     }
 
     if (bandwith.check()) {
