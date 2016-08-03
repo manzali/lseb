@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
       recv_pool.free(iov);
     }
     bandwith.add(iovec_length(recv_vect));
-    while (!recv_pool.empty()) {
+    while (socket->available_recv() && !recv_pool.empty()) {
       socket->post_recv(recv_pool.alloc());
     }
 
@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
       bandwith.add(iov.iov_len);
       send_pool.free({iov.iov_base, chunk_size});
     }
-    while (socket->available_send()) {
+    while (socket->available_send() && !send_pool.empty()) {
       socket->post_send(send_pool.alloc());
     }
 
