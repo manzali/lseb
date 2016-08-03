@@ -49,39 +49,56 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  Log::init("t_server", Log::INFO);
+  Log::init("t_server2", Log::INFO);
 
   size_t const buffer_size = chunk_size * credits;
 
-  LOG(INFO) << "One-way server test (recv)";
+  LOG(INFO) << "Two-way server test";
 
-  std::unique_ptr<unsigned char[]> const buffer_ptr(
+  std::unique_ptr<unsigned char[]> const send_buffer_ptr(
+    new unsigned char[buffer_size]);
+  std::unique_ptr<unsigned char[]> const recv_buffer_ptr(
     new unsigned char[buffer_size]);
 
-  MemoryPool pool(buffer_ptr.get(), buffer_size, chunk_size);
+  MemoryPool send_pool(send_buffer_ptr.get(), buffer_size, chunk_size);
+  MemoryPool recv_pool(recv_buffer_ptr.get(), buffer_size, chunk_size);
 
   Acceptor acceptor(credits);
 
   acceptor.listen(server, port);
   std::unique_ptr<Socket> socket = acceptor.accept();
-  socket->register_memory(buffer_ptr.get(), buffer_size);
+  socket->register_memory(send_buffer_ptr.get(), buffer_size);
+  socket->register_memory(recv_buffer_ptr.get(), buffer_size);
+
   LOG(INFO) << "Accepted connection";
 
   FrequencyMeter bandwith(5.0);
 
-  while (!pool.empty()) {
-    socket->post_recv(pool.alloc());
+  while (!recv_pool.empty()) {
+    socket->post_recv(recv_pool.alloc());
   }
 
   while (true) {
-    std::vector<iovec> vect = socket->poll_completed_recv();
-    for (auto& iov : vect) {
-      pool.free(iov);
+    // Recv
+    std::vector<iovec> recv_vect = socket->poll_completed_recv();
+    for (auto& iov : recv_vect) {
+      recv_pool.free(iov);
     }
-    bandwith.add(iovec_length(vect));
-    if (!pool.empty()) {
-      socket->post_recv(pool.alloc());
+    bandwith.add(iovec_length(recv_vect));
+    if (!recv_pool.empty()) {
+      socket->post_recv(recv_pool.alloc());
     }
+
+    // Send
+    std::vector<iovec> send_vect = socket->poll_completed_send();
+    for (auto& iov : send_vect) {
+      bandwith.add(iov.iov_len);
+      send_pool.free({iov.iov_base, chunk_size});
+    }
+    if (socket->available_send()) {
+      socket->post_send(send_pool.alloc());
+    }
+
     if (bandwith.check()) {
       LOG(INFO)
         << "Bandwith: "

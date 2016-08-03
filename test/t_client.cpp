@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
   size_t const buffer_size = chunk_size * credits;
 
-  LOG(INFO) << "Allocating " << buffer_size << " bytes of memory";
+  LOG(INFO) << "One-way client test (send)";
 
   std::unique_ptr<unsigned char[]> const buffer_ptr(
     new unsigned char[buffer_size]);
