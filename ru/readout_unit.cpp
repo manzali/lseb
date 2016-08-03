@@ -70,7 +70,7 @@ void ReadoutUnit::run() {
   std::chrono::high_resolution_clock::time_point t_tot =
       std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::time_point t_start;
-  double active_time = 0;
+  //double active_time = 0;
 
   auto seq_it = std::begin(id_sequence);
   std::vector<iovec> iov_to_send;
@@ -78,7 +78,7 @@ void ReadoutUnit::run() {
   while (true) {
 
     t_start = std::chrono::high_resolution_clock::now();
-    bool active_flag = false;
+    //bool active_flag = false;
     bool conn_avail = false;
     int seq_id = *seq_it;
 
@@ -116,13 +116,13 @@ void ReadoutUnit::run() {
 
     // Release completed wr
     if (!wr_to_release.empty()) {
-      active_flag = true;
+      //active_flag = true;
       m_accumulator.release_multievents(wr_to_release);
     }
 
     // If there are free resources for this connection and ready data, send it
     if (conn_avail && iov_to_send.size() > seq_id) {
-      active_flag = true;
+      //active_flag = true;
       auto& iov = iov_to_send[seq_id];
       auto& conn = *(m_connection_ids.at(seq_id));
       conn.post_send(iov);
@@ -137,10 +137,10 @@ void ReadoutUnit::run() {
       }
     }
 
-    if (active_flag) {
-      active_time += std::chrono::duration<double>(
-          std::chrono::high_resolution_clock::now() - t_start).count();
-    }
+    //if (active_flag) {
+    //  active_time += std::chrono::duration<double>(
+    //      std::chrono::high_resolution_clock::now() - t_start).count();
+    //}
 
     if (bandwith.check()) {
 
@@ -150,10 +150,10 @@ void ReadoutUnit::run() {
       LOG(NOTICE)
         << "Readout Unit: "
         << bandwith.frequency() / std::giga::num * 8.
-        << " Gb/s - "
-        << active_time / tot_time * 100.
-        << " %";
-      active_time = 0;
+        << " Gb/s";
+      //  << active_time / tot_time * 100.
+      //  << " %";
+      //active_time = 0;
       t_tot = std::chrono::high_resolution_clock::now();
     }
   }
