@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
       bandwith.add(iov.iov_len);
       pool.free({iov.iov_base, chunk_size});
     }
-    while (socket->available_send() && !pool.empty()) {
+    if (socket->available_send() && !pool.empty()) {
       socket->post_send(pool.alloc());
     }
     if (bandwith.check()) {
