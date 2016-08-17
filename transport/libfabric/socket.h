@@ -17,7 +17,7 @@ namespace lseb {
 class Socket {
 public:
 
-  typedef std::unique_ptr<fid_mr, lseb::delete_fid<fid_mr>> mr_ptr;
+  typedef std::unique_ptr<fid_mr, fid_deleter<fid_mr>> mr_ptr;
   typedef std::pair<mr_ptr, uint64_t> memory_region;
 
   Socket(fid_domain *ac,

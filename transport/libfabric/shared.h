@@ -14,7 +14,7 @@ namespace lseb {
 
 template<typename T, typename std::enable_if<is_fabric_id<T>::value,
                                              T>::type * = nullptr>
-struct delete_fid {
+struct fid_deleter {
   void operator()(T *fid) {
     // TODO: check return value of fi_close
     fi_close(&fid->fid);
