@@ -13,13 +13,24 @@ namespace lseb {
 namespace detail {
 template<typename T>
 struct _is_fabric_id :
-public std::false_type {
+    public std::false_type {
 };
 
 template<>
 struct _is_fabric_id<fid_mr> :
-public std::true_type {
+    public std::true_type {
 };
+
+template<>
+struct _is_fabric_id<fid_fabric> :
+    public std::true_type {
+};
+
+template<>
+struct _is_fabric_id<fid_domain> :
+    public std::true_type {
+};
+
 }
 
 template<typename T>
