@@ -4,6 +4,7 @@
 #include <rdma/fi_cm.h>
 #include <rdma/fi_errno.h>
 #include "common/exception.h"
+#include "domain.h"
 
 namespace {
 bool is_in_mr(const iovec &iov, const lseb::Socket::memory_region &mr) {
@@ -16,18 +17,14 @@ bool is_in_mr(const iovec &iov, const lseb::Socket::memory_region &mr) {
 
 namespace lseb {
 
-Socket::Socket(fid_domain *ac, fid_ep *ep, fid_cq *rx_cq,
+Socket::Socket(fid_ep *ep, fid_cq *rx_cq,
                    fid_cq *tx_cq, uint32_t credits)
-    : m_ac(ac), m_ep(ep), m_rx_cq(rx_cq), m_tx_cq(tx_cq), m_credits(credits) {
-}
-
-Socket::~Socket() {
-
+    : m_ep(ep), m_rx_cq(rx_cq), m_tx_cq(tx_cq), m_credits(credits) {
 }
 
 void Socket::register_memory(void *buffer, size_t size) {
   fid_mr *mr;
-  auto ret = fi_mr_reg(m_ac,
+  auto ret = fi_mr_reg(Domain::get_instance().get_raw_domain(),
                        buffer,
                        size,
                        FI_SEND | FI_RECV,

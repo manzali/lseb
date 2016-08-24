@@ -20,14 +20,15 @@ public:
   typedef std::unique_ptr<fid_mr, fid_deleter<fid_mr>> mr_ptr;
   typedef std::pair<mr_ptr, uint64_t> memory_region;
 
-  Socket(fid_domain *ac,
-           fid_ep *ep,
-           fid_cq *rx_cq,
-           fid_cq *tx_cq,
-           uint32_t credits);
+  Socket(fid_ep *ep,
+         fid_cq *rx_cq,
+         fid_cq *tx_cq,
+         uint32_t credits);
   Socket(Socket const &other) = delete;
   Socket &operator=(Socket const &) = delete;
-  ~Socket();
+  Socket(Socket &&other) = default;
+  Socket &operator=(Socket &&) = default;
+  ~Socket() = default;
 
   void register_memory(void *buffer, size_t size);
 
@@ -49,12 +50,6 @@ private:
 
   // TODO: Decide ownership of these resources
   // TODO: Order of declaration is important in deconstruction: order members
-
-  /* Access Domain
-   * Owned by the c/a (connector/acceptor) but needed by fi_mr_reg
-   * TODO: Use shared_ptr
-   */
-  fid_domain *m_ac;
 
   /* Endpoint
    * Allocated by c/a, owned by socket
