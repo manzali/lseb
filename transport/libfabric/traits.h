@@ -31,6 +31,18 @@ struct _is_fabric_id<fid_domain> :
     public std::true_type {
 };
 
+template<>
+struct _is_fabric_id<fid_pep> :
+    public std::true_type {
+};
+
+template<>
+struct _is_fabric_id<fid_eq> :
+    public std::true_type {
+};
+
+
+
 }
 
 template<typename T>
