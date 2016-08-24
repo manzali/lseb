@@ -7,6 +7,7 @@
 
 #include <type_traits>
 #include <rdma/fabric.h>
+#include <rdma/fi_domain.h>
 
 #include "traits.h"
 
@@ -19,6 +20,12 @@ struct fid_deleter {
     // TODO: check return value of fi_close
     fi_close(&fid->fid);
   }
+};
+
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args)
+{
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 };
 
 }
