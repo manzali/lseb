@@ -36,6 +36,7 @@ add_library(
   libfabric/socket.cpp
   libfabric/acceptor.cpp
   libfabric/connector.cpp
+  libfabric/domain.cpp
 )
 
 target_link_libraries(
