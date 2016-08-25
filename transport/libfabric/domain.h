@@ -32,14 +32,14 @@ public:
   fid_domain *get_raw_domain() const;
   const fabric_ptr& get_fabric() const;
   fid_fabric *get_raw_fabric() const;
-  fi_info *get_info() const;
+  fi_info *get_hints() const;
 private:
   Domain();
   ~Domain() = default;
 
   fabric_ptr m_fabric;
   domain_ptr m_domain;
-  info_ptr m_info;
+  info_ptr m_hints;
 
 };
 

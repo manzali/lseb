@@ -27,16 +27,17 @@ std::unique_ptr<Socket> Connector::connect(
   int rc = 0;
   ssize_t rd;
 
+  Domain& d = Domain::get_instance();
+
   /* Resolve address to a fabric specific one */
   // TODO: Verify address correctness in info->dest_addrs
   fi_getinfo(FI_VERSION(1, 3),
              hostname.c_str(),
              port.c_str(),
              0,
-             nullptr,
+             d.get_hints(),
              &info);
 
-  Domain& d = Domain::get_instance();
   fid_eq *eq;
   /* EQ create */
   struct fi_eq_attr cm_attr;
@@ -52,7 +53,7 @@ std::unique_ptr<Socket> Connector::connect(
   /* End CQ create*/
   fid_ep *ep;
   /* Open endpoint */
-  rc = fi_endpoint(d.get_raw_domain(), d.get_info(), &ep, NULL);
+  rc = fi_endpoint(d.get_raw_domain(), info, &ep, NULL);
   if (rc) {
     //FT_PRINTERR("fi_endpoint", rc);
     return nullptr;

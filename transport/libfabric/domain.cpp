@@ -4,6 +4,7 @@
 
 #include "domain.h"
 
+#include <string>
 #include <cassert>
 #include <iostream>
 #include <rdma/fi_errno.h>
@@ -13,28 +14,36 @@ namespace lseb {
 Domain::Domain()
     : m_fabric(nullptr),
       m_domain(nullptr),
-      m_info(nullptr, fi_freeinfo) {
-  fi_info *hints = fi_allocinfo();
+      m_hints(fi_allocinfo(), fi_freeinfo) {
   // TODO: Add support for FI_DGRAM
-  hints->caps = FI_MSG;
-  hints->mode = FI_LOCAL_MR;
-  hints->domain_attr->threading = FI_THREAD_COMPLETION;
-  hints->domain_attr->data_progress = FI_PROGRESS_MANUAL;
+  m_hints->caps = FI_MSG;
+  m_hints->mode = FI_LOCAL_MR;
+  m_hints->ep_attr->type = FI_EP_MSG;
+  m_hints->domain_attr->threading = FI_THREAD_COMPLETION;
+  m_hints->domain_attr->data_progress = FI_PROGRESS_MANUAL;
 
   fi_info *info{nullptr};
-  int rc = fi_getinfo(FI_VERSION(1,3), nullptr, nullptr, 0, hints, &info);
+  int rc =
+      fi_getinfo(FI_VERSION(1, 3), nullptr, nullptr, 0, m_hints.get(), &info);
 
   // TODO: Improve error handling
   if (rc) {
-    std::cerr << fi_strerror(-rc) << std::endl;
+    std::cerr << "Domain:" << fi_strerror(-rc) << std::endl;
   }
 
   // TODO: Select provider based on configuration
 
-  m_info.reset(info);
+  /* std::string prov{"verbs"};
+  for (fi_info *begin = info, *end = nullptr; begin!=end;
+       begin = begin->next) {
+    if (prov == begin->fabric_attr->prov_name) {
+      m_info.reset(begin);
+      break;
+    }
+  } */
 
   fid_fabric *fabric{nullptr};
-  rc = fi_fabric(m_info->fabric_attr, &fabric, nullptr);
+  rc = fi_fabric(info->fabric_attr, &fabric, nullptr);
 
   if (rc) {
     std::cerr << fi_strerror(-rc) << std::endl;
@@ -44,7 +53,7 @@ Domain::Domain()
 
   fid_domain *domain{nullptr};
 
-  rc = fi_domain(m_fabric.get(), m_info.get(), &domain, nullptr);
+  rc = fi_domain(m_fabric.get(), info, &domain, nullptr);
 
   if (rc) {
     std::cerr << fi_strerror(-rc) << std::endl;
@@ -52,7 +61,7 @@ Domain::Domain()
 
   m_domain.reset(domain);
 
-  fi_freeinfo(hints);
+  fi_freeinfo(info);
 }
 
 Domain& Domain::get_instance() {
@@ -75,8 +84,8 @@ const Domain::fabric_ptr& Domain::get_fabric() const {
 fid_fabric *Domain::get_raw_fabric() const {
   return m_fabric.get();
 }
-fi_info *Domain::get_info() const {
-  return m_info.get();
+fi_info *Domain::get_hints() const {
+  return m_hints.get();
 }
 
 }

@@ -24,6 +24,7 @@ void Acceptor::listen(std::string const& hostname, std::string const& port) {
   if (m_pep)
     return;
   fid_pep *pep{nullptr};
+  Domain& domain = Domain::get_instance();
   fi_info *info{nullptr};
   // NOTE: Works for verbs, not necessarily for psm: needs investigation.
   //       Probably works for psm only with FI_PSM_NAME_SERVER enabled.
@@ -31,20 +32,24 @@ void Acceptor::listen(std::string const& hostname, std::string const& port) {
                       hostname.c_str(),
                       port.c_str(),
                       FI_SOURCE,
-                      nullptr,
+                      domain.get_hints(),
                       &info);
 
   if (rc) {
-    std::cerr << fi_strerror(-rc) << "\n";
+    throw exception::acceptor::generic_error(
+        "Error on fi_getinfo: " + std::string(fi_strerror(-rc)));
   }
 
-  Domain& domain = Domain::get_instance();
+  std::cout << info->fabric_attr->prov_name << std::endl;
+
   rc = fi_passive_ep(domain.get_raw_fabric(),
                      info,
                      &pep,
                      NULL /* context */);
   if (rc) {
-    std::cerr << "Unable to open listener endpoint\n";
+    std::cerr << "Unable to open listener endpoint" << std::endl;
+    throw exception::acceptor::generic_error(
+        "Error on fi_passive_ep: " + std::string(fi_strerror(-rc)));
   }
 
   m_pep.reset(pep);
@@ -57,7 +62,8 @@ void Acceptor::listen(std::string const& hostname, std::string const& port) {
   rc = fi_eq_open(domain.get_raw_fabric(), &cm_attr, &pep_eq, NULL);
 
   if (rc) {
-    std::cerr << fi_strerror(-rc) << "\n";
+    throw exception::acceptor::generic_error(
+        "Error on fi_eq_open: " + std::string(fi_strerror(-rc)));
   }
 
   m_pep_eq.reset(pep_eq);
