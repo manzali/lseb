@@ -1,5 +1,7 @@
 #include "transport/libfabric/connector.h"
 
+#include <cstring>
+
 #include "rdma/fi_endpoint.h"
 #include "rdma/fi_cm.h"
 
@@ -39,7 +41,7 @@ std::unique_ptr<Socket> Connector::connect(
   /* EQ create */
   struct fi_eq_attr cm_attr;
 
-  memset(&cm_attr, 0, sizeof cm_attr);
+  std::memset(&cm_attr, 0, sizeof cm_attr);
   cm_attr.wait_obj = FI_WAIT_FD;
 
   rc = fi_eq_open(d.get_raw_fabric(), &cm_attr, &eq, NULL);
@@ -60,7 +62,7 @@ std::unique_ptr<Socket> Connector::connect(
   fid_cq *tx_cq;
   /* Create event queue */
   struct fi_cq_attr cq_attr;
-  memset(&cq_attr, 0, sizeof cq_attr);
+  std::memset(&cq_attr, 0, sizeof cq_attr);
   cq_attr.format = FI_CQ_FORMAT_CONTEXT;
 
   cq_attr.wait_obj = FI_WAIT_FD;

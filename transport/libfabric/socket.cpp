@@ -1,5 +1,6 @@
 #include "transport/libfabric/socket.h"
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <rdma/fi_cm.h>
 #include <rdma/fi_errno.h>
