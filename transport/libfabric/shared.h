@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <rdma/fabric.h>
 #include <rdma/fi_domain.h>
+#include <rdma/fi_endpoint.h>
+#include <rdma/fi_eq.h>
 
 #include "traits.h"
 
