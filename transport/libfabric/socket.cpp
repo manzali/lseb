@@ -9,8 +9,8 @@
 
 namespace {
 bool is_in_mr(const iovec &iov, const lseb::Socket::memory_region &mr) {
-  bool res = mr.first->mem_desc <= iov.iov_base
-      && static_cast<char *>(mr.first->mem_desc) + mr.second
+  bool res = mr.second.first <= iov.iov_base
+      && static_cast<char *>(mr.second.first) + mr.second.second
           >= static_cast<char *>(iov.iov_base) + iov.iov_len;
   return res;
 }
@@ -41,7 +41,7 @@ void Socket::register_memory(void *buffer, size_t size) {
             + std::string(fi_strerror(static_cast<int>(-ret))));
   }
 
-  m_mrs.emplace_back(mr_ptr(mr), size);
+  m_mrs.emplace_back(mr_ptr(mr), mr_info(buffer,size));
 }
 
 std::vector<iovec> Socket::poll_completed_send() {
