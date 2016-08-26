@@ -20,7 +20,7 @@ public:
 
   typedef std::unique_ptr<fid_fabric, fid_deleter<fid_fabric>> fabric_ptr;
   typedef std::unique_ptr<fid_domain, fid_deleter<fid_domain>> domain_ptr;
-  typedef std::unique_ptr<fi_info, decltype(&fi_freeinfo)> info_ptr;
+  typedef std::unique_ptr<fi_info, fid_deleter<fi_info>> info_ptr;
 
   static Domain& get_instance();
   Domain(Domain const&) = delete;             // Copy construct
