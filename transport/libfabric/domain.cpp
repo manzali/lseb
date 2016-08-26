@@ -14,8 +14,9 @@ namespace lseb {
 Domain::Domain()
     : m_fabric(nullptr),
       m_domain(nullptr),
-      m_hints(fi_allocinfo(), fi_freeinfo) {
+      m_hints(nullptr) {
   // TODO: Add support for FI_DGRAM
+  m_hints.reset(fi_allocinfo());
   m_hints->caps = FI_MSG;
   m_hints->mode = FI_LOCAL_MR;
   m_hints->ep_attr->type = FI_EP_MSG;
