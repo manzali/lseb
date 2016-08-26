@@ -1,6 +1,7 @@
 #ifndef TRANSPORT_LIBFABRIC_ACCEPTOR_H
 #define TRANSPORT_LIBFABRIC_ACCEPTOR_H
 
+#include <string>
 #include <memory>
 
 #include <rdma/fabric.h>
