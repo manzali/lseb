@@ -41,6 +41,11 @@ struct _is_fabric_id<fid_eq> :
     public std::true_type {
 };
 
+template<>
+struct _is_fabric_id<fi_info> :
+    public std::true_type {
+};
+
 
 
 }

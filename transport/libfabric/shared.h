@@ -24,6 +24,17 @@ struct fid_deleter {
   }
 };
 
+template<>
+struct fid_deleter<fi_info, nullptr> {
+  void operator()(fi_info *fid) {
+    do {
+      fi_info* next = fid->next;
+      fi_freeinfo(fid);
+      fid = next;
+    } while(fid);
+  }
+};
+
 template<typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args&&... args)
 {
