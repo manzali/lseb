@@ -22,6 +22,7 @@ Domain::Domain()
   m_hints->ep_attr->type = FI_EP_MSG;
   m_hints->domain_attr->threading = FI_THREAD_COMPLETION;
   m_hints->domain_attr->data_progress = FI_PROGRESS_MANUAL;
+  // m_hints->fabric_attr->prov_name = strdup("sockets");
 
   fi_info *info{nullptr};
   int rc =
