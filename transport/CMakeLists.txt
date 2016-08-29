@@ -32,7 +32,7 @@ add_library(
   libfabric/acceptor.cpp
   libfabric/connector.cpp
   libfabric/domain.cpp
-)
+  libfabric/shared.cpp)
 
 target_include_directories(
     transport
