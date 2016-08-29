@@ -178,7 +178,7 @@ void Socket::post_send(iovec const &iov) {
 void Socket::post_recv(iovec const &iov) {
   if (fi_rx_size_left(m_ep) <= 0) {
     throw exception::socket::generic_error(
-        "Error on post_send: no credits available");
+        "Error on post_recv: no credits available");
   }
 
   auto mr_it = std::find_if(std::begin(m_mrs),
