@@ -16,11 +16,8 @@ Connector::Connector(int credits) : m_credits(credits) {}
 std::unique_ptr<Socket> Connector::connect(
     std::string const& hostname,
     std::string const& port) {
-  // TODO: Add subfunctions to make this function more readable
-  // TODO: Add Named Return Value Optimization
   // TODO: Use unique_ptr on all fabric resources to avoid memory leaks on
   //       connection failure
-  // TODO: Improve error reporting (and avoid exceptions?)
   struct fi_eq_cm_entry entry;
   int rc = 0;
   fi_info *info_p;
@@ -28,11 +25,6 @@ std::unique_ptr<Socket> Connector::connect(
   fid_cq *rx_cq, *tx_cq;
   fid_eq *eq;
   Domain& d = Domain::get_instance();
-
-  uint32_t event;
-
-  ssize_t rd;
-
 
   /* Resolve address to a fabric specific one */
   // TODO: Verify address correctness in info->dest_addrs
