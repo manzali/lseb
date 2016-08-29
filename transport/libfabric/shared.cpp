@@ -4,9 +4,11 @@
 
 #include "shared.h"
 
+#include <cstring> // std::memset
+
 #include "rdma/fi_errno.h"
 
-#include "Domain.h"
+#include "domain.h"
 #include "common/exception.h"
 
 

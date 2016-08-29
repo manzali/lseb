@@ -7,6 +7,8 @@
 #include <string>
 #include <cassert>
 #include <iostream>
+
+#include <string.h>
 #include <rdma/fi_errno.h>
 #include <rdma/fi_domain.h>
 
