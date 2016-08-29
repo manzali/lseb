@@ -1,7 +1,5 @@
 #include "transport/libfabric/connector.h"
 
-#include <cstring>
-
 #include <rdma/fi_errno.h>
 #include "rdma/fi_endpoint.h"
 #include "rdma/fi_cm.h"
