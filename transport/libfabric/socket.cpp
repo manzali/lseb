@@ -214,11 +214,11 @@ void Socket::post_recv(iovec const &iov) {
 }
 
 bool Socket::available_send() {
-  return fi_rx_size_left(m_ep) > 0;
+  return fi_tx_size_left(m_ep) > 0;
 }
 
 bool Socket::available_recv() {
-  return fi_tx_size_left(m_ep) > 0;
+  return fi_rx_size_left(m_ep) > 0;
 }
 
 std::vector<iovec> Socket::pending_send() {
