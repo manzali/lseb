@@ -19,10 +19,10 @@ void read_event(fid_eq *eq, struct fi_eq_cm_entry *entry, uint32_t event) {
   std::string err_msg{"Error on fi_eq_sread: "};
 
   rd = fi_eq_sread(eq, &ev, entry, sizeof *entry, -1, 0);
-  if (rd!=sizeof entry) {
+  if (rd!=sizeof *entry) {
     if (rd==-FI_EAVAIL) {
       rd = fi_eq_readerr(eq, &err_entry, 0);
-      if (rd!=sizeof(err_entry)) {
+      if (rd!=sizeof err_entry) {
         throw lseb::exception::acceptor::generic_error(
             "Error on fi_eq_readerr: "
                 + std::string(fi_strerror(-static_cast<int>(rd))));
@@ -221,9 +221,9 @@ std::unique_ptr<Socket> Acceptor::accept() {
         "Error on fi_accept: " + std::string(fi_strerror(-rc)));
   }
 
-  read_event(m_pep_eq.get(), &entry, FI_CONNECTED);
+  read_event(eq, &entry, FI_CONNECTED);
 
-  return new Socket(ep, rx_cq, tx_cq, m_credits);
+  return make_unique<Socket>(ep, rx_cq, tx_cq, m_credits);
 }
 
 }
