@@ -1,4 +1,6 @@
 #include <iostream>
+#include <thread>
+#include <chrono>
 
 #include <boost/program_options.hpp>
 
@@ -65,6 +67,10 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Connected to " << server << " on port " << port;
 
   FrequencyMeter bandwith(5.0);
+
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  LOG(INFO) << "Start sending...";
 
   while (true) {
     std::vector<iovec> vect = socket->poll_completed_send();

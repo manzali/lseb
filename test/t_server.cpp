@@ -73,6 +73,8 @@ int main(int argc, char* argv[]) {
     socket->post_recv(pool.alloc());
   }
 
+  LOG(INFO) << "Start receiving...";
+
   while (true) {
     std::vector<iovec> vect = socket->poll_completed_recv();
     for (auto& iov : vect) {
