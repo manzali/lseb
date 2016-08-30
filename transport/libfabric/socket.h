@@ -48,29 +48,14 @@ public:
   std::string peer_hostname();
 
 private:
+  // NOTE: Declarations sorted by deconstruction requirements
 
-  // TODO: Decide ownership of these resources
-  // TODO: Order of declaration is important in deconstruction: order members
+  // Endpoint
+  fabric_ptr<fid_ep> m_ep;
 
-  /* Endpoint
-   * Allocated by c/a, owned by socket
-   * TODO: Use unique_ptr
-   */
-  fid_ep *m_ep;
-
-  /* Completion Queues:
-   * Allocated and owned by socket
-   * TODO: Use unique_ptr
-   * Note: An endpoint that will generate asynchronous completions, either
-   * through data transfer operations or communication establishment events,
-   * must be bound to the appropriate completion queues or event queues before
-   * being enabled.
-   * TODO: Bind before ep activation
-   * Note: The fi_connect and fi_accept calls will also transition an endpoint into
-   * the enabled state, if it is not already active.
-   */
-  fid_cq *m_rx_cq; // Receive CQ
-  fid_cq *m_tx_cq; // Transmit CQ
+  // Completion Queues
+  fabric_ptr<fid_cq> m_rx_cq; // Receive CQ
+  fabric_ptr<fid_cq> m_tx_cq; // Transmit CQ
 
   uint32_t m_credits; // CQ Depth
   std::vector<memory_region> m_mrs;

@@ -45,11 +45,11 @@ void Socket::register_memory(void *buffer, size_t size) {
 }
 
 std::vector<iovec> Socket::poll_completed_send() {
+  std::vector<iovec> iov_vect;
   std::vector<fi_cq_entry> wcs(m_credits);
 
-  auto ret = fi_cq_read(m_tx_cq, wcs.data(), wcs.size());
+  auto ret = fi_cq_read(m_tx_cq.get(), wcs.data(), wcs.size());
 
-  std::vector<iovec> iov_vect{};
   fi_cq_err_entry cq_err;
   const char *err = nullptr;
 
@@ -58,8 +58,8 @@ std::vector<iovec> Socket::poll_completed_send() {
     case -FI_EAGAIN:
       return iov_vect;
     case -FI_EAVAIL:
-      fi_cq_readerr(m_tx_cq, &cq_err, 0 /* flags not documented */);
-      err = fi_cq_strerror(m_tx_cq,
+      fi_cq_readerr(m_tx_cq.get(), &cq_err, 0 /* flags not documented */);
+      err = fi_cq_strerror(m_tx_cq.get(),
                            cq_err.err,
                            cq_err.err_data,
                            nullptr,
@@ -94,7 +94,7 @@ std::vector<iovec> Socket::poll_completed_send() {
 std::vector<iovec> Socket::poll_completed_recv() {
   std::vector<fi_cq_entry> wcs(m_credits);
 
-  auto ret = fi_cq_read(m_rx_cq, wcs.data(), wcs.size());
+  auto ret = fi_cq_read(m_rx_cq.get(), wcs.data(), wcs.size());
 
   std::vector<iovec> iov_vect{};
   fi_cq_err_entry cq_err;
@@ -105,8 +105,8 @@ std::vector<iovec> Socket::poll_completed_recv() {
     case -FI_EAGAIN:
       return iov_vect;
     case -FI_EAVAIL:
-      fi_cq_readerr(m_rx_cq, &cq_err, 0 /* flags not documented */);
-      err = fi_cq_strerror(m_rx_cq,
+      fi_cq_readerr(m_rx_cq.get(), &cq_err, 0 /* flags not documented */);
+      err = fi_cq_strerror(m_rx_cq.get(),
                            cq_err.err,
                            cq_err.err_data,
                            nullptr,
@@ -156,7 +156,7 @@ void Socket::post_send(iovec const &iov) {
         "Error on find_if: no valid memory region found");
   }
 
-  auto ret = fi_send(m_ep,
+  auto ret = fi_send(m_ep.get(),
                      iov.iov_base,
                      iov.iov_len,
                      fi_mr_desc(mr_it->first.get()),
@@ -193,7 +193,7 @@ void Socket::post_recv(iovec const &iov) {
         "Error on find_if: no valid memory region found");
   }
 
-  auto ret = fi_recv(m_ep,
+  auto ret = fi_recv(m_ep.get(),
                      iov.iov_base,
                      iov.iov_len,
                      fi_mr_desc(mr_it->first.get()),
@@ -241,7 +241,7 @@ std::string Socket::peer_hostname() {
   char str[INET_ADDRSTRLEN];
   size_t len = sizeof(sockaddr_in);
   sockaddr_in addr[1];
-  fi_getpeer(m_ep, reinterpret_cast<void *>(addr), &len);
+  fi_getpeer(m_ep.get(), reinterpret_cast<void *>(addr), &len);
   inet_ntop(AF_INET, &(addr->sin_addr), str, INET_ADDRSTRLEN);
   return str;
 }
