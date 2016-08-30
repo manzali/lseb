@@ -46,12 +46,14 @@ template<typename T>
 using fabric_ptr = std::unique_ptr<T, fid_deleter<T>>;
 
 // Helper functions for endpoint creation and setup
-void read_event(fid_eq *eq, struct fi_eq_cm_entry *entry, uint32_t event);
-void bind_completion_queues(fid_ep *ep,
-                            fid_cq **rx,
-                            fid_cq **tx,
+void read_event(const fabric_ptr<fid_eq>& eq,
+                struct fi_eq_cm_entry *entry,
+                uint32_t event);
+void bind_completion_queues(const fabric_ptr<fid_ep>& ep,
+                            fabric_ptr<fid_cq>& rx,
+                            fabric_ptr<fid_cq>& tx,
                             uint32_t size);
-void bind_event_queue(fid_ep *ep, fid_eq **eq);
+void bind_event_queue(const fabric_ptr<fid_ep>& ep, fabric_ptr<fid_eq>& eq);
 
 }
 

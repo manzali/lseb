@@ -84,40 +84,40 @@ void Acceptor::listen(std::string const& hostname, std::string const& port) {
 }
 
 std::unique_ptr<Socket> Acceptor::accept() {
-  // TODO: Use unique_ptr on all fabric resources to avoid memory leaks on
-  //       connection failure
   struct fi_eq_cm_entry entry;
   int rc = 0;
-  fid_ep *ep;
-  fid_cq *rx_cq;
-  fid_cq *tx_cq;
-  fid_eq *eq;
+  fid_ep *ep_raw;
+  fabric_ptr<fid_ep> ep;
+  fabric_ptr<fid_cq> rx_cq, tx_cq;
+  fabric_ptr<fid_eq> eq;
+
   Domain& d = Domain::get_instance();
 
-  read_event(m_pep_eq.get(), &entry, FI_CONNREQ);
+  read_event(m_pep_eq, &entry, FI_CONNREQ);
 
   rc = fi_endpoint(d.get_raw_domain(),
                    entry.info,
-                   &ep,
+                   &ep_raw,
                    NULL);
   fi_freeinfo(entry.info);
   if (rc) {
     throw exception::acceptor::generic_error(
         "Error on fi_endpoint: " + std::string(fi_strerror(-rc)));
   }
+  ep.reset(ep_raw);
 
   // Create completion queues
-  bind_completion_queues(ep, &rx_cq, &tx_cq, m_credits);
+  bind_completion_queues(ep, rx_cq, tx_cq, m_credits);
   // Create event queues
-  bind_event_queue(ep, &eq);
+  bind_event_queue(ep, eq);
 
-  rc = fi_enable(ep);
+  rc = fi_enable(ep.get());
   if (rc) {
     throw exception::acceptor::generic_error(
         "Error on fi_enable: " + std::string(fi_strerror(-rc)));
   }
 
-  rc = fi_accept(ep, NULL, 0);
+  rc = fi_accept(ep.get(), NULL, 0);
   if (rc) {
     throw exception::acceptor::generic_error(
         "Error on fi_accept: " + std::string(fi_strerror(-rc)));
@@ -125,7 +125,10 @@ std::unique_ptr<Socket> Acceptor::accept() {
 
   read_event(eq, &entry, FI_CONNECTED);
 
-  return make_unique<Socket>(ep, rx_cq, tx_cq, m_credits);
+  return make_unique<Socket>(ep.release(),
+                             rx_cq.release(),
+                             tx_cq.release(),
+                             m_credits);
 }
 
 }
