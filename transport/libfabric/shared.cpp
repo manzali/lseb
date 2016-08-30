@@ -26,11 +26,11 @@ void read_event(const fabric_ptr<fid_eq>& eq,
     if (rd==-FI_EAVAIL) {
       rd = fi_eq_readerr(eq.get(), &err_entry, 0);
       if (rd!=sizeof err_entry) {
-        throw lseb::exception::acceptor::generic_error(
+        throw lseb::exception::connection::generic_error(
             "Error on fi_eq_readerr: "
                 + std::string(fi_strerror(-static_cast<int>(rd))));
       } else {
-        throw lseb::exception::acceptor::generic_error(
+        throw lseb::exception::connection::generic_error(
             err_msg + fi_eq_strerror(eq.get(),
                                      err_entry.prov_errno,
                                      err_entry.err_data,
@@ -38,13 +38,13 @@ void read_event(const fabric_ptr<fid_eq>& eq,
                                      0));
       }
     } else {
-      throw lseb::exception::acceptor::generic_error(
+      throw lseb::exception::connection::generic_error(
           err_msg + fi_strerror(-rd));
     }
   }
 
   if (ev!=event) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         err_msg + "Unexpected CM event");
   }
 }
@@ -66,14 +66,14 @@ void bind_completion_queues(const fabric_ptr<fid_ep>& ep,
   /* Create Completion queues */
   rc = fi_cq_open(d.get_raw_domain(), &cq_attr, &rx_raw, NULL);
   if (rc) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         "Error on fi_cq_open rx: " + std::string(fi_strerror(-rc)));
   }
   rx.reset(rx_raw);
 
   rc = fi_cq_open(d.get_raw_domain(), &cq_attr, &tx_raw, NULL);
   if (rc) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         "Error on fi_cq_open tx: " + std::string(fi_strerror(-rc)));
   }
   tx.reset(tx_raw);
@@ -81,13 +81,13 @@ void bind_completion_queues(const fabric_ptr<fid_ep>& ep,
   /* Bind Completion queues */
   rc = fi_ep_bind(ep.get(), &rx->fid, FI_RECV);
   if (rc) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         "Error on fi_ep_bind rx: " + std::string(fi_strerror(-rc)));
   }
 
   rc = fi_ep_bind(ep.get(), &tx->fid, FI_SEND);
   if (rc) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         "Error on fi_ep_bind tx: " + std::string(fi_strerror(-rc)));
   }
 }
@@ -103,14 +103,14 @@ void bind_event_queue(const fabric_ptr<fid_ep>& ep, fabric_ptr<fid_eq>& eq) {
 
   rc = fi_eq_open(d.get_raw_fabric(), &cm_attr, &eq_raw, NULL);
   if (rc) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         "Error on fi_eq_open: " + std::string(fi_strerror(-rc)));
   }
   eq.reset(eq_raw);
 
   rc = fi_ep_bind(ep.get(), &eq->fid, 0);
   if (rc) {
-    throw lseb::exception::acceptor::generic_error(
+    throw lseb::exception::connection::generic_error(
         "Error on fi_ep_bind eq: " + std::string(fi_strerror(-rc)));
   }
 }

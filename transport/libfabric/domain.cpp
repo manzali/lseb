@@ -12,6 +12,8 @@
 #include <rdma/fi_errno.h>
 #include <rdma/fi_domain.h>
 
+#include "common/exception.h"
+
 namespace lseb {
 Domain::Domain()
     : m_fabric(nullptr),
@@ -26,13 +28,15 @@ Domain::Domain()
   m_hints->domain_attr->data_progress = FI_PROGRESS_MANUAL;
   // m_hints->fabric_attr->prov_name = strdup("sockets");
 
-  fi_info *info{nullptr};
+  fi_info *info_p{nullptr};
   int rc =
-      fi_getinfo(FI_VERSION(1, 3), nullptr, nullptr, 0, m_hints.get(), &info);
+      fi_getinfo(FI_VERSION(1, 3), nullptr, nullptr, 0, m_hints.get(), &info_p);
 
+  fabric_ptr<fi_info> info{info_p};
   // TODO: Improve error handling
   if (rc) {
-    std::cerr << "Domain:" << fi_strerror(-rc) << std::endl;
+    throw lseb::exception::connection::generic_error(
+        "Error on Domain fi_info: " + std::string(fi_strerror(-rc)));
   }
 
   // TODO: Select provider based on configuration
@@ -47,25 +51,25 @@ Domain::Domain()
   } */
 
   fid_fabric *fabric{nullptr};
-  rc = fi_fabric(info->fabric_attr, &fabric, nullptr);
+  rc = fi_fabric(info_p->fabric_attr, &fabric, nullptr);
 
   if (rc) {
-    std::cerr << fi_strerror(-rc) << std::endl;
+    throw lseb::exception::connection::generic_error(
+        "Error on Domain fi_fabric: " + std::string(fi_strerror(-rc)));
   }
 
   m_fabric.reset(fabric);
 
   fid_domain *domain{nullptr};
 
-  rc = fi_domain(m_fabric.get(), info, &domain, nullptr);
+  rc = fi_domain(m_fabric.get(), info_p, &domain, nullptr);
 
   if (rc) {
-    std::cerr << fi_strerror(-rc) << std::endl;
+    throw lseb::exception::connection::generic_error(
+        "Error on Domain fi_domain: " + std::string(fi_strerror(-rc)));
   }
 
   m_domain.reset(domain);
-
-  fi_freeinfo(info);
 }
 
 Domain& Domain::get_instance() {
