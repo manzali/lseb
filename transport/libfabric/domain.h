@@ -18,9 +18,9 @@ namespace lseb {
 class Domain {
 public:
 
-  typedef std::unique_ptr<fid_fabric, fid_deleter<fid_fabric>> fabric_ptr;
-  typedef std::unique_ptr<fid_domain, fid_deleter<fid_domain>> domain_ptr;
-  typedef std::unique_ptr<fi_info, fid_deleter<fi_info>> info_ptr;
+  typedef fabric_ptr<fid_fabric> fab_ptr;
+  typedef fabric_ptr<fid_domain> domain_ptr;
+  typedef fabric_ptr<fi_info> info_ptr;
 
   static Domain& get_instance();
   Domain(Domain const&) = delete;             // Copy construct
@@ -30,14 +30,14 @@ public:
 
   const domain_ptr& get_domain() const;
   fid_domain *get_raw_domain() const;
-  const fabric_ptr& get_fabric() const;
+  const fab_ptr& get_fabric() const;
   fid_fabric *get_raw_fabric() const;
   fi_info *get_hints() const;
 private:
   Domain();
   ~Domain() = default;
 
-  fabric_ptr m_fabric;
+  fab_ptr m_fabric;
   domain_ptr m_domain;
   info_ptr m_hints;
 

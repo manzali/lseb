@@ -81,7 +81,7 @@ fid_domain *Domain::get_raw_domain() const {
   return m_domain.get();
 }
 
-const Domain::fabric_ptr& Domain::get_fabric() const {
+const Domain::fab_ptr& Domain::get_fabric() const {
   return m_fabric;
 }
 
