@@ -28,11 +28,7 @@ struct fid_deleter {
 template<>
 struct fid_deleter<fi_info, nullptr> {
   void operator()(fi_info *fid) {
-    do {
-      fi_info *next = fid->next;
       fi_freeinfo(fid);
-      fid = next;
-    } while (fid);
   }
 };
 
