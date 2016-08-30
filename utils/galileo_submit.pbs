@@ -1,13 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 
 ##PBS -M matteo.manzali@cnaf.infn.it
 ##PBS -m abe
 
-#PBS -l nodes=2:ppn=8,walltime=2:00:00
+#PBS -l nodes=2:ppn=2,walltime=2:00:00
 #PBS -A INF16_LHCb
 
 #PBS -N test
 #PBS -j oe
+
+# load mpi module
+#module load openmpi/1.8.5--gnu--4.9.2
 
 # Create a dedicate directory
 id=`echo ${PBS_JOBID} | cut -f1 -d'.'`
@@ -28,19 +31,13 @@ done < ${PBS_NODEFILE}
 # Store unique hostnames into file
 echo ${array[@]} | tr [:space:] '\n' | awk '!a[$0]++' > $hostnames
 
-# Kill previous processes (if any)
-while read line; do
-  cmd="killall -q lseb;"
-  ssh -n $line $cmd
-done < $hostnames
-
-# Find ib0 ip form hostnames
+# Find ib0 ip from hostnames
 cmd="/usr/sbin/ifconfig ib0 | sed -n 2p | grep -Po '(?<=inet )[^ ]*'"
 endpoints=
 while read line; do  
   address=`ssh -n $line $cmd`
   address=`echo ${address} | rev | cut -d' ' -f1 | rev`
-  endpoints="$endpoints{\"HOST\":\"$address\",\"PORT\":\"7000\"},"
+  endpoints="$endpoints\"$(echo $line | cut -d. -f1)\":{\"HOST\":\"$address\",\"PORT\":\"7000\"},"
 done < $hostnames 
 endpoints="${endpoints%?}"
 
@@ -48,18 +45,14 @@ endpoints="${endpoints%?}"
 cp ${HOME}/configuration.json ${dir}/configuration.json
 sed -i "s/__ENDPOINTS__/${endpoints}/g" ${dir}/configuration.json
 
-cp ${HOME}/lseb/utils/galileo_start.sh ${dir}/galileo_start.sh
-sed -i "s/__ID__/${id}/g" ${dir}/galileo_start.sh
-
-cp ${HOME}/lseb/utils/galileo_stop.sh ${dir}/galileo_stop.sh
-sed -i "s/__ID__/${id}/g" ${dir}/galileo_stop.sh
-
-ssh -n "node165" "/bin/sh ${dir}/galileo_start.sh"
-sleep 300
-/bin/sh ${dir}/galileo_stop.sh
-
-# Kill processes
+# MPI hosts
+mpihosts="${dir}/mpihosts.txt"
+touch ${hostnames}
 while read line; do
-  cmd="killall -q lseb;"
-  ssh -n $line $cmd
+  echo "$line slots=1" >> $mpihosts
 done < $hostnames
+
+# run lseb
+#ssh -n "node165" "mpirun  --hostfile ${mpihosts} ${HOME}/lseb/build/lseb -c ${dir}/configuration.json -l ${dir}"
+
+mpirun --hostfile ${mpihosts} ${HOME}/lseb/build/lseb -c ${dir}/configuration.json -l ${dir}
