@@ -41,6 +41,10 @@ std::unique_ptr<T> make_unique(Args&& ... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 };
 
+// Unique pointer to fabric resource
+template<typename T>
+using fabric_ptr = std::unique_ptr<T, fid_deleter<T>>;
+
 // Helper functions for endpoint creation and setup
 void read_event(fid_eq *eq, struct fi_eq_cm_entry *entry, uint32_t event);
 void bind_completion_queues(fid_ep *ep,
