@@ -51,7 +51,7 @@ Domain::Domain()
   } */
 
   fid_fabric *fabric{nullptr};
-  rc = fi_fabric(info_p->fabric_attr, &fabric, nullptr);
+  rc = fi_fabric(info->fabric_attr, &fabric, nullptr);
 
   if (rc) {
     throw lseb::exception::connection::generic_error(
@@ -62,7 +62,7 @@ Domain::Domain()
 
   fid_domain *domain{nullptr};
 
-  rc = fi_domain(m_fabric.get(), info_p, &domain, nullptr);
+  rc = fi_domain(m_fabric.get(), info.get(), &domain, nullptr);
 
   if (rc) {
     throw lseb::exception::connection::generic_error(
