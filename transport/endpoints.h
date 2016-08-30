@@ -11,7 +11,7 @@
 #include "common/configuration.h"
 
 #ifdef HAVE_HYDRA
-  #include "launcher/hydra_launcher.hpp"
+#include "launcher/hydra_launcher.hpp"
 #endif //HAVE_HYDRA
 
 namespace lseb {
@@ -22,8 +22,7 @@ class Endpoint {
 
  public:
   Endpoint(std::string const& hostname, std::string const& port)
-      :
-        m_hostname(hostname),
+      : m_hostname(hostname),
         m_port(port) {
   }
   std::string hostname() const {
@@ -39,24 +38,24 @@ class Endpoint {
 };
 
 #ifdef HAVE_HYDRA
-  inline std::vector<Endpoint> get_endpoints(HydraLauncher & launcher) {
-    std::vector<Endpoint> endpoints;
-    int nodes = launcher.getWorldSize();
-    for (int i = 0 ; i < nodes ; i++)
-      endpoints.emplace_back(launcher.get("ip",i),launcher.get("port",i));
-    return endpoints;
-  }
+inline std::vector<Endpoint> get_endpoints(HydraLauncher & launcher) {
+  std::vector<Endpoint> endpoints;
+  int nodes = launcher.getWorldSize();
+  for (int i = 0; i < nodes; i++)
+  endpoints.emplace_back(launcher.get("ip",i),launcher.get("port",i));
+  return endpoints;
+}
 #else //HAVE_HYDRA
-  inline std::vector<Endpoint> get_endpoints(Configuration const& configuration) {
-    std::vector<Endpoint> endpoints;
-    for (Configuration::const_iterator it = std::begin(configuration), e =
+inline std::vector<Endpoint> get_endpoints(Configuration const& configuration) {
+  std::vector<Endpoint> endpoints;
+  for (Configuration::const_iterator it = std::begin(configuration), e =
       std::end(configuration); it != e; ++it) {
-      endpoints.emplace_back(
-        it->second.get < std::string > ("HOST"),
-        it->second.get < std::string > ("PORT"));
-    }
-    return endpoints;
+    endpoints.emplace_back(
+        it->second.get<std::string>("HOST"),
+        it->second.get<std::string>("PORT"));
   }
+  return endpoints;
+}
 #endif //HAVE_HYDRA
 
 }

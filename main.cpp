@@ -28,7 +28,6 @@ using namespace lseb;
 
 int main(int argc, char* argv[]) {
 
-  int id;
   std::string str_conf;
   std::string str_logdir;
   std::string str_nodename;
@@ -37,9 +36,6 @@ int main(int argc, char* argv[]) {
   boost::program_options::options_description desc("Options");
 
   desc.add_options()("help,h", "Print help messages.")(
-      "id,i",
-      boost::program_options::value<int>(&id)->required(),
-      "Process ID.")(
       "configuration,c",
       boost::program_options::value<std::string>(&str_conf)->required(),
       "Configuration JSON file.")(
@@ -139,16 +135,28 @@ int main(int argc, char* argv[]) {
 
   /************ Read configuration *****************/
 
+  int id = -1;
+  Configuration const& ep_child = configuration.get_child("ENDPOINTS");
+  for (Configuration::const_iterator it = std::begin(ep_child), e = std::end(
+      ep_child); it != e; ++it) {
+    if (it->first == str_nodename) {
+      id = std::distance(std::begin(ep_child), it);
+    }
+  }
+  if (id == -1) {
+    LOG(ERROR)
+      << "Wrong node name: can't find key \""
+      << str_nodename
+      << "\" in the ENDPOINTS section of the configuration file!";
+    return EXIT_FAILURE;
+  }
+
 #ifdef HAVE_HYDRA
   std::vector<Endpoint> const endpoints = get_endpoints(launcher);
 #else //HAVE_HYDRA
   std::vector<Endpoint> const endpoints = get_endpoints(
       configuration.get_child("ENDPOINTS"));
 #endif //HAVE_HYDRA
-  if (id < 0 || id >= endpoints.size()) {
-    LOG(ERROR) << "Wrong ID: " << id;
-    return EXIT_FAILURE;
-  }
 
   int const max_fragment_size = configuration.get<int>(
       "GENERAL.MAX_FRAGMENT_SIZE");
