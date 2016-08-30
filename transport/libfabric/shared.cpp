@@ -60,8 +60,8 @@ void bind_completion_queues(const fabric_ptr<fid_ep>& ep,
   std::memset(&cq_attr, 0, sizeof cq_attr);
 
   cq_attr.format = FI_CQ_FORMAT_CONTEXT;
-  cq_attr.wait_obj = FI_WAIT_FD;
-  cq_attr.size = size + 1;
+  cq_attr.wait_obj = FI_WAIT_NONE;
+  cq_attr.size = size;
 
   /* Create Completion queues */
   rc = fi_cq_open(d.get_raw_domain(), &cq_attr, &rx_raw, NULL);
