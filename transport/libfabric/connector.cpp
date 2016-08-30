@@ -38,7 +38,7 @@ std::unique_ptr<Socket> Connector::connect(
         "Error on fi_getinfo: " + std::string(fi_strerror(-rc)));
   }
 
-  std::unique_ptr<fi_info, fid_deleter<fi_info>> info{info_p};
+  fabric_ptr<fi_info> info{info_p};
 
   rc = fi_endpoint(d.get_raw_domain(), info.get(), &ep, NULL);
 

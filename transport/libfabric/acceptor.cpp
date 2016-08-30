@@ -44,7 +44,7 @@ void Acceptor::listen(std::string const& hostname, std::string const& port) {
         "Error on fi_getinfo: " + std::string(fi_strerror(-rc)));
   }
 
-  std::unique_ptr<fi_info, fid_deleter<fi_info>> info{info_p};
+  fabric_ptr<fi_info> info{info_p};
 
   rc = fi_passive_ep(domain.get_raw_fabric(),
                      info.get(),
