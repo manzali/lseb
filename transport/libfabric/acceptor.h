@@ -14,8 +14,8 @@ namespace lseb {
 class Acceptor {
 public:
 
-  typedef std::unique_ptr<fid_pep, fid_deleter<fid_pep>> pep_ptr;
-  typedef std::unique_ptr<fid_eq, fid_deleter<fid_eq>> eq_ptr;
+  typedef fabric_ptr<fid_pep> pep_ptr;
+  typedef fabric_ptr<fid_eq> eq_ptr;
 
   Acceptor(int credits);
   Acceptor(Acceptor const& other) = delete;

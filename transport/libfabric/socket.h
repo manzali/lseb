@@ -17,7 +17,7 @@ namespace lseb {
 class Socket {
 public:
 
-  typedef std::unique_ptr<fid_mr, fid_deleter<fid_mr>> mr_ptr;
+  typedef fabric_ptr<fid_mr> mr_ptr;
   typedef std::pair<void*, size_t> mr_info;
   typedef std::pair<mr_ptr, mr_info> memory_region;
 
