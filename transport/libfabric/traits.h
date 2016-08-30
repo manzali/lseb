@@ -32,7 +32,17 @@ struct _is_fabric_id<fid_domain> :
 };
 
 template<>
+struct _is_fabric_id<fid_ep> :
+    public std::true_type {
+};
+
+template<>
 struct _is_fabric_id<fid_pep> :
+    public std::true_type {
+};
+
+template<>
+struct _is_fabric_id<fid_cq> :
     public std::true_type {
 };
 
@@ -46,9 +56,7 @@ struct _is_fabric_id<fi_info> :
     public std::true_type {
 };
 
-
-
-}
+} // namespace detail
 
 template<typename T>
 struct is_fabric_id
