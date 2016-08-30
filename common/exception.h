@@ -30,6 +30,17 @@ class generic_error : public std::runtime_error {
 
 }
 
+namespace connection {
+
+class generic_error : public std::runtime_error {
+public:
+  explicit generic_error(std::string const& error)
+      : std::runtime_error(error) {
+  }
+};
+
+}
+
 namespace socket {
 
 class generic_error : public std::runtime_error {
