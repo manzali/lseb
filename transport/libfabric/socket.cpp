@@ -231,7 +231,7 @@ std::vector<iovec> Socket::pending_send() {
 
 std::vector<iovec> Socket::pending_recv() {
   std::vector<iovec> iov_vect;
-  for (auto const &pair : m_pending_send) {
+  for (auto const &pair : m_pending_recv) {
     iov_vect.push_back({pair.first, pair.second});
   }
   return iov_vect;
