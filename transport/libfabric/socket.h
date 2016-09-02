@@ -14,12 +14,17 @@
 
 namespace lseb {
 
+struct MemoryRegion {
+  fabric_ptr<fid_mr> mr = nullptr;
+  unsigned char* begin;
+  unsigned char* end;
+  MemoryRegion(void* buffer, size_t size);
+};
+
 class Socket {
 public:
 
-  typedef fabric_ptr<fid_mr> mr_ptr;
-  typedef std::pair<void*, size_t> mr_info;
-  typedef std::pair<mr_ptr, mr_info> memory_region;
+  typedef MemoryRegion memory_region;
 
   Socket(fid_ep *ep,
          fid_cq *rx_cq,

@@ -9,23 +9,18 @@
 #include "domain.h"
 
 namespace {
-bool is_in_mr(const iovec &iov, const lseb::Socket::memory_region &mr) {
-  bool res = mr.second.first <= iov.iov_base
-      && static_cast<char *>(mr.second.first) + mr.second.second
-          >= static_cast<char *>(iov.iov_base) + iov.iov_len;
-  return res;
+bool is_in_mr(iovec const& iov, lseb::Socket::memory_region const& mr) {
+  return
+         mr.begin <= iov.iov_base
+      && mr.end >= static_cast<unsigned char *>(iov.iov_base) + iov.iov_len;
 }
 }
 
 namespace lseb {
 
-Socket::Socket(fid_ep *ep, fid_cq *rx_cq,
-                   fid_cq *tx_cq, uint32_t credits)
-    : m_ep(ep), m_rx_cq(rx_cq), m_tx_cq(tx_cq), m_credits(credits) {
-}
-
-void Socket::register_memory(void *buffer, size_t size) {
-  fid_mr *mr;
+MemoryRegion::MemoryRegion(void *buffer, size_t size)
+    : begin(static_cast<unsigned char *>(buffer)), end(begin + size) {
+  fid_mr *mr_raw;
   auto ret = fi_mr_reg(Domain::get_instance().get_raw_domain(),
                        buffer,
                        size,
@@ -33,16 +28,23 @@ void Socket::register_memory(void *buffer, size_t size) {
                        0 /* offset, must be 0 */,
                        0 /* requested key */,
                        0 /* flags, must be 0 */,
-                       &mr,
+                       &mr_raw,
                        0 /* context */);
-
   if (ret) {
     throw exception::socket::generic_error(
         "Error on fi_mr_reg: "
             + std::string(fi_strerror(static_cast<int>(-ret))));
   }
+  mr.reset(mr_raw);
+}
 
-  m_mrs.emplace_back(mr_ptr(mr), mr_info(buffer,size));
+Socket::Socket(fid_ep *ep, fid_cq *rx_cq,
+               fid_cq *tx_cq, uint32_t credits)
+    : m_ep(ep), m_rx_cq(rx_cq), m_tx_cq(tx_cq), m_credits(credits) {
+}
+
+void Socket::register_memory(void *buffer, size_t size) {
+  m_mrs.emplace_back(buffer, size);
 }
 
 std::vector<iovec> Socket::poll_completed_send() {
@@ -56,10 +58,11 @@ std::vector<iovec> Socket::poll_completed_send() {
 
   if (ret < 0) {
     switch (ret) {
-    case -FI_EAGAIN:
-      return iov_vect;
+    case -FI_EAGAIN:return iov_vect;
     case -FI_EAVAIL:
-      fi_cq_readerr(m_tx_cq.get(), &cq_err, 0 /* flags not documented */);
+      fi_cq_readerr(m_tx_cq.get(),
+                    &cq_err,
+                    0 /* flags not documented */);
       err = fi_cq_strerror(m_tx_cq.get(),
                            cq_err.err,
                            cq_err.err_data,
@@ -103,10 +106,11 @@ std::vector<iovec> Socket::poll_completed_recv() {
 
   if (ret < 0) {
     switch (ret) {
-    case -FI_EAGAIN:
-      return iov_vect;
+    case -FI_EAGAIN:return iov_vect;
     case -FI_EAVAIL:
-      fi_cq_readerr(m_rx_cq.get(), &cq_err, 0 /* flags not documented */);
+      fi_cq_readerr(m_rx_cq.get(),
+                    &cq_err,
+                    0 /* flags not documented */);
       err = fi_cq_strerror(m_rx_cq.get(),
                            cq_err.err,
                            cq_err.err_data,
@@ -139,7 +143,7 @@ std::vector<iovec> Socket::poll_completed_recv() {
   return iov_vect;
 }
 
-void Socket::post_send(iovec const &iov) {
+void Socket::post_send(iovec const& iov) {
   if (!available_send()) {
     throw exception::socket::generic_error(
         "Error on post_send: no credits available");
@@ -160,7 +164,7 @@ void Socket::post_send(iovec const &iov) {
   auto ret = fi_send(m_ep.get(),
                      iov.iov_base,
                      iov.iov_len,
-                     fi_mr_desc(mr_it->first.get()),
+                     fi_mr_desc(mr_it->mr.get()),
                      0, /* dest_address */
                      iov.iov_base);/* context */
   if (ret) {
@@ -176,7 +180,7 @@ void Socket::post_send(iovec const &iov) {
   }
 }
 
-void Socket::post_recv(iovec const &iov) {
+void Socket::post_recv(iovec const& iov) {
   if (!available_recv()) {
     throw exception::socket::generic_error(
         "Error on post_recv: no credits available");
@@ -197,7 +201,7 @@ void Socket::post_recv(iovec const &iov) {
   auto ret = fi_recv(m_ep.get(),
                      iov.iov_base,
                      iov.iov_len,
-                     fi_mr_desc(mr_it->first.get()),
+                     fi_mr_desc(mr_it->mr.get()),
                      0, /* src_address */
                      iov.iov_base);/* context */
   if (ret) {
@@ -225,7 +229,7 @@ bool Socket::available_recv() {
 std::vector<iovec> Socket::pending_send() {
   std::vector<iovec> iov_vect;
   iov_vect.reserve(m_pending_send.size());
-  for (auto const &pair : m_pending_send) {
+  for (auto const& pair : m_pending_send) {
     iov_vect.push_back({pair.first, pair.second});
   }
   return iov_vect;
@@ -234,7 +238,7 @@ std::vector<iovec> Socket::pending_send() {
 std::vector<iovec> Socket::pending_recv() {
   std::vector<iovec> iov_vect;
   iov_vect.reserve(m_pending_recv.size());
-  for (auto const &pair : m_pending_recv) {
+  for (auto const& pair : m_pending_recv) {
     iov_vect.push_back({pair.first, pair.second});
   }
   return iov_vect;
