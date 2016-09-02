@@ -1,6 +1,7 @@
 #include "transport/libfabric/socket.h"
 
 #include <algorithm>
+#include <array>
 #include <arpa/inet.h>
 #include <rdma/fi_cm.h>
 #include <rdma/fi_errno.h>
@@ -46,7 +47,7 @@ void Socket::register_memory(void *buffer, size_t size) {
 
 std::vector<iovec> Socket::poll_completed_send() {
   std::vector<iovec> iov_vect;
-  std::vector<fi_cq_entry> wcs(m_credits);
+  std::array<fi_cq_entry, 100> wcs;
 
   auto ret = fi_cq_read(m_tx_cq.get(), wcs.data(), wcs.size());
 
@@ -92,7 +93,7 @@ std::vector<iovec> Socket::poll_completed_send() {
 }
 
 std::vector<iovec> Socket::poll_completed_recv() {
-  std::vector<fi_cq_entry> wcs(m_credits);
+  std::array<fi_cq_entry, 100> wcs;
 
   auto ret = fi_cq_read(m_rx_cq.get(), wcs.data(), wcs.size());
 
@@ -223,6 +224,7 @@ bool Socket::available_recv() {
 
 std::vector<iovec> Socket::pending_send() {
   std::vector<iovec> iov_vect;
+  iov_vect.reserve(m_pending_send.size());
   for (auto const &pair : m_pending_send) {
     iov_vect.push_back({pair.first, pair.second});
   }
@@ -231,6 +233,7 @@ std::vector<iovec> Socket::pending_send() {
 
 std::vector<iovec> Socket::pending_recv() {
   std::vector<iovec> iov_vect;
+  iov_vect.reserve(m_pending_recv.size())
   for (auto const &pair : m_pending_recv) {
     iov_vect.push_back({pair.first, pair.second});
   }
