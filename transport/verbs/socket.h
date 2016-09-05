@@ -25,6 +25,8 @@ class Socket {
   uint32_t m_credits;
   std::map<void*, size_t> m_pending_send;
   std::map<void*, size_t> m_pending_recv;
+  std::vector<ibv_wc> m_comp_send;
+  std::vector<ibv_wc> m_comp_recv;
 
  public:
 

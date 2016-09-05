@@ -23,7 +23,9 @@ namespace lseb {
 
 Socket::Socket(rdma_cm_id* cm_id, uint32_t credits)
     : m_cm_id(cm_id),
-      m_credits(credits) {
+      m_credits(credits),
+      m_comp_send(m_credits),
+      m_comp_recv(m_credits) {
 }
 
 Socket::~Socket() {
@@ -44,7 +46,7 @@ void Socket::register_memory(void* buffer, size_t size) {
 }
 
 std::vector<iovec> Socket::poll_completed_send() {
-  std::vector<ibv_wc> wcs(m_credits);
+  auto& wcs = m_comp_send;
   int ret = ibv_poll_cq(m_cm_id->send_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw exception::socket::generic_error(
@@ -72,7 +74,7 @@ std::vector<iovec> Socket::poll_completed_send() {
 }
 
 std::vector<iovec> Socket::poll_completed_recv() {
-  std::vector<ibv_wc> wcs(m_credits);
+  auto& wcs = m_comp_recv;
   int ret = ibv_poll_cq(m_cm_id->recv_cq, wcs.size(), &wcs.front());
   if (ret < 0) {
     throw exception::socket::generic_error(
