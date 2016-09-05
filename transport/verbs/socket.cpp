@@ -51,6 +51,7 @@ std::vector<iovec> Socket::poll_completed_send() {
         "Error on ibv_poll_cq: " + std::string(strerror(ret)));
   }
   std::vector<iovec> iov_vect;
+  iov_vect.reserve(ret);
   for (auto wcs_it = std::begin(wcs); wcs_it != std::begin(wcs) + ret;
       ++wcs_it) {
     if (wcs_it->status) {
@@ -78,6 +79,7 @@ std::vector<iovec> Socket::poll_completed_recv() {
         "Error on ibv_poll_cq: " + std::string(strerror(ret)));
   }
   std::vector<iovec> iov_vect;
+  iov_vect.reserve(ret);
   for (auto wcs_it = std::begin(wcs); wcs_it != std::begin(wcs) + ret;
       ++wcs_it) {
     if (wcs_it->status) {
@@ -182,6 +184,7 @@ bool Socket::available_recv() {
 
 std::vector<iovec> Socket::pending_send() {
   std::vector<iovec> iov_vect;
+  iov_vect.reserve(m_pending_send.size());
   for (auto const& pair : m_pending_send) {
     iov_vect.push_back( { pair.first, pair.second });
   }
@@ -190,6 +193,7 @@ std::vector<iovec> Socket::pending_send() {
 
 std::vector<iovec> Socket::pending_recv() {
   std::vector<iovec> iov_vect;
+  iov_vect.reserve(m_pending_recv.size());
   for (auto const& pair : m_pending_recv) {
     iov_vect.push_back( { pair.first, pair.second });
   }
