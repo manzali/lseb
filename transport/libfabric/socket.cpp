@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <arpa/inet.h>
 #include <rdma/fi_cm.h>
 #include <rdma/fi_errno.h>
@@ -40,7 +41,8 @@ MemoryRegion::MemoryRegion(void *buffer, size_t size)
 
 Socket::Socket(fid_ep *ep, fid_cq *rx_cq,
                fid_cq *tx_cq, uint32_t credits)
-    : m_ep(ep), m_rx_cq(rx_cq), m_tx_cq(tx_cq), m_credits(credits) {
+    : m_ep(ep), m_rx_cq(rx_cq), m_tx_cq(tx_cq), m_credits(credits),
+      m_comp_send(m_credits), m_comp_recv(m_credits) {
 }
 
 void Socket::register_memory(void *buffer, size_t size) {
@@ -49,9 +51,8 @@ void Socket::register_memory(void *buffer, size_t size) {
 
 std::vector<iovec> Socket::poll_completed_send() {
   std::vector<iovec> iov_vect;
-  std::array<fi_cq_entry, 100> wcs;
 
-  auto ret = fi_cq_read(m_tx_cq.get(), wcs.data(), wcs.size());
+  auto ret = fi_cq_read(m_tx_cq.get(), m_comp_send.data(), m_comp_send.size());
 
   fi_cq_err_entry cq_err;
   const char *err = nullptr;
@@ -82,7 +83,7 @@ std::vector<iovec> Socket::poll_completed_send() {
   // Note: Is safe to store the map_end iterator because the erase function
   //       invalidates only references and iterators to the erased element
   auto map_end = std::end(m_pending_send);
-  for (auto it = std::begin(wcs), end = it + ret; it!=end; ++it) {
+  for (auto it = std::begin(m_comp_send), end = it + ret; it!=end; ++it) {
     auto map_it = m_pending_send.find(it->op_context);
     if (map_it==map_end) {
       throw exception::socket::generic_error(
@@ -96,11 +97,10 @@ std::vector<iovec> Socket::poll_completed_send() {
 }
 
 std::vector<iovec> Socket::poll_completed_recv() {
-  std::array<fi_cq_entry, 100> wcs;
+  std::vector<iovec> iov_vect;
 
-  auto ret = fi_cq_read(m_rx_cq.get(), wcs.data(), wcs.size());
+  auto ret = fi_cq_read(m_rx_cq.get(), m_comp_recv.data(), m_comp_recv.size());
 
-  std::vector<iovec> iov_vect{};
   fi_cq_err_entry cq_err;
   const char *err = nullptr;
 
@@ -130,7 +130,7 @@ std::vector<iovec> Socket::poll_completed_recv() {
   // Note: Is safe to store the map_end iterator because the erase function
   //       invalidates only references and iterators to the erased element
   auto map_end = std::end(m_pending_recv);
-  for (auto it = std::begin(wcs), end = it + ret; it!=end; ++it) {
+  for (auto it = std::begin(m_comp_recv), end = it + ret; it!=end; ++it) {
     auto map_it = m_pending_recv.find(it->op_context);
     if (map_it==map_end) {
       throw exception::socket::generic_error(
@@ -156,10 +156,8 @@ void Socket::post_send(iovec const& iov) {
                               return is_in_mr(iov, m);
                             });
 
-  if (mr_it==std::end(m_mrs)) {
-    throw exception::socket::generic_error(
-        "Error on find_if: no valid memory region found");
-  }
+  assert(mr_it!=std::end(m_mrs)
+             && "Error on find_if: no valid memory region found");
 
   auto ret = fi_send(m_ep.get(),
                      iov.iov_base,
@@ -193,10 +191,8 @@ void Socket::post_recv(iovec const& iov) {
                               return is_in_mr(iov, m);
                             });
 
-  if (mr_it==std::end(m_mrs)) {
-    throw exception::socket::generic_error(
-        "Error on find_if: no valid memory region found");
-  }
+  assert(mr_it!=std::end(m_mrs)
+             && "Error on find_if: no valid memory region found");
 
   auto ret = fi_recv(m_ep.get(),
                      iov.iov_base,

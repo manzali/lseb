@@ -69,6 +69,11 @@ private:
   std::unordered_map<void *, size_t> m_pending_send;
   std::unordered_map<void *, size_t> m_pending_recv;
 
+  // Used as temporary buffer for reading completions from rx/tx queues
+  std::vector<fi_cq_entry> m_comp_send;
+  std::vector<fi_cq_entry> m_comp_recv;
+
+
 };
 
 }
