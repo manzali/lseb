@@ -98,9 +98,7 @@ void ReadoutUnit::run() {
       auto& conn = *(m_connection_ids.at(id));
       std::vector<iovec> completed_wr = conn.poll_completed_send();
       for (auto const& wr : completed_wr) {
-        if (id != m_id) {
-          bandwith.add(wr.iov_len);
-        }
+        bandwith.add(wr.iov_len);
         wr_to_release.push_back(wr.iov_base);
       }
       int const count = completed_wr.size();
