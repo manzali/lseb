@@ -9,6 +9,8 @@
 
 namespace lseb {
 
+// typedef std::unique_ptr<rdma_addrinfo, decltype(rdma_freeaddrinfo)> rdma_addrinfo_ptr;
+
 class Connector {
 
   uint32_t m_credits;
