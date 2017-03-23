@@ -125,15 +125,15 @@ void BuilderUnit::run() {
 
   FrequencyMeter frequency(5.0);
 
-  //std::chrono::high_resolution_clock::time_point t_tot =
-  //    std::chrono::high_resolution_clock::now();
-  //std::chrono::high_resolution_clock::time_point t_active;
-  //double active_time = 0;
+  std::chrono::high_resolution_clock::time_point t_tot =
+      std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point t_active;
+  double active_time = 0;
 
   while (true) {
 
-    //bool active_flag = false;
-    //t_active = std::chrono::high_resolution_clock::now();
+    bool active_flag = false;
+    t_active = std::chrono::high_resolution_clock::now();
 
     // Acquire
     int min_wrs = m_credits;
@@ -145,7 +145,7 @@ void BuilderUnit::run() {
           << read_wrs
           << " wrs from conn "
           << i;
-        //active_flag = true;
+        active_flag = true;
       }
       int const current_wrs = m_data_vect[i].size();
       min_wrs = (min_wrs < current_wrs) ? min_wrs : current_wrs;
@@ -168,24 +168,24 @@ void BuilderUnit::run() {
       frequency.add(min_wrs * m_bulk_size * m_connection_ids.size());
     }
 
-    //if (active_flag) {
-    //  active_time += std::chrono::duration<double>(
-    //      std::chrono::high_resolution_clock::now() - t_active).count();
-    //}
+    if (active_flag) {
+      active_time += std::chrono::duration<double>(
+          std::chrono::high_resolution_clock::now() - t_active).count();
+    }
 
     if (frequency.check()) {
 
-    //  double tot_time = std::chrono::duration<double>(
-    //      std::chrono::high_resolution_clock::now() - t_tot).count();
+      double tot_time = std::chrono::duration<double>(
+          std::chrono::high_resolution_clock::now() - t_tot).count();
 
       LOG(NOTICE)
         << "Builder Unit: "
         << frequency.frequency() / std::mega::num
-        << " MHz";
-       // << active_time / tot_time * 100.
-       // << " %";
-      //active_time = 0;
-      //t_tot = std::chrono::high_resolution_clock::now();
+        << " MHz - "
+        << active_time / tot_time * 100.
+        << " %";
+      active_time = 0;
+      t_tot = std::chrono::high_resolution_clock::now();
     }
   }
 
