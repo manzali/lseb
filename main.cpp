@@ -104,6 +104,8 @@ int main(int argc, char* argv[]) {
 
   LOG(NOTICE) << "Node name: " << str_nodename;
 
+  int id = -1;
+
   /****** Setup Launcher / exchange addresses ******/
 #ifdef HAVE_HYDRA
   //extract from config
@@ -129,11 +131,9 @@ int main(int argc, char* argv[]) {
 
   //extract id
   id = launcher.getRank();
-#endif //HAVE_HYDRA
 
-  /************ Read configuration *****************/
+#else
 
-  int id = -1;
   Configuration const& ep_child = configuration.get_child("ENDPOINTS");
   for (Configuration::const_iterator it = std::begin(ep_child), e = std::end(
       ep_child); it != e; ++it) {
@@ -148,6 +148,8 @@ int main(int argc, char* argv[]) {
       << "\" in the ENDPOINTS section of the configuration file!";
     return EXIT_FAILURE;
   }
+
+#endif //HAVE_HYDRA
 
 #ifdef HAVE_HYDRA
   std::vector<Endpoint> const endpoints = get_endpoints(launcher);
