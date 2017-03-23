@@ -1,10 +1,10 @@
 ######################################################
 # - Try to find hdyra (https://www.mpich.org/)
 # Once done this will define
-#  HYDRA_FOUND - System has libfabric
-#  HYDRA_INCLUDE_DIRS - The libfabric include directories
-#  HYDRA_LIBRARIES - The libraries needed to use libfabric
-#  HYDRA_DEFINITIONS - Compiler switches required for using libfabric
+#  HYDRA_FOUND - System has hydra
+#  HYDRA_INCLUDE_DIRS - The hydra include directories
+#  HYDRA_LIBRARIES - The libraries needed to use hydra
+#  HYDRA_DEFINITIONS - Compiler switches required for using hydra
 
 ######################################################
 set(HYDRA_PREFIX "" CACHE STRING "Help cmake to find hydra library (https://www.mpich.org/ into mpich package subdirectory pm/hydra) into your system.")
