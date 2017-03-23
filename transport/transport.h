@@ -5,7 +5,7 @@
 #include "transport/verbs/socket.h"
 #include "transport/verbs/acceptor.h"
 #include "transport/verbs/connector.h"
-#elif LIBFABRIC
+#elif FI_TCP
 #include "transport/libfabric/socket.h"
 #include "transport/libfabric/acceptor.h"
 #include "transport/libfabric/connector.h"

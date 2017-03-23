@@ -3,7 +3,7 @@
 
 # LSEB (Large Scale Event Building)
 
-LSEB is a DAQ (data acquisition system) software that aims to perform the event building of the LHCb physic experiment after its next major upgrade (2018-2019). This software is designed to scale up to hundreds of nodes and to use different transport layers (at the moment only TCP and Infiniband verbs are implemented).
+LSEB is a DAQ (data acquisition system) software that aims to perform the event building of the LHCb physic experiment after its next major upgrade (2018-2019). This software is designed to scale up to hundreds of nodes and to use different transport layers (at the moment only TCP (using libfabric) and Infiniband verbs are implemented).
 
 ## Generic Design
 
@@ -29,9 +29,9 @@ In order to install LSEB run:
     cd lseb
     mkdir build
     cd build
-    cmake -DTRANSPORT=<TCP | VERBS> ..
+    cmake -DTRANSPORT=<FI_TCP | VERBS> ..
     #or
-    cmake -DTRANSPORT=<TCP | VERBS> -DENABLE_HYDRA=ON -DWITH_HYDRA=<PATh_TO_HYDRA_PREFIX> ..
+    cmake -DTRANSPORT=<FI_TCP | VERBS> -DENABLE_HYDRA=ON -DWITH_HYDRA=<PATH_TO_HYDRA_PREFIX> ..
 ```
 
 ## Getting Started
