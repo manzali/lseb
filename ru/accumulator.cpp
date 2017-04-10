@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "common/log.hpp"
+#include "log/log.hpp"
 #include "common/utility.h"
 
 namespace lseb {
@@ -75,7 +75,7 @@ std::pair<iovec, bool> Accumulator::get_multievent() {
   m_generated_events -= m_events_in_multievent;
   m_current_metadata = std::end(multievent_metadata);
 
-  LOG(DEBUG) << "Accumulator - Acquired 1 multievent";
+  LOG_TRACE << "Accumulator - Acquired 1 multievent";
   }
   else {
     p.second = false;
@@ -103,7 +103,7 @@ int Accumulator::releaseContiguousMemory() {
     m_iov_multievents.erase(
       std::begin(m_iov_multievents),
       std::begin(m_iov_multievents) + multievents_to_release);
-    LOG(DEBUG) << "Accumulator - Released " << multievents_to_release
+    LOG_DEBUG << "Accumulator - Released " << multievents_to_release
                << " contiguous multievents";
   }
   return multievents_to_release;

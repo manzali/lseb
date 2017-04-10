@@ -5,7 +5,7 @@
 #include "common/memory_pool.h"
 #include "common/frequency_meter.h"
 #include "common/utility.h"
-#include "common/log.hpp"
+#include "log/log.hpp"
 
 #include "transport/transport.h"
 
@@ -49,11 +49,12 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  Log::init("t_server", Log::INFO);
+  async_log::init();
+  async_log::add_console();
 
   size_t const buffer_size = chunk_size * credits;
 
-  LOG(INFO) << "One-way server test (recv)";
+  LOG_INFO << "One-way server test (recv)";
 
   std::unique_ptr<unsigned char[]> const buffer_ptr(
     new unsigned char[buffer_size]);
@@ -65,7 +66,7 @@ int main(int argc, char* argv[]) {
   acceptor.listen(server, port);
   std::unique_ptr<Socket> socket = acceptor.accept();
   socket->register_memory(buffer_ptr.get(), buffer_size);
-  LOG(INFO) << "Accepted connection";
+  LOG_INFO << "Accepted connection";
 
   FrequencyMeter bandwith(5.0);
 
@@ -73,7 +74,7 @@ int main(int argc, char* argv[]) {
     socket->post_recv(pool.alloc());
   }
 
-  LOG(INFO) << "Start receiving...";
+  LOG_INFO << "Start receiving...";
 
   while (true) {
     std::vector<iovec> vect = socket->poll_completed_recv();
@@ -85,7 +86,7 @@ int main(int argc, char* argv[]) {
       socket->post_recv(pool.alloc());
     }
     if (bandwith.check()) {
-      LOG(INFO)
+      LOG_INFO
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";

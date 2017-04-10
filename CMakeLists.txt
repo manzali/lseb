@@ -45,10 +45,12 @@ endif()
 add_definitions(-D${TRANSPORT})
 
 # searching for boost 1.54 or newer
-find_package(Boost 1.53 REQUIRED COMPONENTS system program_options)
+ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
+find_package(Boost 1.53 REQUIRED COMPONENTS system program_options thread log)
 
 add_subdirectory(transport)
 add_subdirectory(generator)
+add_subdirectory(log)
 add_subdirectory(ru)
 add_subdirectory(bu)
 add_subdirectory(test)
@@ -67,6 +69,7 @@ target_link_libraries(
   lseb
   ru
   bu
+  log
   ${Boost_LIBRARIES}
 )
 

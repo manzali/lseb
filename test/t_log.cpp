@@ -1,21 +1,24 @@
-#include <fstream>
+#include <iostream>
 
-#include "common/log.hpp"
+#include "log/log.hpp"
 
 int main() {
 
-  //lseb::Log::UseSyslog();
+  async_log::init();
 
-  lseb::Log::init("t_log", lseb::Log::DEBUG);
+  async_log::add_console(async_log::severity_level::trace);
 
-  LOG(DEBUG) << "This is a DEBUG message";
-  LOG(INFO) << "This is an INFO message";
-  LOG(WARNING) << "This is a WARNING message\non two lines";
-  LOG(ERROR) << "This is an ERROR message";
+  async_log::add_file("t_log", 1024, async_log::severity_level::info);
 
-  std::ofstream f("/tmp/lseb_log.txt");
-  lseb::Log::init("t_log", lseb::Log::DEBUG, f);
+  LOG_DEBUG<< "test " << "with define";
+  async_log::log(async_log::severity_level::debug) << "test " << "w/o define";
 
-  LOG(DEBUG) << "This is a DEBUG message in a log file";
+  LOG_TRACE << "trace";// not printed to file
+  LOG_DEBUG << "debug";// not printed to file
+  LOG_INFO << "info";
+  LOG_WARNING << "warning";
+  LOG_ERROR << "error";
+  LOG_FATAL << "fatal";
 
+  return EXIT_SUCCESS;
 }

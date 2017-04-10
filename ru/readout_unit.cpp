@@ -10,7 +10,7 @@
 #include "ru/readout_unit.h"
 
 #include "common/dataformat.h"
-#include "common/log.hpp"
+#include "log/log.hpp"
 #include "common/utility.h"
 #include "common/frequency_meter.h"
 
@@ -30,7 +30,7 @@ ReadoutUnit::ReadoutUnit(
 void ReadoutUnit::connect(std::vector<Endpoint> const& endpoints){
   std::vector<int> id_sequence = create_sequence(m_id, endpoints.size());
 
-  LOG(NOTICE) << "Readout Unit - Waiting for connections...";
+  LOG_INFO << "Readout Unit - Waiting for connections...";
 
   DataRange const data_range = m_accumulator.data_range();
   Connector connector(m_credits);
@@ -51,14 +51,14 @@ void ReadoutUnit::connect(std::vector<Endpoint> const& endpoints){
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
     }
-    LOG(NOTICE)
+    LOG_INFO
       << "Readout Unit - Connection established with ip "
       << ep.hostname()
       << " (bu "
       << id
       << ")";
   }
-  LOG(NOTICE) << "Readout Unit - All connections established";
+  LOG_INFO << "Readout Unit - All connections established";
 }
 
 void ReadoutUnit::run() {
@@ -104,7 +104,7 @@ void ReadoutUnit::run() {
       int const count = completed_wr.size();
       conn_avail = (seq_id == id) ? (conn.available_send()) : conn_avail;
       if (!count) {
-        LOG(DEBUG)
+        LOG_TRACE
           << "Readout Unit - Completed "
           << count
           << " wrs of conn "
@@ -124,7 +124,7 @@ void ReadoutUnit::run() {
       auto& iov = iov_to_send[seq_id];
       auto& conn = *(m_connection_ids.at(seq_id));
       conn.post_send(iov);
-      LOG(DEBUG) << "Readout Unit - Written 1 wrs to conn " << seq_id;
+      LOG_TRACE << "Readout Unit - Written 1 wrs to conn " << seq_id;
 
       // Increment seq_it and check for end of a cycle
       if (++seq_it == std::end(id_sequence)) {
@@ -145,7 +145,7 @@ void ReadoutUnit::run() {
       double tot_time = std::chrono::duration<double>(
           std::chrono::high_resolution_clock::now() - t_tot).count();
 
-      LOG(NOTICE)
+      LOG_INFO
         << "Readout Unit: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s - "
@@ -156,7 +156,7 @@ void ReadoutUnit::run() {
     }
   }
 
-  LOG(INFO) << "Readout Unit: exiting";
+  LOG_DEBUG << "Readout Unit: exiting";
 }
 
 }

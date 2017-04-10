@@ -12,5 +12,6 @@ add_library(
 target_link_libraries(
   bu
   transport
+  log
   ${Boost_LIBRARIES}
 )

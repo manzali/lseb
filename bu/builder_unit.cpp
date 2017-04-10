@@ -5,7 +5,7 @@
 #include <chrono>
 
 #include "common/frequency_meter.h"
-#include "common/log.hpp"
+#include "log/log.hpp"
 #include "common/dataformat.h"
 #include "common/utility.h"
 
@@ -50,7 +50,7 @@ bool BuilderUnit::check_data() {
     uint64_t flags = pointer_cast<EventHeader>(data.front().iov_base)->flags;
     uint64_t length = pointer_cast<EventHeader>(data.front().iov_base)->length;
     if (id != first_evt_id) {
-      LOG(ERROR)
+      LOG_ERROR
         << "Remote event id ("
         << id
         << ") is different from the event id of the BU 0 ("
@@ -63,7 +63,7 @@ bool BuilderUnit::check_data() {
     //  return false;
     //}
     if (!length) {
-      LOG(ERROR) << "Found wrong length: " << length;
+      LOG_ERROR << "Found wrong length: " << length;
       return false;
     }
   }
@@ -95,7 +95,7 @@ void BuilderUnit::connect(std::vector<Endpoint> const& endpoints) {
 
   acceptor.listen(endpoints[m_id].hostname(), endpoints[m_id].port());
 
-  LOG(NOTICE) << "Builder Unit - Waiting for connections...";
+  LOG_INFO << "Builder Unit - Waiting for connections...";
 
   size_t const chunk_size = m_max_fragment_size * m_bulk_size;
 
@@ -114,11 +114,11 @@ void BuilderUnit::connect(std::vector<Endpoint> const& endpoints) {
       conn.post_recv({ base_data_ptr + j * chunk_size, chunk_size });
     }
 
-    LOG(NOTICE)
+    LOG_INFO
       << "Builder Unit - Connection established with ip "
       << conn.peer_hostname();
   }
-  LOG(NOTICE) << "Builder Unit - All connections established";
+  LOG_INFO << "Builder Unit - All connections established";
 }
 
 void BuilderUnit::run() {
@@ -140,7 +140,7 @@ void BuilderUnit::run() {
     for (int i = 0; i < m_connection_ids.size(); ++i) {
       int read_wrs = read_data(i);
       if (read_wrs) {
-        LOG(DEBUG)
+        LOG_TRACE
           << "Builder Unit - Read "
           << read_wrs
           << " wrs from conn "
@@ -159,7 +159,7 @@ void BuilderUnit::run() {
       // Release
       for (int i = 0; i < m_connection_ids.size(); ++i) {
         size_t const bytes = release_data(i, min_wrs);
-        LOG(DEBUG)
+        LOG_TRACE
           << "Builder Unit - Released "
           << min_wrs
           << " wrs of conn "
@@ -178,7 +178,7 @@ void BuilderUnit::run() {
       double tot_time = std::chrono::duration<double>(
           std::chrono::high_resolution_clock::now() - t_tot).count();
 
-      LOG(NOTICE)
+      LOG_INFO
         << "Builder Unit: "
         << frequency.frequency() / std::mega::num
         << " MHz - "
@@ -189,6 +189,6 @@ void BuilderUnit::run() {
     }
   }
 
-  LOG(INFO) << "Builder Unit: exiting";
+  LOG_DEBUG << "Builder Unit: exiting";
 }
 }

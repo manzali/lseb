@@ -5,7 +5,7 @@
 #include "common/memory_pool.h"
 #include "common/frequency_meter.h"
 #include "common/utility.h"
-#include "common/log.hpp"
+#include "log/log.hpp"
 
 #include "transport/transport.h"
 
@@ -49,11 +49,12 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  Log::init("t_server2", Log::INFO);
+  async_log::init();
+  async_log::add_console();
 
   size_t const buffer_size = chunk_size * credits * 2;
 
-  LOG(INFO) << "Two-way server test";
+  LOG_INFO << "Two-way server test";
 
   std::unique_ptr<unsigned char[]> const buffer_ptr(
     new unsigned char[buffer_size]);
@@ -66,7 +67,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<Socket> socket = acceptor.accept();
   socket->register_memory(buffer_ptr.get(), buffer_size);
 
-  LOG(INFO) << "Accepted connection";
+  LOG_INFO << "Accepted connection";
 
   FrequencyMeter bandwith(5.0);
 
@@ -96,7 +97,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (bandwith.check()) {
-      LOG(INFO)
+      LOG_INFO
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";

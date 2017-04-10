@@ -8,7 +8,7 @@
 //usage of PMI (hydra)
 #include "hydra-simple/pmi.h"
 //local
-#include "../common/log.hpp"
+#include "log/log.hpp"
 //std
 #include <cassert>
 #include <cstdio>
@@ -82,7 +82,7 @@ void HydraLauncher::initialize ( int argc, char** argv )
   PMI_CHECK_STATUS("PMI_KVS_Get_my_name",status);
   
   //debugging
-  LOG(DEBUG) << "hydra-launcher [" << getRank() << "] KVS name : " << kvsName;
+  LOG_DEBUG << "hydra-launcher [" << getRank() << "] KVS name : " << kvsName;
 }
 
 /*******************  FUNCTION  *********************/

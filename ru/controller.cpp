@@ -4,7 +4,6 @@
 #include<thread>
 
 #include "common/utility.h"
-#include "common/log.hpp"
 
 namespace lseb {
 

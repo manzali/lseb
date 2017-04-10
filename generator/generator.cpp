@@ -4,7 +4,7 @@
 #include <cassert>
 
 #include "common/utility.h"
-#include "common/log.hpp"
+#include "log/log.hpp"
 
 namespace lseb {
 
@@ -70,7 +70,7 @@ Generator::Generator(
   m_metadata_buffer.release(m_metadata_buffer.ready());
   data_buffer.release(data_buffer.ready());
 
-  LOG(NOTICE) << "Generator - Capacity of " << events_counter << " events";
+  LOG_INFO << "Generator - Capacity of " << events_counter << " events";
 
 // Check that all memory is free
   assert(!m_metadata_buffer.ready() && !data_buffer.ready());

@@ -11,7 +11,7 @@
 #include "bu/builder_unit.h"
 #include "ru/readout_unit.h"
 
-#include "common/log.hpp"
+#include "log/log.hpp"
 #include "common/configuration.h"
 #include "common/dataformat.h"
 #include "common/local_ip.h"
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (timeout < 0) {
-    LOG(ERROR) << "Wrong timeout: can't be negative!";
+    std::cerr << "Wrong timeout: can't be negative!\n";
     return EXIT_FAILURE;
   }
 
@@ -85,11 +85,15 @@ int main(int argc, char* argv[]) {
 
   // Configure log
 
+  async_log::init();
+  async_log::add_console(async_log::severity_level::trace);
+  /*
   std::string logdir_postfix = "/" + str_nodename;
   str_logdir.append(logdir_postfix);
 
   std::ofstream log_stream(str_logdir);
   if (str_logdir == logdir_postfix) {
+
     Log::init(
         "LSEB",
         Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
@@ -100,10 +104,10 @@ int main(int argc, char* argv[]) {
         log_stream);
   }
 
-  LOG(INFO) << configuration << std::endl;
+  LOG_DEBUG << configuration << std::endl;
 
-  LOG(NOTICE) << "Node name: " << str_nodename;
-
+  LOG_INFO << "Node name: " << str_nodename;
+*/
   int id = -1;
 
   /****** Setup Launcher / exchange addresses ******/
@@ -114,7 +118,7 @@ int main(int argc, char* argv[]) {
   int range = configuration.get_child("NETWORK").get<int>("RANGE");
   if (iface.empty())
   iface = "ib0";
-  LOG(DEBUG) << "Using iface = " << iface << ", port = " << port << ", range = " << range;
+  LOG_DEBUG << "Using iface = " << iface << ", port = " << port << ", range = " << range;
 
   //get ip
   std::string ip = get_local_ip(iface);
@@ -142,7 +146,7 @@ int main(int argc, char* argv[]) {
     }
   }
   if (id == -1) {
-    LOG(ERROR)
+    LOG_ERROR
       << "Wrong node name: can't find key \""
       << str_nodename
       << "\" in the ENDPOINTS section of the configuration file!";
@@ -161,19 +165,19 @@ int main(int argc, char* argv[]) {
   int const max_fragment_size = configuration.get<int>(
       "GENERAL.MAX_FRAGMENT_SIZE");
   if (max_fragment_size <= 0 || max_fragment_size % sizeof(EventHeader)) {
-    LOG(ERROR) << "Wrong MAX_FRAGMENT_SIZE: " << max_fragment_size;
+    LOG_ERROR << "Wrong MAX_FRAGMENT_SIZE: " << max_fragment_size;
     return EXIT_FAILURE;
   }
 
   int const bulk_size = configuration.get<int>("GENERAL.BULKED_EVENTS");
   if (bulk_size <= 0) {
-    LOG(ERROR) << "Wrong BULKED_EVENTS: " << bulk_size;
+    LOG_ERROR << "Wrong BULKED_EVENTS: " << bulk_size;
     return EXIT_FAILURE;
   }
 
   int const credits = configuration.get<int>("GENERAL.CREDITS");
   if (credits < 1) {
-    LOG(ERROR) << "Wrong CREDITS: " << credits;
+    LOG_ERROR << "Wrong CREDITS: " << credits;
     return EXIT_FAILURE;
   }
 

@@ -14,6 +14,7 @@ add_executable(
 target_link_libraries(
   t_client
   transport
+  log
   ${Boost_LIBRARIES}
 )
 
@@ -25,6 +26,7 @@ add_executable(
 target_link_libraries(
   t_server
   transport
+  log
   ${Boost_LIBRARIES}
 )
 
@@ -36,6 +38,7 @@ add_executable(
 target_link_libraries(
   t_client2
   transport
+  log
   ${Boost_LIBRARIES}
 )
 
@@ -47,6 +50,7 @@ add_executable(
 target_link_libraries(
   t_server2
   transport
+  log
   ${Boost_LIBRARIES}
 )
 

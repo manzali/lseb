@@ -6,7 +6,7 @@
 
 #include "common/memory_pool.h"
 #include "common/frequency_meter.h"
-#include "common/log.hpp"
+#include "log/log.hpp"
 
 #include "transport/transport.h"
 
@@ -50,11 +50,12 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  Log::init("t_client", Log::INFO);
+  async_log::init();
+  async_log::add_console();
 
   size_t const buffer_size = chunk_size * credits;
 
-  LOG(INFO) << "One-way client test (send)";
+  LOG_INFO << "One-way client test (send)";
 
   std::unique_ptr<unsigned char[]> const buffer_ptr(
     new unsigned char[buffer_size]);
@@ -64,13 +65,13 @@ int main(int argc, char* argv[]) {
   Connector connector(credits);
   std::unique_ptr<Socket> socket(connector.connect(server, port));
   socket->register_memory(buffer_ptr.get(), buffer_size);
-  LOG(INFO) << "Connected to " << server << " on port " << port;
+  LOG_INFO << "Connected to " << server << " on port " << port;
 
   FrequencyMeter bandwith(5.0);
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  LOG(INFO) << "Start sending...";
+  LOG_INFO << "Start sending...";
 
   while (true) {
     std::vector<iovec> vect = socket->poll_completed_send();
@@ -82,7 +83,7 @@ int main(int argc, char* argv[]) {
       socket->post_send(pool.alloc());
     }
     if (bandwith.check()) {
-      LOG(INFO)
+      LOG_INFO
         << "Bandwith: "
         << bandwith.frequency() / std::giga::num * 8.
         << " Gb/s";

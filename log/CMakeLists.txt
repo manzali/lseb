@@ -5,16 +5,11 @@ include_directories(
 )
 
 add_library(
-  ru
-  readout_unit.cpp
-  controller.cpp
-  accumulator.cpp
+  log
+  log.cpp
 )
 
 target_link_libraries(
-  ru
-  generator
-  transport
   log
   ${Boost_LIBRARIES}
 )
