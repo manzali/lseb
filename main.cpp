@@ -85,8 +85,13 @@ int main(int argc, char* argv[]) {
 
   // Configure log
 
+  std::string log_level = configuration.get<std::string>("LOG_LEVEL");
+
   async_log::init();
-  async_log::add_console(async_log::severity_level::trace);
+  async_log::add_console(severity_from_string(log_level));
+
+  LOG_WARNING << "Missing log to file! To be implemented!";
+
   /*
   std::string logdir_postfix = "/" + str_nodename;
   str_logdir.append(logdir_postfix);

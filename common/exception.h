@@ -52,6 +52,17 @@ class generic_error : public std::runtime_error {
 
 }
 
+namespace configuration {
+
+class generic_error : public std::runtime_error {
+ public:
+  explicit generic_error(std::string const& error)
+      : std::runtime_error(error) {
+  }
+};
+
+}
+
 }
 
 }

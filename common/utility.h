@@ -14,6 +14,9 @@
 #include <sys/uio.h>
 
 #include "common/pointer_cast.h"
+#include "common/exception.h"
+
+#include "log/log.hpp"
 
 namespace lseb {
 
@@ -114,6 +117,33 @@ inline std::vector<int> create_sequence(int id, int total) {
     std::begin(sequence) + first_id,
     std::end(sequence));
   return sequence;
+}
+
+inline async_log::severity_level severity_from_string(std::string const& str) {
+  async_log::severity_level sev = async_log::severity_level::trace;
+  if (str == "TRACE"){
+    // default value
+  }
+  else if (str == "DEBUG"){
+    sev = async_log::severity_level::debug;
+  }
+  else if (str == "INFO"){
+    sev = async_log::severity_level::info;
+  }
+  else if (str == "WARNING"){
+    sev = async_log::severity_level::warning;
+  }
+  else if (str == "ERROR"){
+    sev = async_log::severity_level::error;
+  }
+  else if (str == "FATAL"){
+    sev = async_log::severity_level::fatal;
+  }
+  else {
+    throw lseb::exception::configuration::generic_error(
+        "Error parsing LOG_LEVEL: Unknown " + str + " level!");
+  }
+  return sev;
 }
 
 }
