@@ -88,31 +88,23 @@ int main(int argc, char* argv[]) {
   std::string log_level = configuration.get<std::string>("LOG_LEVEL");
 
   async_log::init();
-  async_log::add_console(severity_from_string(log_level));
 
-  LOG_WARNING << "Missing log to file! To be implemented!";
-
-  /*
   std::string logdir_postfix = "/" + str_nodename;
   str_logdir.append(logdir_postfix);
 
-  std::ofstream log_stream(str_logdir);
   if (str_logdir == logdir_postfix) {
-
-    Log::init(
-        "LSEB",
-        Log::FromString(configuration.get<std::string>("LOG_LEVEL")));
+    async_log::add_console(severity_from_string(log_level));
   } else {
-    Log::init(
-        "LSEB",
-        Log::FromString(configuration.get<std::string>("LOG_LEVEL")),
-        log_stream);
+    async_log::add_file(
+        str_logdir,
+        1024 * 1024, // rotate log file every 1 GB
+        severity_from_string(log_level));
   }
 
   LOG_DEBUG << configuration << std::endl;
 
   LOG_INFO << "Node name: " << str_nodename;
-*/
+
   int id = -1;
 
   /****** Setup Launcher / exchange addresses ******/
