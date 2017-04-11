@@ -215,7 +215,7 @@ int main(int argc, char* argv[]) {
 
   BuilderUnit bu(endpoints.size(), bulk_size, credits, max_fragment_size, id);
 
-  ReadoutUnit ru(accumulator, bulk_size, credits, id);
+  ReadoutUnit ru(accumulator, credits, id);
 
   std::thread bu_conn_th(&BuilderUnit::connect, &bu, endpoints);
   std::thread ru_conn_th(&ReadoutUnit::connect, &ru, endpoints);

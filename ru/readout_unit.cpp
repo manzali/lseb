@@ -18,11 +18,9 @@ namespace lseb {
 
 ReadoutUnit::ReadoutUnit(
     Accumulator& accumulator,
-    int bulk_size,
     int credits,
     int id)
     : m_accumulator(accumulator),
-      m_bulk_size(bulk_size),
       m_credits(credits),
       m_id(id) {
 }
