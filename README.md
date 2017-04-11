@@ -29,9 +29,9 @@ In order to install LSEB run:
     cd lseb
     mkdir build
     cd build
-    cmake -DTRANSPORT=<FI_TCP | VERBS> ..
+    cmake -DTRANSPORT=<FI_TCP | FI_VERBS | VERBS> ..
     #or
-    cmake -DTRANSPORT=<FI_TCP | VERBS> -DENABLE_HYDRA=ON -DWITH_HYDRA=<PATH_TO_HYDRA_PREFIX> ..
+    cmake -DTRANSPORT=<FI_TCP | FI_VERBS | VERBS> -DENABLE_HYDRA=ON -DWITH_HYDRA=<PATH_TO_HYDRA_PREFIX> ..
 ```
 
 ## Getting Started
