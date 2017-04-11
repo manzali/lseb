@@ -39,8 +39,8 @@ In order to install LSEB run:
 You can start from configuration.json in the root directory in order to create your own configuration file.
 
 ```JSON
-    {"HOST":"hostname1", "PORT":"7000"},
-    {"HOST":"hostname2", "PORT":"7000"}
+    "<NODE_NAME1>":{"HOST": "<HOSTNAME1>", "PORT": "<PORT1>"},
+    "<NODE_NAME2>":{"HOST": "<HOSTNAME2>", "PORT": "<PORT2>"}
 ```
  
 Once that the configuration file is ready you can LSEB typing:
