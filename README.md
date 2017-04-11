@@ -46,7 +46,14 @@ You can start from configuration.json in the root directory in order to create y
 Once that the configuration file is ready you can LSEB typing:
 
 ```Bash
-    ./lseb -c configuration.json -i ID
+    $ ./lseb
+    the option '--configuration' is required but missing
+    Options:
+      -h [ --help ]              Print help messages.
+      -c [ --configuration ] arg Configuration JSON file.
+      -l [ --logdir ] arg        Log directory (default is standard output)
+      -n [ --nodename ] arg      Node name (default is the hostname)
+      -t [ --timeout ] arg       Timeout in seconds (default is infinite)
 ```
 
 ## Running with Hydra
