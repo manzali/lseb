@@ -26,9 +26,11 @@ Domain::Domain()
   m_hints->ep_attr->type = FI_EP_MSG;
   m_hints->domain_attr->threading = FI_THREAD_COMPLETION;
   m_hints->domain_attr->data_progress = FI_PROGRESS_MANUAL;
+#ifdef FI_VERBS
+  m_hints->fabric_attr->prov_name = strdup("verbs");
+#else // FI_TCP
   m_hints->fabric_attr->prov_name = strdup("sockets");
-  // m_hints->fabric_attr->prov_name = strdup("verbs");
-
+#endif
   fi_info *info_p{nullptr};
   int rc =
       fi_getinfo(FI_VERSION(1, 3), nullptr, nullptr, 0, m_hints.get(), &info_p);

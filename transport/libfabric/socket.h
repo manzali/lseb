@@ -13,19 +13,20 @@
 #include "shared.h"
 
 namespace lseb {
-
+#ifdef FI_VERBS
 struct MemoryRegion {
   fabric_ptr<fid_mr> mr = nullptr;
   unsigned char* begin;
   unsigned char* end;
   MemoryRegion(void* buffer, size_t size);
 };
+#endif
 
 class Socket {
 public:
-
+#ifdef FI_VERBS
   typedef MemoryRegion memory_region;
-
+#endif
   Socket(fid_ep *ep,
          fid_cq *rx_cq,
          fid_cq *tx_cq,
@@ -63,7 +64,9 @@ private:
   fabric_ptr<fid_cq> m_tx_cq; // Transmit CQ
 
   uint32_t m_credits; // CQ Depth
+#ifdef FI_VERBS
   std::vector<memory_region> m_mrs;
+#endif
   // TODO: Remove the unordered_map because we let the application store the
   //       length of the registered buffers. Maybe an unordered_set is needed
   std::unordered_map<void *, size_t> m_pending_send;

@@ -21,7 +21,7 @@ target_link_libraries(
   ${RDMA_LIBRARIES}
 )
 
-elseif (TRANSPORT STREQUAL "FI_TCP")
+elseif (TRANSPORT STREQUAL "FI_VERBS" OR TRANSPORT STREQUAL "FI_TCP")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
 find_package (LibFabric REQUIRED)

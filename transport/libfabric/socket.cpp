@@ -9,6 +9,7 @@
 #include "common/exception.h"
 #include "domain.h"
 
+#ifdef FI_VERBS
 namespace {
 bool is_in_mr(iovec const& iov, lseb::Socket::memory_region const& mr) {
   return
@@ -16,9 +17,10 @@ bool is_in_mr(iovec const& iov, lseb::Socket::memory_region const& mr) {
       && mr.end >= static_cast<unsigned char *>(iov.iov_base) + iov.iov_len;
 }
 }
+#endif
 
 namespace lseb {
-
+#ifdef FI_VERBS
 MemoryRegion::MemoryRegion(void *buffer, size_t size)
     : begin(static_cast<unsigned char *>(buffer)), end(begin + size) {
   fid_mr *mr_raw;
@@ -38,6 +40,7 @@ MemoryRegion::MemoryRegion(void *buffer, size_t size)
   }
   mr.reset(mr_raw);
 }
+#endif
 
 Socket::Socket(fid_ep *ep, fid_cq *rx_cq,
                fid_cq *tx_cq, uint32_t credits)
@@ -46,7 +49,9 @@ Socket::Socket(fid_ep *ep, fid_cq *rx_cq,
 }
 
 void Socket::register_memory(void *buffer, size_t size) {
-  m_mrs.emplace_back(buffer, size);
+#ifdef FI_VERBS
+  m_mrs.emplace_back(buffer, size); // it implicitly calls the constructor of MemoryRegion
+#endif
 }
 
 std::vector<iovec> Socket::poll_completed_send() {
@@ -148,7 +153,7 @@ void Socket::post_send(iovec const& iov) {
     throw exception::socket::generic_error(
         "Error on post_send: no credits available");
   }
-
+#ifdef FI_VERBS
   auto mr_it = std::find_if(std::begin(m_mrs),
                             std::end(m_mrs),
                             [&iov](decltype(m_mrs)
@@ -165,6 +170,15 @@ void Socket::post_send(iovec const& iov) {
                      fi_mr_desc(mr_it->mr.get()),
                      0, /* dest_address */
                      iov.iov_base);/* context */
+#else // FI_TCP
+  auto ret = fi_send(m_ep.get(),
+                     iov.iov_base,
+                     iov.iov_len,
+                     nullptr,
+                     0, /* dest_address */
+                     iov.iov_base);/* context */
+#endif
+
   if (ret) {
     throw exception::socket::generic_error(
         "Error on fi_recv: "
@@ -184,6 +198,8 @@ void Socket::post_recv(iovec const& iov) {
         "Error on post_recv: no credits available");
   }
 
+#ifdef FI_VERBS
+
   auto mr_it = std::find_if(std::begin(m_mrs),
                             std::end(m_mrs),
                             [&iov](decltype(m_mrs)
@@ -200,6 +216,14 @@ void Socket::post_recv(iovec const& iov) {
                      fi_mr_desc(mr_it->mr.get()),
                      0, /* src_address */
                      iov.iov_base);/* context */
+#else // FI_TCP
+  auto ret = fi_recv(m_ep.get(),
+                     iov.iov_base,
+                     iov.iov_len,
+                     nullptr,
+                     0, /* src_address */
+                     iov.iov_base);/* context */
+#endif
   if (ret) {
     throw exception::socket::generic_error(
         "Error on fi_recv: "
