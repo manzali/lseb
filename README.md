@@ -43,7 +43,7 @@ You can start from configuration.json in the root directory in order to create y
     "<NODE_NAME2>":{"HOST": "<HOSTNAME2>", "PORT": "<PORT2>"}
 ```
  
-Once that the configuration file is ready you can LSEB typing:
+Once that the configuration file is ready you can run LSEB:
 
 ```Bash
     $ ./lseb
