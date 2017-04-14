@@ -37,6 +37,11 @@ elseif (TRANSPORT STREQUAL "FI_VERBS" OR TRANSPORT STREQUAL "FI_TCP")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
 find_package (LibFabric REQUIRED)
 
+include_directories(
+  ${LSEB_SOURCE_DIR}
+  ${LIBFABRIC_INCLUDE_DIRS}
+)
+
 add_library(
   transport
   libfabric/socket.cpp
@@ -44,13 +49,6 @@ add_library(
   libfabric/connector.cpp
   libfabric/domain.cpp
   libfabric/shared.cpp)
-
-target_include_directories(
-    transport
-    PUBLIC
-    ${LSEB_SOURCE_DIR}
-    ${LIBFABRIC_INCLUDE_DIRS}
-)
 
 target_link_libraries(
   transport
