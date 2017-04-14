@@ -23,7 +23,7 @@ target_link_libraries(
 
 add_executable(
   show_device_attr
-  verbs/show_device_attr.cpp
+  verbs/show_devices_attr.cpp
 )
 
 target_link_libraries(
