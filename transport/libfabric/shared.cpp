@@ -60,7 +60,7 @@ void bind_completion_queues(
   fi_cq_attr cq_attr;
   std::memset(&cq_attr, 0, sizeof cq_attr);
 
-  cq_attr.format = FI_CQ_FORMAT_CONTEXT;
+  cq_attr.format = FI_CQ_FORMAT_CONTEXT; // see https://ofiwg.github.io/libfabric/master/man/fi_cq.3.html for other formats (with more informations)
   cq_attr.wait_obj = FI_WAIT_NONE;
   cq_attr.size = size;
 
