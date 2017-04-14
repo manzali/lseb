@@ -1,7 +1,3 @@
-//
-// Created by Valentino on 10/08/16.
-//
-
 #ifndef TRANSPORT_LIBFABRIC_FABRIC_TRAITS_H
 #define TRANSPORT_LIBFABRIC_FABRIC_TRAITS_H
 

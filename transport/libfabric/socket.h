@@ -23,27 +23,24 @@ struct MemoryRegion {
 #endif
 
 class Socket {
-public:
+ public:
 #ifdef FI_VERBS
   typedef MemoryRegion memory_region;
 #endif
-  Socket(fid_ep *ep,
-         fid_cq *rx_cq,
-         fid_cq *tx_cq,
-         uint32_t credits);
-  Socket(Socket const &other) = delete;
-  Socket &operator=(Socket const &) = delete;
+  Socket(fid_ep* ep, fid_cq* rx_cq, fid_cq* tx_cq, uint32_t credits);
+  Socket(Socket const& other) = delete;
+  Socket &operator=(Socket const&) = delete;
   Socket(Socket &&other) = default;
   Socket &operator=(Socket &&) = default;
   ~Socket() = default;
 
-  void register_memory(void *buffer, size_t size);
+  void register_memory(void* buffer, size_t size);
 
   std::vector<iovec> poll_completed_send();
   std::vector<iovec> poll_completed_recv();
 
-  void post_send(iovec const &iov);
-  void post_recv(iovec const &iov);
+  void post_send(iovec const& iov);
+  void post_recv(iovec const& iov);
 
   bool available_send();
   bool available_recv();
@@ -53,29 +50,28 @@ public:
 
   std::string peer_hostname();
 
-private:
+ private:
   // NOTE: Declarations sorted by deconstruction requirements
 
   // Endpoint
   fabric_ptr<fid_ep> m_ep;
 
   // Completion Queues
-  fabric_ptr<fid_cq> m_rx_cq; // Receive CQ
-  fabric_ptr<fid_cq> m_tx_cq; // Transmit CQ
+  fabric_ptr<fid_cq> m_rx_cq;  // Receive CQ
+  fabric_ptr<fid_cq> m_tx_cq;  // Transmit CQ
 
-  uint32_t m_credits; // CQ Depth
+  uint32_t m_credits;  // CQ Depth
 #ifdef FI_VERBS
   std::vector<memory_region> m_mrs;
 #endif
   // TODO: Remove the unordered_map because we let the application store the
   //       length of the registered buffers. Maybe an unordered_set is needed
-  std::unordered_map<void *, size_t> m_pending_send;
-  std::unordered_map<void *, size_t> m_pending_recv;
+  std::unordered_map<void*, size_t> m_pending_send;
+  std::unordered_map<void*, size_t> m_pending_recv;
 
   // Used as temporary buffer for reading completions from rx/tx queues
   std::vector<fi_cq_entry> m_comp_send;
   std::vector<fi_cq_entry> m_comp_recv;
-
 
 };
 

@@ -1,7 +1,3 @@
-//
-// Created by Valentino on 29/08/16.
-//
-
 #include "shared.h"
 
 #include <cstring> // std::memset
@@ -13,29 +9,33 @@
 
 namespace lseb {
 
-void read_event(fabric_ptr<fid_eq> const& eq,
-                fi_eq_cm_entry *entry,
-                uint32_t event) {
-  struct fi_eq_err_entry err_entry;
+void read_event(
+    fabric_ptr<fid_eq> const& eq,
+    fi_eq_cm_entry* entry,
+    uint32_t event) {
+
+  fi_eq_err_entry err_entry;
   uint32_t ev;
   ssize_t rd;
-  std::string err_msg{"Error on fi_eq_sread: "};
+  std::string err_msg { "Error on fi_eq_sread: " };
 
-  rd = fi_eq_sread(eq.get(), &ev, entry, sizeof *entry, -1, 0);
-  if (rd!=sizeof *entry) {
-    if (rd==-FI_EAVAIL) {
+  rd = fi_eq_sread(eq.get(), &ev, entry, sizeof(*entry), -1, 0);
+  if (rd != sizeof(*entry)) {
+    if (rd == -FI_EAVAIL) {
       rd = fi_eq_readerr(eq.get(), &err_entry, 0);
-      if (rd!=sizeof err_entry) {
+      if (rd != sizeof(err_entry)) {
         throw lseb::exception::connection::generic_error(
             "Error on fi_eq_readerr: "
                 + std::string(fi_strerror(-static_cast<int>(rd))));
       } else {
         throw lseb::exception::connection::generic_error(
-            err_msg + fi_eq_strerror(eq.get(),
-                                     err_entry.prov_errno,
-                                     err_entry.err_data,
-                                     nullptr,
-                                     0));
+            err_msg
+                + fi_eq_strerror(
+                    eq.get(),
+                    err_entry.prov_errno,
+                    err_entry.err_data,
+                    nullptr,
+                    0));
       }
     } else {
       throw lseb::exception::connection::generic_error(
@@ -43,20 +43,21 @@ void read_event(fabric_ptr<fid_eq> const& eq,
     }
   }
 
-  if (ev!=event) {
+  if (ev != event) {
     throw lseb::exception::connection::generic_error(
         err_msg + "Unexpected CM event");
   }
 }
 
-void bind_completion_queues(fabric_ptr<fid_ep> const& ep,
-                            fabric_ptr<fid_cq>& rx,
-                            fabric_ptr<fid_cq>& tx,
-                            uint32_t size) {
-  int rc = 0;
-  struct fi_cq_attr cq_attr;
-  fid_cq *rx_raw, *tx_raw;
+void bind_completion_queues(
+    fabric_ptr<fid_ep> const& ep,
+    fabric_ptr<fid_cq>& rx,
+    fabric_ptr<fid_cq>& tx,
+    uint32_t size) {
+
   lseb::Domain& d = lseb::Domain::get_instance();
+
+  fi_cq_attr cq_attr;
   std::memset(&cq_attr, 0, sizeof cq_attr);
 
   cq_attr.format = FI_CQ_FORMAT_CONTEXT;
@@ -64,7 +65,8 @@ void bind_completion_queues(fabric_ptr<fid_ep> const& ep,
   cq_attr.size = size;
 
   /* Create Completion queues */
-  rc = fi_cq_open(d.get_raw_domain(), &cq_attr, &rx_raw, NULL);
+  fid_cq *rx_raw, *tx_raw;
+  int rc = fi_cq_open(d.get_raw_domain(), &cq_attr, &rx_raw, NULL);
   if (rc) {
     throw lseb::exception::connection::generic_error(
         "Error on fi_cq_open rx: " + std::string(fi_strerror(-rc)));
@@ -93,15 +95,15 @@ void bind_completion_queues(fabric_ptr<fid_ep> const& ep,
 }
 
 void bind_event_queue(fabric_ptr<fid_ep> const& ep, fabric_ptr<fid_eq>& eq) {
-  int rc = 0;
-  struct fi_eq_attr cm_attr;
-  fid_eq *eq_raw;
+
   lseb::Domain& d = lseb::Domain::get_instance();
 
+  fi_eq_attr cm_attr;
   std::memset(&cm_attr, 0, sizeof cm_attr);
   cm_attr.wait_obj = FI_WAIT_FD;
 
-  rc = fi_eq_open(d.get_raw_fabric(), &cm_attr, &eq_raw, NULL);
+  fid_eq* eq_raw;
+  int rc = fi_eq_open(d.get_raw_fabric(), &cm_attr, &eq_raw, NULL);
   if (rc) {
     throw lseb::exception::connection::generic_error(
         "Error on fi_eq_open: " + std::string(fi_strerror(-rc)));

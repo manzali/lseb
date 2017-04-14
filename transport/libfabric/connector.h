@@ -8,8 +8,8 @@
 namespace lseb {
 
 class Connector {
-public:
 
+ public:
   Connector(int credits);
   Connector(Connector const& other) = delete;
   Connector& operator=(Connector const&) = delete;
@@ -20,8 +20,8 @@ public:
   std::unique_ptr<Socket> connect(
       std::string const& hostname,
       std::string const& port);
-private:
 
+ private:
   uint32_t m_credits;
 
 };

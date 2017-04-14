@@ -12,7 +12,7 @@
 namespace lseb {
 
 class Acceptor {
-public:
+ public:
 
   typedef fabric_ptr<fid_pep> pep_ptr;
   typedef fabric_ptr<fid_eq> eq_ptr;
@@ -27,7 +27,7 @@ public:
   ~Acceptor() = default;
   std::unique_ptr<Socket> accept();
 
-private:
+ private:
   uint32_t m_credits;
   pep_ptr m_pep;
   eq_ptr m_pep_eq;
