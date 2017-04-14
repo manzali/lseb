@@ -111,15 +111,6 @@ std::unique_ptr<Socket> Acceptor::accept() {
   // Create event queues
   bind_event_queue(ep, eq);
 
-  // TODO: Remove this function call because fi_accept already enables the ep
-  /*
-  rc = fi_enable(ep.get());
-  if (rc) {
-    throw exception::acceptor::generic_error(
-        "Error on fi_enable: " + std::string(fi_strerror(-rc)));
-  }
-  */
-
   rc = fi_accept(ep.get(), NULL, 0);
   if (rc) {
     throw exception::acceptor::generic_error(

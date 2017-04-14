@@ -103,7 +103,7 @@ std::vector<iovec> Socket::poll_completed_recv() {
 
 void Socket::post_send(iovec const& iov) {
 
-  if (m_pending_send.size() >= m_credits) {
+  if (!available_send()) {
     throw exception::socket::generic_error(
         "Error on post_send: no credits available");
   }
@@ -143,6 +143,10 @@ void Socket::post_send(iovec const& iov) {
 }
 
 void Socket::post_recv(iovec const& iov) {
+  if (!available_recv()) {
+    throw exception::socket::generic_error(
+        "Error on post_recv: no credits available");
+  }
 
   auto mr_it = find_mr(m_mrs, iov);
   if (mr_it == std::end(m_mrs)) {

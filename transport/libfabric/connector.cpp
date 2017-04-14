@@ -53,14 +53,6 @@ std::unique_ptr<Socket> Connector::connect(
   // Create event queues
   bind_event_queue(ep, eq);
 
-  // TODO: Remove this function call because fi_connect already enables the ep
-  /*
-  rc = fi_enable(ep.get());
-  if (rc) {
-    throw exception::connector::generic_error(
-        "Error on fi_enable: " + std::string(fi_strerror(-rc)));
-  }
-  */
 
   rc = fi_connect(ep.get(), info->dest_addr, NULL, 0);
   if (rc) {
