@@ -12,7 +12,7 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  std::cout << num_devices << " RDMA device(s) found.\n\n";
+  std::cout << num_devices << " RDMA device(s) found.\n";
 
   for (int i = 0; i < num_devices; ++i) {
 
