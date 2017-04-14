@@ -21,6 +21,17 @@ target_link_libraries(
   ${RDMA_LIBRARIES}
 )
 
+add_executable(
+  show_device_attr
+  show_device_attr.cpp
+)
+
+target_link_libraries(
+  show_device_attr
+  -libverbs
+  ${RDMA_LIBRARIES}
+)
+
 elseif (TRANSPORT STREQUAL "FI_VERBS" OR TRANSPORT STREQUAL "FI_TCP")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/transport/")
