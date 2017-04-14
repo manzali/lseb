@@ -22,12 +22,12 @@ target_link_libraries(
 )
 
 add_executable(
-  show_device_attr
+  show_devices_attr
   verbs/show_devices_attr.cpp
 )
 
 target_link_libraries(
-  show_device_attr
+  show_devices_attr
   -libverbs
   ${RDMA_LIBRARIES}
 )
