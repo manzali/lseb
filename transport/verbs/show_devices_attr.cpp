@@ -95,9 +95,11 @@ int main() {
     std::cout << "max_srq_sge: " << device_attr.max_srq_sge << std::endl;
     std::cout << "max_pkeys: " << device_attr.max_pkeys << std::endl;
     std::cout << "local_ca_ack_delay: "
-              << device_attr.local_ca_ack_delay
+              << static_cast<uint32_t>(device_attr.local_ca_ack_delay)
               << std::endl;
-    std::cout << "phys_port_cnt: " << device_attr.phys_port_cnt << std::endl;
+    std::cout << "phys_port_cnt: "
+              << static_cast<uint32_t>(device_attr.phys_port_cnt)
+              << std::endl;
 
     if (ibv_close_device(ctx)) {
       std::cerr << "Error, failed to close the device '"
