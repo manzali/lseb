@@ -13,8 +13,8 @@
 
 namespace lseb {
 
-void read_event(const fabric_ptr<fid_eq>& eq,
-                struct fi_eq_cm_entry *entry,
+void read_event(fabric_ptr<fid_eq> const& eq,
+                fi_eq_cm_entry *entry,
                 uint32_t event) {
   struct fi_eq_err_entry err_entry;
   uint32_t ev;
@@ -49,7 +49,7 @@ void read_event(const fabric_ptr<fid_eq>& eq,
   }
 }
 
-void bind_completion_queues(const fabric_ptr<fid_ep>& ep,
+void bind_completion_queues(fabric_ptr<fid_ep> const& ep,
                             fabric_ptr<fid_cq>& rx,
                             fabric_ptr<fid_cq>& tx,
                             uint32_t size) {
@@ -92,7 +92,7 @@ void bind_completion_queues(const fabric_ptr<fid_ep>& ep,
   }
 }
 
-void bind_event_queue(const fabric_ptr<fid_ep>& ep, fabric_ptr<fid_eq>& eq) {
+void bind_event_queue(fabric_ptr<fid_ep> const& ep, fabric_ptr<fid_eq>& eq) {
   int rc = 0;
   struct fi_eq_attr cm_attr;
   fid_eq *eq_raw;
