@@ -57,6 +57,16 @@ target_link_libraries(
   ${LIBFABRIC_LIBRARIES}
 )
 
+add_executable(
+  show_devices_attr
+  libfabric/show_devices_attr.cpp
+)
+
+target_link_libraries(
+  show_devices_attr
+  ${LIBFABRIC_LIBRARIES}
+)
+
 else()
     message(FATAL_ERROR "The variable TRANSPORT is not properly set.")
     # exit due to fatal error
