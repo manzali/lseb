@@ -27,7 +27,7 @@ add_executable(
 )
 
 target_link_libraries(
-  show_device_attr
+  verbs/show_device_attr
   -libverbs
   ${RDMA_LIBRARIES}
 )
