@@ -23,7 +23,8 @@ while True:
     start = datetime.now()
     time.sleep(interval)
     end = datetime.now()
-    delta_t = end - start
+    delta = end - start
+    delta_seconds = delta.seconds + delta.microseconds/1000000.
 
     # read counters
 
@@ -43,8 +44,8 @@ while True:
     xmit = long(output_list[3].split("PortXmitData:....................", 1)[1])
     rcv = long(output_list[4].split("PortRcvData:.....................", 1)[1])
 
-    xmit = xmit / 1000000000.0 # to giga
-    rcv = rcv / 1000000000.0 # to giga
+    xmit = xmit / delta_seconds # in time interval
+    rcv = rcv / delta_seconds # in time interval
 
     xmit = xmit * 4.0 # 4 lanes
     rcv = rcv * 4.0 # 4 lanes
@@ -52,8 +53,8 @@ while True:
     xmit = xmit * 8.0 # from byte to bit
     rcv = rcv * 8.0 # from byte to bit
 
-    xmit = xmit / delta_t # in time interval
-    rcv = rcv / delta_t # in time interval
+    xmit = xmit / 1000000000.0 # to giga
+    rcv = rcv / 1000000000.0 # to giga
 
     print "Xmit: {} Gb/s".format(xmit)
     print "Rcv:  {} Gb/s".format(rcv)
