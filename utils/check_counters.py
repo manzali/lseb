@@ -22,4 +22,4 @@ while True:
 	print "Rcv:  {} Gb/s".format(gb_rcv)
 	print "Tot:  {} Gb/s".format(gb_xmit + gb_rcv)
     
-    sys.stdout.flush()
+        sys.stdout.flush()
