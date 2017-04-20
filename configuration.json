@@ -1,5 +1,5 @@
 {
-  "LOG_LEVEL": "NOTICE",
+  "LOG_LEVEL": "INFO",
   "GENERATOR":
   {
     "MEAN": "200",
