@@ -84,6 +84,7 @@ std::unique_ptr<Socket> Acceptor::accept() {
   read_event(m_pep_eq, &entry, FI_CONNREQ);
 
   fid_ep* ep_raw;
+  // Instead of NULL you can create a fi_srx_context and pass it in order to use shared receive queues
   int rc = fi_endpoint(d.get_raw_domain(), entry.info, &ep_raw, NULL);
   fi_freeinfo(entry.info);
   if (rc) {
