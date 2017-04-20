@@ -48,7 +48,7 @@ for a in node_list:
         
         if a != b:
 
-            p = subprocess.Popen(["mpirun", "-x", "SCANNER_IPOIB=" + ipoip_a, "-np", "2", "-map-by", "ppr:1:node", "--host", a + "," + b, "python", "worker.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(["mpirun", "-x", "SCANNER_IPOIB=" + ipoip_a, "-np", "2", "-map-by", "ppr:1:node", "--host", a + "," + b, "python", "ib_write_bw.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             if mode == "TWOWAY":
                 
@@ -56,7 +56,7 @@ for a in node_list:
                 if not ipoip_b:
                     sys.exit("error while parsing the output of ifconfig!")
                 
-                p2 = subprocess.Popen(["mpirun", "-x", "SCANNER_IPOIB=" + ipoip_b, "-np", "2", "-map-by", "ppr:1:node", "--host", b + "," + a, "python", "worker.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p2 = subprocess.Popen(["mpirun", "-x", "SCANNER_IPOIB=" + ipoip_b, "-np", "2", "-map-by", "ppr:1:node", "--host", b + "," + a, "python", "ib_write_bw.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
                 out2, err2 = p2.communicate()
 
