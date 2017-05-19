@@ -1,5 +1,7 @@
+<!---
 [![Build Status](https://travis-ci.org/manzali/lseb.svg?branch=master)](https://travis-ci.org/manzali/lseb)
 [![Coverage Status](https://coveralls.io/repos/manzali/lseb/badge.svg?branch=master&service=github)](https://coveralls.io/github/manzali/lseb?branch=master)
+--->
 
 # LSEB (Large Scale Event Building)
 
